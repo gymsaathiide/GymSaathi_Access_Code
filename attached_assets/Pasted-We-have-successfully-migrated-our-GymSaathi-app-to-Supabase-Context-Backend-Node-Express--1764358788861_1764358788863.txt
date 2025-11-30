@@ -1,0 +1,41 @@
+We have successfully migrated our GymSaathi app to Supabase.
+
+Context:
+- Backend: Node + Express + TypeScript
+- ORM: Drizzle
+- We now have a DATABASE_URL secret pointing to Supabase, with ?sslmode=require
+- The app is already able to connect to Supabase and db:push works
+- Supabase already has the full schema (36+ tables) and demo rows (5 gyms, 4 users, etc.)
+
+I want you to do a final migration cleanup and verification for production:
+
+1) Verify **all** database usage now goes through the Supabase DATABASE_URL:
+   - Open server/db.ts and confirm it only reads process.env.DATABASE_URL and does NOT build a connection from PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD.
+   - Open drizzle.config.ts and confirm it also uses process.env.DATABASE_URL for dbCredentials.url (no manual host/user/password).
+   - Search the whole repo for `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` and show me all matches. If any code still uses them, refactor to use DATABASE_URL instead.
+
+2) Clean up old Replit env usage:
+   - Confirm that the app can start and /api/health/db works **without** relying on PGHOST/PGPORT/etc.
+   - If safe, remove references to PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD from code. We will later delete these secrets from the Replit UI manually.
+
+3) Verify Supabase schema vs Drizzle schema:
+   - Using Drizzle / SQL, query Supabase to confirm the following tables exist: gyms, users, members, membership_plans, memberships, invoices, payments, leads, attendance, attendance_qr_config, classes, class_types, class_bookings, class_attendance, products, orders, order_items, store_settings, subscriptions, transactions, trainers, audit_logs, branding, notifications, whatsapp_messages, revenue_snapshots, equipment, announcements, gym_admins, gym_invoices, integrations.
+   - For each table, just print the row counts so I can see which tables already have data. (Short summary is fine.)
+
+4) Data migration note:
+   - Do NOT drop any tables.
+   - Do NOT recreate the schema again; it is already correct in Supabase.
+   - Assume the old Neon/Replit database may still have some test invoices/attendance rows that are missing in Supabase, but they are not critical. Keep Supabase as the source of truth going forward.
+
+5) Security / SSL:
+   - Confirm that the runtime connection to Supabase uses SSL. If needed, keep the minimal safe configuration:
+       - Use the DATABASE_URL with `?sslmode=require`
+       - If there is an explicit ssl option in the pg/Pool config, set `ssl: { rejectUnauthorized: false }` or the equivalent that is already working.
+   - Do NOT set NODE_TLS_REJECT_UNAUTHORIZED=0 globally in code.
+
+6) Final confirmation:
+   - Restart the app server.
+   - Call the /api/health/db endpoint and show the JSON result.
+   - Confirm that when I log in via the UI, any new data I create (for example a test lead, test member, test invoice) is stored in Supabase (not Neon).
+
+At the end, please give me a short checklist of what was changed and confirm that the application is now fully using Supabase as the only database.

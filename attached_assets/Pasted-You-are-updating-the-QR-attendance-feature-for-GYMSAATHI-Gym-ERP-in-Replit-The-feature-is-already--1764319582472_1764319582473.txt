@@ -1,0 +1,306 @@
+You are updating the QR attendance feature for GYMSAATHI Gym ERP in Replit.
+
+The feature is already implemented (files like shared/schema.ts, server/storage.ts, server/routes.ts, client/src/components/QrAttendanceManager.tsx, client/src/components/QrScanner.tsx, client/src/pages/MemberDashboard.tsx, client/src/components/GymCheckIn.tsx), but the current behavior is buggy:
+multiple check-ins / check-outs get created, and the UI gets into weird states.
+
+We need to simplify and strictly control the user journey and state machine.
+
+1️⃣ Desired User Journey (VERY IMPORTANT)
+
+For each member per day per gym there should be at most one “open” attendance session at a time.
+
+Flow:
+
+Member comes to gym → opens Member Dashboard → taps “Scan QR / Check-in” → scans QR.
+
+If they are not currently in the gym:
+
+System should create a new attendance record and mark them as checked-in.
+
+UI shows success: You’re checked in and button label becomes “Check out”.
+
+When member is leaving gym:
+
+They open the app and tap the same button (Scan / Check-out flow) once.
+
+System should close that open attendance record (set checkOutTime) and mark status as checked-out.
+
+UI shows success: You’re checked out and button label becomes “Check in” again.
+
+Auto checkout rule:
+
+If a member stays “checked-in” for more than 3 hours without explicit checkout, the system should:
+
+Automatically set checkOutTime = checkInTime + 3 hours
+
+Mark status as auto-checked-out
+
+Next time they scan QR, it should behave as a new check-in, not a toggle on the old record.
+
+The key rule:
+
+At any time, a member is either:
+
+NOT_IN_GYM, or
+
+IN_GYM (has exactly 1 open record)
+
+And auto-checkout after 3 hours moves them back to NOT_IN_GYM.
+
+2️⃣ Data Model Clarification
+
+In shared/schema.ts (or wherever attendance types are defined) make sure we have:
+
+type AttendanceSource = "qr_scan" | "admin_manual" | "class";
+
+type AttendanceExitType = "manual" | "auto" | null;
+
+interface AttendanceRecord {
+  id: string;
+  gymId: string;
+  memberId: string;
+  memberName: string;
+  checkInTime: string;        // ISO
+  checkOutTime?: string;      // ISO
+  status: "in" | "out";       // "in" = currently in gym, "out" = finished
+  exitType: AttendanceExitType; // "manual" when member/admin checks out, "auto" when system auto-closes
+  source: AttendanceSource;
+}
+
+
+If we already have a similar type, just extend it to include exitType.
+
+Also, the index key for today’s records is already something like:
+
+attendanceIndex:{gymId}:{YYYY-MM-DD} → attendanceId[]
+
+Keep using that.
+
+3️⃣ Backend Logic – Find Open Session & Auto-Close
+
+In server/storage.ts create helper functions (or update existing ones) for attendance:
+
+getTodayAttendanceForMember(gymId, memberId, todayDate)
+
+Returns all attendance records for that member for todayDate (local IST day).
+
+Use the existing attendanceIndex for that day.
+
+getOpenAttendanceSession(gymId, memberId, now)
+
+Logic:
+
+Look at today’s records for that member.
+
+Find the last record (by checkInTime) where status === "in" and !checkOutTime.
+
+If none, return null.
+
+If found, check auto-checkout rule:
+
+const checkIn = new Date(record.checkInTime);
+const diffHours = (now - checkIn) / (1000 * 60 * 60);
+
+if (diffHours > 3) {
+  // auto close
+  record.checkOutTime = new Date(checkIn.getTime() + 3 * 60 * 60 * 1000).toISOString();
+  record.status = "out";
+  record.exitType = "auto";
+  save changes;
+  return null; // no open session anymore
+}
+
+
+So any open session older than 3 hours is auto-closed before further logic.
+
+createCheckIn(gymId, member)
+
+Creates new AttendanceRecord with:
+
+status = "in"
+
+exitType = null
+
+source = "qr_scan" (for this feature)
+
+checkInTime = now (IST aware)
+
+closeCheckInManually(record, now)
+
+Sets:
+
+checkOutTime = now
+
+status = "out"
+
+exitType = "manual"
+
+Saves and returns updated record.
+
+Make sure date calculations use IST/local day logic (you have some timezone helpers already from previous step).
+
+4️⃣ Backend – Fix /api/member/attendance/scan Logic
+
+In server/routes.ts, find the endpoint handling the QR scan (e.g. POST /api/member/attendance/scan).
+
+Refactor it to implement this exact state machine:
+
+Validate QR (as already done):
+
+decode qrData
+
+validate secret, gymId, isEnabled
+
+ensure member from session exists, belongs to that gym, has active plan.
+
+Determine current state:
+
+const now = new Date();
+const openSession = await getOpenAttendanceSession(gymId, memberId, now);
+
+
+Note: getOpenAttendanceSession already auto-closes expired open sessions (>3 hours).
+
+If openSession == null → CHECK IN
+
+Call createCheckIn().
+
+Respond:
+
+{
+  status: "checked_in",
+  message: "You are checked in!",
+  record: newRecord
+}
+
+
+If openSession != null → CHECK OUT
+
+Call closeCheckInManually(openSession, now).
+
+Respond:
+
+{
+  status: "checked_out",
+  message: "You are checked out. See you again!",
+  record: updatedRecord
+}
+
+
+IMPORTANT:
+
+Do not create multiple records on repeated scans if there is still an open session.
+
+The only time we create a new record is when there is no open session (current state = NOT_IN_GYM).
+
+5️⃣ Member UI – Button + QR Scanner Behaviour
+
+In:
+
+client/src/components/QrScanner.tsx
+
+client/src/pages/MemberDashboard.tsx
+
+Fix the behaviour so it matches the backend:
+
+5.1 Member dashboard status
+
+On Member Dashboard, fetch an endpoint like /api/member/attendance/today (if you don’t have it, you can reuse the same logic as getOpenAttendanceSession on backend and expose a small endpoint):
+
+Response example:
+
+interface MemberAttendanceToday {
+  inGym: boolean;
+  lastRecord?: AttendanceRecord;
+}
+
+
+Use this to determine:
+
+If inGym === true → show status badge: In Gym, and the main action button label = “Scan QR / Check out”.
+
+If inGym === false → status Not Checked In, button label = “Scan QR / Check in”.
+
+5.2 After scan
+
+When QR scan succeeds and API returns:
+
+If status === "checked_in":
+
+Show toast Checked in successfully with time.
+
+Update local state inGym = true.
+
+If status === "checked_out":
+
+Show toast Checked out successfully with time.
+
+Update local state inGym = false.
+
+If status === "error":
+
+Show error toast and do not change local state.
+
+Make sure the UI does not trigger multiple API calls on a single scan:
+
+Only send the scanned qrData once per scan event.
+
+6️⃣ Attendance Table – Consistent Status
+
+In client/src/components/GymCheckIn.tsx:
+
+Use record.status and record.exitType to render labels:
+
+If status === "in" → show badge In Gym.
+
+If status === "out" and exitType === "manual" → Checked Out.
+
+If status === "out" and exitType === "auto" → Auto checked-out.
+
+Keep the source icon: QR vs Manual.
+
+This makes it clear in the admin table what happened.
+
+7️⃣ Tests to Pass
+
+After your changes:
+
+Member with active plan, no open session:
+
+Scan QR → 1 record created, status="in", exitType=null.
+
+Member dashboard shows In Gym, button label Scan QR / Check out.
+
+Same member, within 3 hours:
+
+Scan again → same record updated (checkOutTime, status="out", exitType="manual").
+
+No new record created.
+
+Dashboard shows Not Checked In.
+
+Same member, after > 3 hours:
+
+On any API call, previous open session is auto-closed (exitType="auto").
+
+Scan QR again → new record created for today with fresh checkInTime.
+
+Admin Attendance KPIs (Currently in Gym, Check-ins Today, Unique Members) reflect:
+
+Current state (open sessions) + total daily records.
+
+Please implement all of the above by updating:
+
+shared/schema.ts (if needed)
+
+server/storage.ts (attendance helpers + auto-close)
+
+server/routes.ts (/api/member/attendance/scan and any helper endpoint for member “today status”)
+
+client/src/pages/MemberDashboard.tsx
+
+client/src/components/QrScanner.tsx
+
+client/src/components/GymCheckIn.tsx
+
+Do not break existing manual check-in features; just ensure QR-based logic follows this strict state machine.

@@ -1,0 +1,169 @@
+✅ WatX (UPMTech) WhatsApp API – Full Developer Documentation
+
+Base URL:
+
+https://sms.upmtech.in/api
+
+
+Authentication:
+
+secret = Your API Secret (from Tools → API Keys)
+
+
+WhatsApp messages can be sent from linked WhatsApp accounts using account = WHATSAPP_UNIQUE_ID.
+
+────────────────────────────────────────────────
+📌 1. Send WhatsApp Message (Single Message)
+
+(Most important for your gym app)
+
+Endpoint
+POST /send/whatsapp
+
+Content-Type
+multipart/form-data
+
+Required Fields
+Field	Type	Description
+secret	string	Your API secret
+account	string	WhatsApp unique ID
+recipient	string	Phone number (+91…)
+type	string	Default: text
+message	string	Message text
+Optional Fields
+Field	Type	Notes
+priority	number	1 = send instantly, 2 = normal
+media_file	binary	For media messages
+media_url	string	Direct media link
+media_type	string	image, audio, video
+document_*	various	For documents
+Example Request (Text Message)
+curl -X POST "https://sms.upmtech.in/api/send/whatsapp" \
+  -H "Content-Type: multipart/form-data" \
+  -F "secret=YOUR_API_SECRET" \
+  -F "account=YOUR_UNIQUE_ID" \
+  -F "recipient=+919876543210" \
+  -F "type=text" \
+  -F "message=Hello from WatX!"
+
+Success Response
+{
+  "status": 200,
+  "message": "WhatsApp chat has been sent!",
+  "data": {
+    "messageId": 123
+  }
+}
+
+────────────────────────────────────────────────
+📌 2. Bulk WhatsApp Messaging
+Endpoint
+POST /send/whatsapp.bulk
+
+Content-Type
+application/x-www-form-urlencoded
+
+Required Fields
+Field	Description
+secret	API secret
+account	WhatsApp account unique ID
+campaign	Name of campaign
+recipients	Comma-separated numbers
+type	text / media / document
+message	Message text
+Simple Bulk Example
+curl -X POST "https://sms.upmtech.in/api/send/whatsapp.bulk" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "secret=YOUR_API_SECRET&account=YOUR_UNIQUE_ID&campaign=GymReminders&type=text&recipients=+919123456789,+919876543210&message=Renew Your Membership!"
+
+────────────────────────────────────────────────
+📌 3. Validate WhatsApp Phone Number
+Endpoint
+GET /get/wa.phone
+
+Parameters
+Name	Description
+secret	API secret
+unique	WhatsApp account unique ID
+phone	Phone number to check
+────────────────────────────────────────────────
+📌 4. Link a WhatsApp Account (Create QR)
+Endpoint
+GET /create/wa.link
+
+Parameters
+Name	Description
+secret	API secret
+sid	Optional server ID
+Response Example
+{
+  "status": 200,
+  "message": "WhatsApp QRCode has been created!",
+  "data": {
+    "qrstring": "...",
+    "qrimagelink": "https://sms.upmtech.in/api/get/wa.qr?token=...",
+    "infolink": "https://sms.upmtech.in/api/get/wa.info?token=..."
+  }
+}
+
+────────────────────────────────────────────────
+📌 5. Fetch WhatsApp Accounts
+Endpoint
+GET /get/wa.accounts
+
+────────────────────────────────────────────────
+📌 6. Fetch Sent Messages
+GET /get/wa.sent
+
+────────────────────────────────────────────────
+📌 7. Fetch Received Messages
+GET /get/wa.received
+
+────────────────────────────────────────────────
+📌 8. Fetch Pending Messages
+GET /get/wa.pending
+
+────────────────────────────────────────────────
+📌 9. Fetch a Single Message
+Endpoint
+GET /get/wa.message
+
+Parameters
+name	description
+secret	API secret
+type	sent / received
+id	Message ID
+────────────────────────────────────────────────
+📌 10. Delete Sent/Received WhatsApp Messages
+Delete Sent
+GET /delete/wa.sent
+
+Delete Received
+GET /delete/wa.received
+
+────────────────────────────────────────────────
+📌 11. WhatsApp Campaigns
+List Campaigns
+GET /get/wa.campaigns
+
+Start Campaign
+GET /remote/start.chats
+
+Stop Campaign
+GET /remote/stop.chats
+
+────────────────────────────────────────────────
+📌 12. WhatsApp Groups & Contacts
+Get Groups
+GET /get/wa.groups
+
+Get Group Contacts
+GET /get/wa.group.contacts
+
+────────────────────────────────────────────────
+📌 13. WhatsApp Servers (Required for linking)
+GET /get/wa.servers
+
+────────────────────────────────────────────────
+📌 14. Delete WhatsApp Account
+GET /delete/wa.account

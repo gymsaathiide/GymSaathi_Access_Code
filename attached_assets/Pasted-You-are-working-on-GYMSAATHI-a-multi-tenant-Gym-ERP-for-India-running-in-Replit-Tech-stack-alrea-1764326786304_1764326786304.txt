@@ -1,0 +1,332 @@
+You are working on GYMSAATHI, a multi-tenant Gym ERP for India running in Replit.
+
+Tech stack (already in project):
+
+Frontend: React 18 + TypeScript + Vite + TailwindCSS + Radix UI
+
+Backend: Node.js + Express + TypeScript
+
+DB: PostgreSQL (Supabase) for main data, Replit env for runtime
+
+Auth: Session-based express-session, roles: superadmin, admin, trainer, member
+
+Existing modules:
+
+leads / visitors section in Admin (KPIs + Lead Directory table)
+
+WhatsApp integration via WatX API
+
+Email integration via Resend
+
+We now want to introduce a public enquiry form per gym which feeds into the Leads & Visitors pipeline and triggers email + WhatsApp notifications with templates.
+
+The goal:
+
+“Every gym gets its OWN branded enquiry form link. Visitors fill it → entry appears instantly in the gym’s Leads/Visitor section → gym gets notified via email + WhatsApp → Admin can follow funnel and convert into Member.”
+
+1️⃣ Data Model & Status Flow
+
+We already have a leads / visitors table. Extend / standardize it if needed:
+
+leads (
+  id              uuid PK,
+  gym_id          uuid FK gyms,
+  name            text,
+  email           text,
+  phone           text,
+  source          text,        -- e.g. 'Website form', 'QR Enquiry', 'Walk-in'
+  channel         text,        -- 'online', 'referral', 'social', etc.
+  status          text,        -- 'new', 'contacted', 'interested', 'converted', 'lost'
+  notes           text,
+  follow_up_date  timestamptz,
+  created_at      timestamptz,
+  updated_at      timestamptz,
+  converted_member_id uuid NULL, -- FK members.id when converted
+  utm_source      text NULL,
+  utm_campaign    text NULL,
+  utm_medium      text NULL,
+  whatsapp_sent   boolean DEFAULT false,
+  email_sent      boolean DEFAULT false
+);
+
+
+Status flow:
+
+new → auto when enquiry form submitted.
+
+contacted → when admin first calls/messages.
+
+interested → lead shows interest.
+
+converted → linked to a new member account.
+
+lost → not interested / unreachable.
+
+2️⃣ Per-Gym Enquiry Form
+2.1 Public URL
+
+Each gym has a public Enquiry Form URL:
+
+Base pattern: /enquiry/:gymSlug or /enquiry/:gymId.
+
+No authentication required.
+
+Uses gym branding from gyms / branding tables (logo, colors, name).
+
+Expose this link in the Admin UI:
+
+On Leads & Visitors page, top-right:
+
+Button: “Copy Enquiry Form Link”
+
+Tooltip: Share this link on Instagram, WhatsApp, or your website. New enquiries come here automatically.
+
+2.2 Form Fields
+
+Public form fields (responsive mobile-first):
+
+Full name (required)
+
+Mobile number (required, India validation)
+
+Email (optional but recommended)
+
+Goal (dropdown: Weight Loss, Muscle Gain, General Fitness, Personal Training, Other)
+
+Preferred contact method (Radio: WhatsApp / Phone / Email)
+
+Preferred time to call (Morning / Afternoon / Evening / Any)
+
+How did you hear about us? (dropdown: Walk-in, Instagram, Google, Referral, Other)
+
+Optional message
+
+At bottom:
+
+Consent checkbox (required):
+I agree to be contacted by this gym via WhatsApp, call, or email.
+
+Submit button: “Submit enquiry”
+
+Form validation:
+
+Block obvious spam (min length on name/message, phone must be 10 digits, anti-bot honeypot field).
+
+Show success screen:
+Thanks, {name}! The gym team will contact you shortly.
+
+optional button “Send WhatsApp message to gym” with pre-filled text.
+
+3️⃣ Backend API – Public Enquiry Submit
+
+New endpoint (no session required):
+
+POST /api/public/enquiry/:gymIdOrSlug
+
+Request body (from form):
+
+interface PublicEnquiryPayload {
+  name: string;
+  email?: string;
+  phone: string;
+  goal?: string;
+  preferredChannel?: 'whatsapp' | 'phone' | 'email';
+  preferredTime?: 'morning' | 'afternoon' | 'evening' | 'any';
+  source?: string;       // e.g. 'Website form'
+  message?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+}
+
+
+Server behaviour:
+
+Resolve gymId from URL (slug or id).
+
+Validate gym is active.
+
+Validate input (phone, name, etc.).
+
+Insert new record in leads table:
+
+gym_id = gymId
+
+status = 'new'
+
+source = 'Website form'
+
+channel = 'online'
+
+follow_up_date = NOW() + 1 day by default.
+
+Trigger async notifications (email + WhatsApp) using existing integrations (see below).
+
+Return JSON:
+
+{
+  status: "ok",
+  leadId: "uuid",
+  message: "Enquiry submitted"
+}
+
+4️⃣ Notifications – Email (Resend) & WhatsApp (WatX)
+4.1 Email to Gym Admin (Resend)
+
+When a new enquiry is created:
+
+Fetch gym admin(s) for this gym (primary admin, maybe all admins).
+
+Use Resend with a reusable template:
+
+Subject:
+New enquiry for {{gymName}} – {{leadName}}
+
+Body:
+
+Lead name, phone, email
+
+Goal, source, preferred time, message
+
+One-click CTA:
+
+“Open in Gymsaathi” → deep link to /admin/leads?lead={{leadId}}
+
+Update leads.email_sent = true if success.
+
+4.2 WhatsApp to Gym Admin (WatX)
+
+Use existing WatX single message API:
+
+Account: gym’s configured WhatsApp sender (from integrations or whatsapp_accounts table).
+
+Recipient: gym admin’s WhatsApp number (from gym profile).
+
+Template text (keep it simple, variables):
+
+New enquiry for {{gymName}}
+Name: {{leadName}}
+Phone: {{phone}}
+Goal: {{goal}}
+Source: {{source}}
+Open in Gymsaathi: {{shortLink}}
+
+Log to whatsapp_messages table and set leads.whatsapp_sent = true.
+
+If WhatsApp sending fails, do not block enquiry creation; just log error.
+
+5️⃣ Admin UI – Leads & Visitors
+
+On Leads & Visitors page (screenshot you showed), extend:
+
+5.1 KPI cards updates
+
+Total Leads – count of all leads for this gym.
+
+New – leads with status = 'new' created in last 7 days.
+
+Contacted – status = contacted.
+
+Interested – status = interested.
+
+Converted – status = converted.
+
+Lost – status = lost.
+
+Filter bar:
+
+Search by name/email/phone.
+
+Dropdown filter: All Statuses (already there).
+
+New filter: Source (Website form, Walk-in, Referral, etc.).
+
+5.2 Lead Row Actions
+
+For each lead row:
+
+Status pill (color coded: new = blue, contacted = gray, interested = yellow, converted = green, lost = red).
+
+Click row → open Lead Detail Drawer / Modal.
+
+Lead detail includes:
+
+All form fields (goal, message, preferred contact time)
+
+Contact buttons:
+
+Call (tel: link)
+
+WhatsApp (wa.me link with prefilled template)
+
+Email (mailto link)
+
+Quick status change dropdown:
+
+Mark as Contacted
+
+Mark as Interested
+
+Mark as Lost
+
+Big CTA button: “Convert to Member”
+
+5.3 Convert Lead → Member
+
+The Convert to Member button should:
+
+Open pre-filled Member creation form:
+
+name, email, phone copied from lead
+
+gymId same as lead
+
+After member is created:
+
+Update leads.status = 'converted'
+
+Set converted_member_id = newMember.id
+
+(Optional) add note “Converted on {date} by {adminName}”.
+
+This conversion flow is already partially implemented; just ensure it’s wired to enquiries too.
+
+6️⃣ Visitor → Lead automation & UX
+
+Even though you said “this is built already”, align behaviour:
+
+All enquiry form submissions land in leads with:
+
+status = 'new'
+
+source = 'Website form'
+
+Leads KPIs + table should auto-refresh using React Query (e.g. refetchInterval: 10000 or invalidate queries after a new enquiry is created from admin side).
+
+Optionally show a “New” badge in sidebar next to Leads when there are status = 'new' leads created in last X minutes.
+
+7️⃣ Files to Touch
+
+Please implement / update the following (reusing existing patterns, not rewriting from scratch):
+
+Backend:
+
+server/routes.ts – new public enquiry route, notifications trigger.
+
+server/storage.ts – helper to create lead from public form.
+
+Any notifications / integrations service modules for Resend + WatX.
+
+DB migrations for new lead fields (utm, whatsapp_sent, email_sent, converted_member_id).
+
+Frontend:
+
+client/src/pages/Leads.tsx – update KPIs, filters, table, drawer, “Copy Enquiry Link” button.
+
+client/src/components/LeadDetailDrawer.tsx (or similar) – show details & conversion CTA.
+
+client/src/pages/PublicEnquiryForm.tsx – new public, unauthenticated form page.
+
+Routing config to support /enquiry/:gymSlug.
+
+Make design consistent with existing Gymsaathi admin UI and brand.

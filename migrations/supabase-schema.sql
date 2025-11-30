@@ -1,0 +1,414 @@
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Gyms table
+CREATE TABLE IF NOT EXISTS gyms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  plan TEXT NOT NULL CHECK (plan IN ('starter', 'professional', 'enterprise')),
+  status TEXT NOT NULL CHECK (status IN ('active', 'pending', 'suspended')),
+  members INTEGER DEFAULT 0,
+  revenue DECIMAL(10, 2) DEFAULT 0,
+  address TEXT,
+  logo_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('superadmin', 'admin', 'trainer', 'member')),
+  name TEXT NOT NULL,
+  phone TEXT,
+  is_active INTEGER DEFAULT 1,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_login TIMESTAMP WITH TIME ZONE
+);
+
+-- Gym Admins table (links users to gyms with admin role)
+CREATE TABLE IF NOT EXISTS gym_admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(gym_id, user_id)
+);
+
+-- Trainers table (links users to gyms with trainer role)
+CREATE TABLE IF NOT EXISTS trainers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  specialization TEXT,
+  bio TEXT,
+  image_url TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(gym_id, user_id)
+);
+
+-- Members table
+CREATE TABLE IF NOT EXISTS members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  membership_type TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('active', 'inactive', 'expired')),
+  join_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expiry_date TIMESTAMP WITH TIME ZONE,
+  emergency_contact TEXT,
+  address TEXT,
+  date_of_birth DATE,
+  profile_image_url TEXT
+);
+
+-- Membership Plans table
+CREATE TABLE IF NOT EXISTS membership_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  duration_days INTEGER NOT NULL,
+  price DECIMAL(10, 2) NOT NULL,
+  features JSONB,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Memberships table
+CREATE TABLE IF NOT EXISTS memberships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  plan_id UUID REFERENCES membership_plans(id) ON DELETE SET NULL,
+  start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('active', 'expired', 'cancelled')),
+  amount DECIMAL(10, 2) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Payments table
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  amount DECIMAL(10, 2) NOT NULL,
+  payment_method TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('completed', 'pending', 'failed', 'refunded')),
+  transaction_id TEXT,
+  description TEXT,
+  payment_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  receipt_url TEXT
+);
+
+-- Invoices table
+CREATE TABLE IF NOT EXISTS invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  invoice_number TEXT UNIQUE NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('paid', 'pending', 'overdue', 'cancelled')),
+  due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  paid_date TIMESTAMP WITH TIME ZONE,
+  items JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Subscriptions table
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  gym_name TEXT NOT NULL,
+  plan TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('active', 'past_due', 'canceled', 'trialing')),
+  amount DECIMAL(10, 2) NOT NULL,
+  billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('monthly', 'yearly')),
+  next_billing_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Transactions table
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  gym_name TEXT NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('paid', 'pending', 'failed', 'refunded')),
+  date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  invoice_number TEXT UNIQUE NOT NULL,
+  description TEXT
+);
+
+-- Class Types table
+CREATE TABLE IF NOT EXISTS class_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  duration_minutes INTEGER NOT NULL,
+  max_capacity INTEGER NOT NULL,
+  color TEXT,
+  is_active BOOLEAN DEFAULT true
+);
+
+-- Classes table
+CREATE TABLE IF NOT EXISTS classes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  class_type_id UUID REFERENCES class_types(id) ON DELETE CASCADE,
+  trainer_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  max_capacity INTEGER NOT NULL,
+  current_bookings INTEGER DEFAULT 0,
+  status TEXT NOT NULL CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled'))
+);
+
+-- Class Bookings table
+CREATE TABLE IF NOT EXISTS class_bookings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  status TEXT NOT NULL CHECK (status IN ('confirmed', 'cancelled', 'waitlist')),
+  booked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Class Attendance table
+CREATE TABLE IF NOT EXISTS class_attendance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID REFERENCES classes(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  check_in_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late'))
+);
+
+-- Products table
+CREATE TABLE IF NOT EXISTS products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  category_id UUID,
+  name TEXT NOT NULL,
+  description TEXT,
+  price DECIMAL(10, 2) NOT NULL,
+  stock_quantity INTEGER NOT NULL DEFAULT 0,
+  low_stock_threshold INTEGER DEFAULT 10,
+  visibility VARCHAR(20) DEFAULT 'public' CHECK (visibility IN ('public', 'private', 'hidden')),
+  featured BOOLEAN DEFAULT false,
+  image_url TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Product Categories table
+CREATE TABLE IF NOT EXISTS product_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT
+);
+
+-- Orders table
+CREATE TABLE IF NOT EXISTS orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  order_number TEXT UNIQUE NOT NULL,
+  total_amount DECIMAL(10, 2) NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'completed', 'cancelled')),
+  payment_status TEXT NOT NULL CHECK (payment_status IN ('pending', 'paid', 'refunded')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Order Items table
+CREATE TABLE IF NOT EXISTS order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  quantity INTEGER NOT NULL,
+  unit_price DECIMAL(10, 2) NOT NULL,
+  total_price DECIMAL(10, 2) NOT NULL
+);
+
+-- Leads table
+CREATE TABLE IF NOT EXISTS leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  source TEXT,
+  status TEXT NOT NULL CHECK (status IN ('new', 'contacted', 'qualified', 'converted', 'lost')),
+  notes TEXT,
+  assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_contact TIMESTAMP WITH TIME ZONE
+);
+
+-- Attendance (gym check-ins) table
+CREATE TABLE IF NOT EXISTS attendance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  check_in_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  check_out_time TIMESTAMP WITH TIME ZONE,
+  notes TEXT
+);
+
+-- Branding table
+CREATE TABLE IF NOT EXISTS branding (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID UNIQUE REFERENCES gyms(id) ON DELETE CASCADE,
+  logo_url TEXT,
+  primary_color TEXT DEFAULT '#3b82f6',
+  secondary_color TEXT DEFAULT '#10b981',
+  accent_color TEXT DEFAULT '#f59e0b',
+  custom_domain TEXT,
+  company_name TEXT NOT NULL
+);
+
+-- Audit Logs table
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  user_id UUID NOT NULL,
+  user_name TEXT NOT NULL,
+  action TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
+  ip_address TEXT NOT NULL,
+  details TEXT,
+  status TEXT NOT NULL CHECK (status IN ('success', 'failed'))
+);
+
+-- Integrations table
+CREATE TABLE IF NOT EXISTS integrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('payment', 'email', 'analytics', 'storage', 'communication')),
+  status TEXT NOT NULL CHECK (status IN ('active', 'inactive', 'error')),
+  api_key TEXT,
+  last_sync TIMESTAMP WITH TIME ZONE,
+  description TEXT NOT NULL
+);
+
+-- Equipment table
+CREATE TABLE IF NOT EXISTS equipment (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  category TEXT,
+  purchase_date DATE,
+  last_maintenance TIMESTAMP WITH TIME ZONE,
+  next_maintenance TIMESTAMP WITH TIME ZONE,
+  status TEXT NOT NULL CHECK (status IN ('operational', 'maintenance', 'out_of_service')),
+  notes TEXT
+);
+
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('info', 'warning', 'success', 'error')),
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Announcements table
+CREATE TABLE IF NOT EXISTS announcements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  target_audience TEXT NOT NULL CHECK (target_audience IN ('all', 'members', 'trainers', 'staff')),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE
+);
+
+-- WhatsApp Messages table
+CREATE TABLE IF NOT EXISTS whatsapp_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+  recipient_phone TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'sent', 'delivered', 'failed')),
+  sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  error_message TEXT
+);
+
+-- Invoice counter table for generating sequential invoice numbers
+CREATE TABLE IF NOT EXISTS invoice_counters (
+  gym_id UUID PRIMARY KEY REFERENCES gyms(id) ON DELETE CASCADE,
+  next_invoice_number INTEGER DEFAULT 1000 NOT NULL
+);
+
+-- Function to ensure invoice counter exists for a gym
+CREATE OR REPLACE FUNCTION ensure_invoice_counter(p_gym_id UUID)
+RETURNS void AS $$
+BEGIN
+  INSERT INTO invoice_counters (gym_id, next_invoice_number)
+  VALUES (p_gym_id, 1000)
+  ON CONFLICT (gym_id) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get next invoice number and increment
+CREATE OR REPLACE FUNCTION get_next_invoice_number(p_gym_id UUID)
+RETURNS TABLE(next_invoice_number TEXT) AS $$
+DECLARE
+  v_number INTEGER;
+BEGIN
+  -- Ensure counter exists
+  PERFORM ensure_invoice_counter(p_gym_id);
+
+  -- Get and increment counter
+  UPDATE invoice_counters
+  SET next_invoice_number = next_invoice_number + 1
+  WHERE gym_id = p_gym_id
+  RETURNING invoice_counters.next_invoice_number - 1 INTO v_number;
+
+  -- Return formatted invoice number
+  RETURN QUERY SELECT 'INV-' || v_number::TEXT;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_gym_admins_user_id ON gym_admins(user_id);
+CREATE INDEX IF NOT EXISTS idx_gym_admins_gym_id ON gym_admins(gym_id);
+CREATE INDEX IF NOT EXISTS idx_trainers_user_id ON trainers(user_id);
+CREATE INDEX IF NOT EXISTS idx_trainers_gym_id ON trainers(gym_id);
+CREATE INDEX IF NOT EXISTS idx_members_gym_id ON members(gym_id);
+CREATE INDEX IF NOT EXISTS idx_payments_gym_id ON payments(gym_id);
+CREATE INDEX IF NOT EXISTS idx_classes_gym_id ON classes(gym_id);
+CREATE INDEX IF NOT EXISTS idx_products_gym_id ON products(gym_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_gym_id ON attendance(gym_id);
+
+-- Enable Row Level Security (RLS) - Optional, can be enabled later
+-- ALTER TABLE gyms ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE members ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies can be added after initial setup
+-- For now, keeping RLS disabled for easier development

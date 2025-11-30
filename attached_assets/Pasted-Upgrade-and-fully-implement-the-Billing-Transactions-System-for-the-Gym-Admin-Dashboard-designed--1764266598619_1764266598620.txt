@@ -1,0 +1,271 @@
+Upgrade and fully implement the Billing + Transactions System for the Gym Admin Dashboard, designed specifically for Indian gyms.
+
+Each gym will have its own billing history, invoices, payments, dues, and revenue analytics.
+
+🇮🇳 India-Specific Requirements
+
+💰 Currency = INR only
+
+Use the rupee symbol ₹ everywhere.
+
+NEVER show $, USD, or any other currency.
+
+Format amounts like:
+
+₹499
+
+₹1,200
+
+₹75 / user
+
+📱 Payment methods commonly used in India:
+
+Cash
+
+UPI (Google Pay, PhonePe, Paytm, etc.)
+
+Card
+
+Optional Razorpay
+
+🔁 Partial payments and dues:
+
+When a visitor converts into a member, they may pay:
+
+Full amount
+
+Partial amount now, remaining amount later
+
+Billing system must track:
+
+Paid amount
+
+Due amount
+
+Payment history
+
+Outstanding balance
+
+🧾 All transactions must be logged
+
+Every single financial activity for a gym must be recorded.
+
+Includes:
+
+Membership payments
+
+Shop purchases
+
+Invoices
+
+Dues/arrears
+
+Partial payments
+
+Refunds
+
+Adjustments
+
+🧱 System Design Requirements
+✔ Multi-tenant structure
+
+Every payment belongs to a specific gym, based on gymId.
+
+Each gym sees only its own payments.
+
+✔ CRUD for Payments & Invoices
+
+Admin must be able to:
+
+Add payment (record payment)
+
+Add partial payment
+
+Mark dues paid
+
+Update payment method
+
+Edit or delete a payment
+
+Generate invoices
+
+Link payment ↔ invoice
+
+Track overdue invoices
+
+Track partial-paid invoices
+
+✔ Payment History Table (Gym-Level)
+
+The Payment History section must display:
+
+Member Name
+
+Amount Paid (₹)
+
+Pending Due (₹)
+
+Method (UPI/Cash/Card/Razorpay)
+
+Status (Paid / Pending / Partially Paid / Failed)
+
+Date
+
+Reference ID
+
+Notes
+
+Action Buttons (View / Edit / Delete)
+
+📊 Billing KPIs (Gym Admin View)
+
+Show the following KPIs at the top:
+
+Total Revenue (₹) for current month
+
+Total Paid Payments
+
+Pending Payments (Dues)
+
+Partial Payments Collected
+
+Membership Revenue vs Shop Revenue
+
+Charts:
+
+Revenue Trend (last 6 months)
+
+Payment method split (Cash/UPI/Card)
+
+Paid vs Pending ratio
+
+Member revenue contribution
+
+🔄 Workflow: Visitor → Lead → Customer → Payment
+
+Visitor enters → Admin adds Lead
+
+Lead converts to Member
+
+While converting, Admin enters:
+
+Amount paid now
+
+Amount due (if any)
+
+Billing system must:
+
+Save this as the first transaction
+
+Create a due record
+
+Update dashboard KPIs immediately
+
+Add to Payment History
+
+Allow Admin to take remaining payments anytime
+
+🗄 Data Behavior
+For each payment:
+
+Store:
+
+gymId
+
+memberId
+
+amountPaid
+
+amountDue
+
+totalAmount
+
+method
+
+status
+
+type (membership/shop/other)
+
+invoiceId (optional)
+
+reference
+
+notes
+
+timestamps
+
+For each due:
+
+Automatically derived from:
+due = totalAmount - amountPaid
+
+Marked as:
+
+pending
+
+partially_paid
+
+paid
+
+🧠 Additional Features to Add
+1. Auto Due Alerts
+
+Highlight members with pending dues.
+
+Add “Remind Member” button.
+
+2. Smart Filters
+
+Date range
+
+Payment method
+
+Status
+
+Member
+
+3. Invoice Enhancements
+
+Generate invoice with each payment
+
+Combine multiple payments into one invoice
+
+Show tax, discount, subtotal, total (all in ₹)
+
+4. Export Features
+
+Download billing as CSV
+
+Download invoice PDF (optional)
+
+5. Seamless Member Linking
+
+Payment history should appear in:
+
+Member profile
+
+Admin billing section
+
+🎯 Final Goal
+
+The result must be a powerful, production-ready Billing System for Gym Admins, with:
+
+100% INR support
+
+Full payment logging
+
+Full dues tracking
+
+Complete payment history
+
+Filters & KPIs
+
+Partial payments
+
+Lead → Customer → Payment workflow
+
+No USD anywhere
+
+Beautiful, responsive UI
+
+Make sure everything is implemented in Node.js + Express (backend) and React + Vite (frontend) using Replit DB, following best practices and modular code structure.

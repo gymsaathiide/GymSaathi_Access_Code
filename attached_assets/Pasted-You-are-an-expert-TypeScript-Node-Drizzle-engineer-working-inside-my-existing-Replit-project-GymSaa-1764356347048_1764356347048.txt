@@ -1,0 +1,225 @@
+You are an expert TypeScript/Node/Drizzle engineer working inside my existing Replit project “GymSaathi / Gym ERP”.
+
+We have already created a Supabase Postgres project and set up networking:
+
+Supabase DB is live and reachable.
+
+We already bought the IPv4 add-on in Supabase.
+
+In Replit Secrets there is a secret:
+
+DATABASE_URL = the Supabase connection string in this exact style
+postgresql://postgres:cMJrAOJig2dDzyJn@db.orukviniixuwylqtlwvk.supabase.co:5432/postgres?sslmode=require
+
+The app previously used Replit’s Neon Postgres via PGHOST, PGDATABASE, PGUSER, PGPASSWORD, etc.
+
+We already ran:
+
+NODE_TLS_REJECT_UNAUTHORIZED=0 npm run db:push
+
+
+and Drizzle said:
+
+[✓] Pulling schema from database...
+[✓] Changes applied
+
+
+So Supabase already has the full schema.
+Now I want you to finish the migration and wire the app fully to Supabase.
+
+Your job
+
+Use only DATABASE_URL everywhere
+
+Stop using PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD anywhere in the code
+
+Make the runtime app connect to Supabase with SSL, without needing NODE_TLS_REJECT_UNAUTHORIZED=0 in normal usage
+
+Keep the existing Drizzle schema & migrations exactly as they are
+
+Do not migrate or copy old data right now — just make the app talk to Supabase cleanly
+
+Update docs (replit.md) so future me knows we are now on Supabase
+
+Please make all code changes yourself and run the necessary commands.
+Don’t ask me questions; just follow the plan below.
+
+Step 1 – Fix drizzle.config.ts to use DATABASE_URL
+
+Open drizzle.config.ts and refactor it to:
+
+Read only process.env.DATABASE_URL
+
+Throw a clear error if DATABASE_URL is missing
+
+Use that URL in dbCredentials
+
+Set ssl.rejectUnauthorized = false in the drizzle config so drizzle-kit doesn’t fail with SELF_SIGNED_CERT_IN_CHAIN.
+
+Rough shape (adjust to fit the file):
+
+import { defineConfig } from "drizzle-kit";
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL must be set for drizzle-kit");
+}
+
+export default defineConfig({
+  out: "./migrations",
+  schema: "./shared/schema.ts",
+  dialect: "postgresql",
+  dbCredentials: {
+    url: connectionString,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  },
+});
+
+
+Remove the old PGHOST/PGDATABASE/PGUSER/PGPASSWORD logic completely.
+
+Then run:
+
+npm run db:push
+
+
+If it says “no changes” or similar, that’s fine.
+
+If you still see TLS errors, adjust config until db:push works without using NODE_TLS_REJECT_UNAUTHORIZED=0 in the shell.
+
+Step 2 – Wire runtime DB to Supabase in server/db.ts
+
+Now update server/db.ts so the running app also uses DATABASE_URL + SSL and doesn’t depend on PGHOST, etc.
+
+Refactor server/db.ts to:
+
+Import Pool from pg and drizzle from drizzle-orm/node-postgres (which it probably already does)
+
+Build the Pool config only from process.env.DATABASE_URL
+
+Add ssl: { rejectUnauthorized: false } to avoid TLS chain errors at runtime
+
+Target shape:
+
+// server/db.ts
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL must be set");
+}
+
+const pool = new Pool({
+  connectionString,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
+export const db = drizzle(pool);
+export default db;
+
+
+Remove any code that manually combines PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, etc.
+
+If there is logic that reads and executes server/db-setup.sql (for attendance indexes), keep that behaviour — it should now run against Supabase via this pool.
+
+Step 3 – Make sure all DB access goes through server/db.ts
+
+Search the project for any direct pg connections or manual connection strings that bypass server/db.ts:
+
+If you find any code creating its own Pool / Client with PGHOST etc, refactor it to import and use the shared db from server/db.ts instead.
+
+Ensure server/storage.ts and all route handlers rely only on the db instance.
+
+Goal: one single connection definition in server/db.ts, nothing else.
+
+Step 4 – Add a DB health-check route
+
+Create a tiny API endpoint to confirm Supabase connectivity at runtime:
+
+In server/routes.ts (or similar), add:
+
+app.get("/api/health/db", async (_req, res) => {
+  try {
+    // pick any cheap query – e.g. select 1 or select count(*) from gyms
+    const result = await db.execute(/* a simple SQL or drizzle call */);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("DB health check failed", err);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+
+Use whatever simple query style matches the existing code.
+
+We’ll use this for a quick smoke test in the browser.
+
+Step 5 – Remove dependence on old PG env vars
+
+The runtime code should now only use DATABASE_URL. Do the following cleanup:
+
+Confirm the project still builds and runs without PGHOST, PGDATABASE, etc.
+(You don’t have to change the Replit secrets for them yet; just make sure nothing reads them anymore.)
+
+Update replit.md (or any internal docs) so they clearly say:
+
+We are now using Supabase Postgres.
+
+DATABASE_URL is the only DB secret required.
+
+Drizzle CLI also uses DATABASE_URL.
+
+Do not delete the old secrets from Replit; I’ll do that later myself.
+
+Step 6 – Restart & smoke test
+
+Please:
+
+Restart the dev server in Replit (npm run dev or the existing command).
+
+Use the built-in Replit browser preview to:
+
+Hit /api/health/db and confirm { ok: true }.
+
+Login as an existing user (admin / superadmin).
+
+Create or edit at least one record (example: add a test gym, lead, or member).
+
+Confirm there are no DB connection errors in the console.
+
+If you hit any errors:
+
+Fix them yourself.
+
+Only when everything is clean, summarize what you changed.
+
+Step 7 – Final summary for me
+
+When you’re done, please give me a short, clear summary:
+
+Which files you changed (paths).
+
+What exactly you updated in each file.
+
+How to run DB migrations going forward (which command, which env var).
+
+A sentence confirming: “The app is now fully wired to Supabase via DATABASE_URL”.
+
+Don’t touch:
+
+Email/WhatsApp integrations
+
+Any QR attendance business logic
+
+Any frontend behaviour unrelated to DB connection
+
+Just complete the Supabase DB integration + runtime wiring + health-check.
+
+End of prompt.
