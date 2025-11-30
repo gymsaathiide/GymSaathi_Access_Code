@@ -310,5 +310,79 @@ export const supabaseRepo = {
       return false;
     }
     return true;
+  },
+
+  async createGym(gymData: {
+    name: string;
+    owner: string;
+    email: string;
+    phone: string;
+    plan: string;
+    status: string;
+    members?: number;
+    revenue?: string;
+    address?: string | null;
+    logo_url?: string | null;
+  }): Promise<SupabaseGym | null> {
+    const { data, error } = await supabase
+      .from('gyms')
+      .insert([{
+        ...gymData,
+        members: gymData.members || 0,
+        revenue: gymData.revenue || '0',
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Supabase createGym error:', error);
+      return null;
+    }
+    return data as SupabaseGym;
+  },
+
+  async createGymAdmin(gymId: string, userId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('gym_admins')
+      .insert([{
+        gym_id: gymId,
+        user_id: userId,
+        is_primary: 1
+      }]);
+    
+    if (error) {
+      console.error('Supabase createGymAdmin error:', error);
+      return false;
+    }
+    return true;
+  },
+
+  async updateGym(gymId: string, updateData: Partial<SupabaseGym>): Promise<SupabaseGym | null> {
+    const { data, error } = await supabase
+      .from('gyms')
+      .update(updateData)
+      .eq('id', gymId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Supabase updateGym error:', error);
+      return null;
+    }
+    return data as SupabaseGym;
+  },
+
+  async deleteGym(gymId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('gyms')
+      .delete()
+      .eq('id', gymId);
+    
+    if (error) {
+      console.error('Supabase deleteGym error:', error);
+      return false;
+    }
+    return true;
   }
 };

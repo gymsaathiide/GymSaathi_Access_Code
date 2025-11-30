@@ -1096,23 +1096,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/gyms', requireRole('superadmin'), async (req, res) => {
     try {
-      const gyms = await db.select().from(schema.gyms);
+      let gyms: any[] = [];
       
-      // Get member counts for each gym from the members table
-      const gymsWithMemberCounts = await Promise.all(gyms.map(async (gym) => {
-        const memberCountResult = await db.select({ count: sql<number>`count(*)` })
-          .from(schema.members)
-          .where(eq(schema.members.gymId, gym.id));
+      if (isDbAvailable()) {
+        gyms = await db!.select().from(schema.gyms);
         
-        const memberCount = Number(memberCountResult[0]?.count || 0);
+        // Get member counts for each gym from the members table
+        const gymsWithMemberCounts = await Promise.all(gyms.map(async (gym) => {
+          const memberCountResult = await db!.select({ count: sql<number>`count(*)` })
+            .from(schema.members)
+            .where(eq(schema.members.gymId, gym.id));
+          
+          const memberCount = Number(memberCountResult[0]?.count || 0);
+          
+          return {
+            ...gym,
+            members: memberCount,
+          };
+        }));
         
-        return {
-          ...gym,
-          members: memberCount,
-        };
-      }));
-      
-      res.json(gymsWithMemberCounts.map(transformGym));
+        res.json(gymsWithMemberCounts.map(transformGym));
+      } else {
+        const supabaseGyms = await supabaseRepo.getAllGyms();
+        gyms = supabaseGyms.map(g => ({
+          id: g.id,
+          name: g.name,
+          owner: g.owner,
+          email: g.email,
+          phone: g.phone,
+          plan: g.plan,
+          status: g.status,
+          members: g.members,
+          revenue: g.revenue,
+          address: g.address,
+          logoUrl: g.logo_url,
+          createdAt: g.created_at
+        }));
+        res.json(gyms.map(transformGym));
+      }
     } catch (error: any) {
       console.error('Error fetching gyms:', error);
       res.status(500).json({ error: error.message });
@@ -1121,23 +1142,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/gyms/recent', requireRole('superadmin'), async (req, res) => {
     try {
-      const gyms = await db.select().from(schema.gyms).orderBy(desc(schema.gyms.createdAt)).limit(10);
+      let gyms: any[] = [];
       
-      // Get member counts for each gym from the members table
-      const gymsWithMemberCounts = await Promise.all(gyms.map(async (gym) => {
-        const memberCountResult = await db.select({ count: sql<number>`count(*)` })
-          .from(schema.members)
-          .where(eq(schema.members.gymId, gym.id));
+      if (isDbAvailable()) {
+        gyms = await db!.select().from(schema.gyms).orderBy(desc(schema.gyms.createdAt)).limit(10);
         
-        const memberCount = Number(memberCountResult[0]?.count || 0);
+        // Get member counts for each gym from the members table
+        const gymsWithMemberCounts = await Promise.all(gyms.map(async (gym) => {
+          const memberCountResult = await db!.select({ count: sql<number>`count(*)` })
+            .from(schema.members)
+            .where(eq(schema.members.gymId, gym.id));
+          
+          const memberCount = Number(memberCountResult[0]?.count || 0);
+          
+          return {
+            ...gym,
+            members: memberCount,
+          };
+        }));
         
-        return {
-          ...gym,
-          members: memberCount,
-        };
-      }));
-      
-      res.json(gymsWithMemberCounts.map(transformGym));
+        res.json(gymsWithMemberCounts.map(transformGym));
+      } else {
+        const supabaseGyms = await supabaseRepo.getAllGyms();
+        gyms = supabaseGyms.slice(0, 10).map(g => ({
+          id: g.id,
+          name: g.name,
+          owner: g.owner,
+          email: g.email,
+          phone: g.phone,
+          plan: g.plan,
+          status: g.status,
+          members: g.members,
+          revenue: g.revenue,
+          address: g.address,
+          logoUrl: g.logo_url,
+          createdAt: g.created_at
+        }));
+        res.json(gyms.map(transformGym));
+      }
     } catch (error: any) {
       console.error('Error fetching recent gyms:', error);
       res.status(500).json({ error: error.message });
@@ -1146,7 +1188,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/gyms/:id', requireRole('superadmin'), async (req, res) => {
     try {
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, req.params.id)).limit(1).then(rows => rows[0]);
+      let gym: any = null;
+      
+      if (isDbAvailable()) {
+        gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, req.params.id)).limit(1).then(rows => rows[0]);
+      } else {
+        const supabaseGym = await supabaseRepo.getGymById(req.params.id);
+        if (supabaseGym) {
+          gym = {
+            id: supabaseGym.id,
+            name: supabaseGym.name,
+            owner: supabaseGym.owner,
+            email: supabaseGym.email,
+            phone: supabaseGym.phone,
+            plan: supabaseGym.plan,
+            status: supabaseGym.status,
+            members: supabaseGym.members,
+            revenue: supabaseGym.revenue,
+            address: supabaseGym.address,
+            logoUrl: supabaseGym.logo_url,
+            createdAt: supabaseGym.created_at
+          };
+        }
+      }
+      
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
@@ -1169,44 +1234,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Password must be at least 8 characters long' });
       }
 
-      const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, adminEmail)).limit(1).then(rows => rows[0]);
+      let existingUser: any = null;
+      let gym: any = null;
+      let newUser: any = null;
+
+      if (isDbAvailable()) {
+        existingUser = await db!.select().from(schema.users).where(eq(schema.users.email, adminEmail)).limit(1).then(rows => rows[0]);
+      } else {
+        existingUser = await supabaseRepo.getUserByEmail(adminEmail);
+      }
 
       if (existingUser) {
         return res.status(400).json({ error: 'Admin email already exists' });
       }
 
       const revenue = gymData.plan === 'enterprise' ? '2500' : gymData.plan === 'professional' ? '1500' : '800';
-      const gym = await db.insert(schema.gyms).values({
-        name: gymData.name,
-        owner: gymData.owner,
-        email: gymData.email,
-        phone: gymData.phone,
-        plan: gymData.plan,
-        status: gymData.status,
-        members: 0,
-        revenue: revenue,
-        address: gymData.address || null,
-        logoUrl: gymData.logoUrl || null
-      }).returning().then(rows => rows[0]);
-
       const passwordHash = await bcrypt.hash(adminPassword, 10);
-      console.log('🔐 Creating admin user with email:', adminEmail);
 
-      const newUser = await db.insert(schema.users).values({
-        email: adminEmail,
-        passwordHash: passwordHash,
-        role: 'admin',
-        name: `${gym.owner} (Admin)`,
-        phone: gym.phone || '+1-000-000-0000',
-        isActive: 1
-      }).returning().then(rows => rows[0]);
+      if (isDbAvailable()) {
+        gym = await db!.insert(schema.gyms).values({
+          name: gymData.name,
+          owner: gymData.owner,
+          email: gymData.email,
+          phone: gymData.phone,
+          plan: gymData.plan,
+          status: gymData.status,
+          members: 0,
+          revenue: revenue,
+          address: gymData.address || null,
+          logoUrl: gymData.logoUrl || null
+        }).returning().then(rows => rows[0]);
 
-      console.log('✅ Admin user created successfully:', newUser.id, newUser.email);
+        console.log('🔐 Creating admin user with email:', adminEmail);
 
-      await db.insert(schema.gymAdmins).values({
-        gymId: gym.id,
-        userId: newUser.id
-      });
+        newUser = await db!.insert(schema.users).values({
+          email: adminEmail,
+          passwordHash: passwordHash,
+          role: 'admin',
+          name: `${gym.owner} (Admin)`,
+          phone: gym.phone || '+1-000-000-0000',
+          isActive: 1
+        }).returning().then(rows => rows[0]);
+
+        console.log('✅ Admin user created successfully:', newUser.id, newUser.email);
+
+        await db!.insert(schema.gymAdmins).values({
+          gymId: gym.id,
+          userId: newUser.id
+        });
+      } else {
+        const supabaseGym = await supabaseRepo.createGym({
+          name: gymData.name,
+          owner: gymData.owner,
+          email: gymData.email,
+          phone: gymData.phone,
+          plan: gymData.plan,
+          status: gymData.status,
+          members: 0,
+          revenue: revenue,
+          address: gymData.address || null,
+          logo_url: gymData.logoUrl || null
+        });
+
+        if (!supabaseGym) {
+          return res.status(500).json({ error: 'Failed to create gym' });
+        }
+
+        gym = {
+          id: supabaseGym.id,
+          name: supabaseGym.name,
+          owner: supabaseGym.owner,
+          email: supabaseGym.email,
+          phone: supabaseGym.phone,
+          plan: supabaseGym.plan,
+          status: supabaseGym.status,
+          members: supabaseGym.members,
+          revenue: supabaseGym.revenue,
+          address: supabaseGym.address,
+          logoUrl: supabaseGym.logo_url,
+          createdAt: supabaseGym.created_at
+        };
+
+        console.log('🔐 Creating admin user with email:', adminEmail);
+
+        const supabaseUser = await supabaseRepo.createUser({
+          email: adminEmail,
+          password_hash: passwordHash,
+          role: 'admin',
+          name: `${gym.owner} (Admin)`,
+          phone: gym.phone || '+1-000-000-0000',
+          is_active: 1
+        });
+
+        if (!supabaseUser) {
+          return res.status(500).json({ error: 'Failed to create admin user' });
+        }
+
+        newUser = {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          name: supabaseUser.name
+        };
+
+        console.log('✅ Admin user created successfully:', newUser.id, newUser.email);
+
+        await supabaseRepo.createGymAdmin(gym.id, newUser.id);
+      }
 
       const loginUrl = process.env.REPLIT_DEV_DOMAIN 
         ? `https://${process.env.REPLIT_DEV_DOMAIN}/login`
@@ -1229,9 +1362,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tempPassword: adminPassword,
       }).catch(err => console.error('[notification] Failed to send gym admin welcome WhatsApp:', err));
 
-      const currentUser = await storage.getUserById(req.session!.userId!);
-      await auditService.logGymCreated(req, req.session!.userId!, currentUser?.name || 'System', gym.name, gym.id);
-      await auditService.logUserCreated(req, req.session!.userId!, currentUser?.name || 'System', `${gym.owner} (Admin)`, 'admin');
+      try {
+        const currentUser = await userAccess.getUserById(req.session!.userId!);
+        await auditService.logGymCreated(req, req.session!.userId!, currentUser?.name || 'System', gym.name, gym.id);
+        await auditService.logUserCreated(req, req.session!.userId!, currentUser?.name || 'System', `${gym.owner} (Admin)`, 'admin');
+      } catch (e) {
+        console.error('Audit logging error:', e);
+      }
 
       res.status(201).json({ 
         gym: transformGym(gym), 
@@ -1247,7 +1384,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/gyms/:id', requireRole('superadmin'), async (req, res) => {
     try {
       console.log('Updating gym with body:', req.body);
-      const gym = await db.update(schema.gyms).set(req.body).where(eq(schema.gyms.id, req.params.id)).returning().then(rows => rows[0]);
+      let gym: any = null;
+      
+      if (isDbAvailable()) {
+        gym = await db!.update(schema.gyms).set(req.body).where(eq(schema.gyms.id, req.params.id)).returning().then(rows => rows[0]);
+      } else {
+        const updateData: any = { ...req.body };
+        if (updateData.logoUrl !== undefined) {
+          updateData.logo_url = updateData.logoUrl;
+          delete updateData.logoUrl;
+        }
+        const supabaseGym = await supabaseRepo.updateGym(req.params.id, updateData);
+        if (supabaseGym) {
+          gym = {
+            id: supabaseGym.id,
+            name: supabaseGym.name,
+            owner: supabaseGym.owner,
+            email: supabaseGym.email,
+            phone: supabaseGym.phone,
+            plan: supabaseGym.plan,
+            status: supabaseGym.status,
+            members: supabaseGym.members,
+            revenue: supabaseGym.revenue,
+            address: supabaseGym.address,
+            logoUrl: supabaseGym.logo_url,
+            createdAt: supabaseGym.created_at
+          };
+        }
+      }
+      
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
@@ -1260,12 +1425,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/gyms/:id/suspend', requireRole('superadmin'), async (req, res) => {
     try {
-      const existingGym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, req.params.id)).limit(1).then(rows => rows[0]);
-      if (!existingGym) {
-        return res.status(404).json({ error: 'Gym not found' });
+      let existingGym: any = null;
+      let gym: any = null;
+      
+      if (isDbAvailable()) {
+        existingGym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, req.params.id)).limit(1).then(rows => rows[0]);
+        if (!existingGym) {
+          return res.status(404).json({ error: 'Gym not found' });
+        }
+        const newStatus = existingGym.status === 'suspended' ? 'active' : 'suspended';
+        gym = await db!.update(schema.gyms).set({ status: newStatus as any }).where(eq(schema.gyms.id, req.params.id)).returning().then(rows => rows[0]);
+      } else {
+        const supabaseGym = await supabaseRepo.getGymById(req.params.id);
+        if (!supabaseGym) {
+          return res.status(404).json({ error: 'Gym not found' });
+        }
+        const newStatus = supabaseGym.status === 'suspended' ? 'active' : 'suspended';
+        const updatedGym = await supabaseRepo.updateGym(req.params.id, { status: newStatus });
+        if (updatedGym) {
+          gym = {
+            id: updatedGym.id,
+            name: updatedGym.name,
+            owner: updatedGym.owner,
+            email: updatedGym.email,
+            phone: updatedGym.phone,
+            plan: updatedGym.plan,
+            status: updatedGym.status,
+            members: updatedGym.members,
+            revenue: updatedGym.revenue,
+            address: updatedGym.address,
+            logoUrl: updatedGym.logo_url,
+            createdAt: updatedGym.created_at
+          };
+        }
       }
-      const newStatus = existingGym.status === 'suspended' ? 'active' : 'suspended';
-      const gym = await db.update(schema.gyms).set({ status: newStatus as any }).where(eq(schema.gyms.id, req.params.id)).returning().then(rows => rows[0]);
+      
       res.json(transformGym(gym));
     } catch (error: any) {
       console.error(`Error suspending gym ${req.params.id}:`, error);
@@ -1275,7 +1469,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/gyms/:id', requireRole('superadmin'), async (req, res) => {
     try {
-      await db.delete(schema.gyms).where(eq(schema.gyms.id, req.params.id));
+      if (isDbAvailable()) {
+        await db!.delete(schema.gyms).where(eq(schema.gyms.id, req.params.id));
+      } else {
+        await supabaseRepo.deleteGym(req.params.id);
+      }
       res.status(204).send();
     } catch (error: any) {
       console.error(`Error deleting gym ${req.params.id}:`, error);
