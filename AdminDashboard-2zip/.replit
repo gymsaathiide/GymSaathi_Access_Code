@@ -1,0 +1,50 @@
+modules = ["nodejs-20", "postgresql-16"]
+[nix]
+channel = "stable-25_05"
+packages = ["unzip"]
+
+[agent]
+expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 34087
+externalPort = 3002
+
+[[ports]]
+localPort = 38315
+externalPort = 3000
+
+[[ports]]
+localPort = 42291
+externalPort = 3001
+
+[objectStorage]
+defaultBucketID = "replit-objstore-092cb468-e7bd-43bb-9c94-01cd493426ea"

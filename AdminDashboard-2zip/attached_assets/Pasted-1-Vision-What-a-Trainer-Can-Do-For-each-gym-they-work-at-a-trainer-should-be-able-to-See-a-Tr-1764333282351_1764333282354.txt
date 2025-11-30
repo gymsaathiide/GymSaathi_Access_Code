@@ -1,0 +1,564 @@
+1️⃣ Vision: What a Trainer Can Do
+
+For each gym they work at, a trainer should be able to:
+
+See a Trainer Dashboard with:
+
+Today’s classes
+
+Today’s attendance
+
+Assigned members
+
+New leads
+
+See members of that gym, with:
+
+Basic profile
+
+Attendance history
+
+Active plan / expiry
+
+See and run classes that the admin scheduled:
+
+Today / this week’s schedule
+
+Who has booked
+
+Mark attendance (Attended / No-show)
+
+See attendance KPIs for that gym:
+
+Check-ins today
+
+Weekly trends
+
+“Low attendance” members
+
+Work with leads:
+
+See gym leads list
+
+Add new lead quickly
+
+Copy/share that gym’s enquiry form link
+
+Only see data for the gym currently selected, even if they work at multiple gyms.
+
+Admins can:
+
+Add trainers to their gym
+
+Remove / deactivate trainers
+
+Control what each trainer can see (basic permissions)
+
+2️⃣ Data Model – Multi-Gym Trainers
+
+You already have a trainers table that links trainers to gyms. Let’s standardize it:
+
+trainers {
+  id           uuid PK
+  gymId        uuid FK gyms
+  userId       uuid FK users     // same user can have many trainer rows for many gyms
+  role         text              // 'trainer' or 'head_trainer' (future)
+  status       text              // 'active' | 'inactive'
+  createdAt    timestamptz
+}
+
+
+Rules:
+
+A user can have multiple trainer records, one per gym.
+
+Trainer queries must always filter by gymId + userId.
+
+When trainer logs in, they see only gyms where status='active'.
+
+3️⃣ Admin Side – Managing Trainers
+A. Admin Permissions
+
+Only gym admins can:
+
+Add existing user as trainer to their gym
+
+Invite a new trainer (create user + trainer row)
+
+Change trainer status (active / inactive)
+
+See list of trainers for their gym
+
+B. New Admin Page: “Trainers”
+
+In Admin sidebar (for a gym):
+
+Dashboard
+
+Members
+
+Leads
+
+Trainers ✅
+
+Classes
+
+Attendance
+
+Billing
+
+Shop
+
+Trainers Page UI
+
+Top:
+
+KPI cards:
+
+Total Trainers
+
+Active Trainers
+
+Classes This Week (by trainers)
+
+Members Assigned (optional future)
+
+Then:
+
+Button: “+ Add Trainer”
+Opens modal with:
+
+Option 1: “Select existing user” (search by email)
+
+Option 2: “Invite new trainer”
+
+Fields:
+
+Name
+
+Email
+
+Phone
+
+Status (Active/Inactive)
+
+Trainers table:
+
+Name
+
+Email
+
+Status pill
+
+Gyms (for superadmin) or just this gym
+
+Classes this week
+
+Actions: Edit, Deactivate
+
+When a trainer is added:
+
+Create users row (if new)
+
+Create trainers row for this gymId
+
+Send email + WhatsApp with:
+
+Login link
+
+Credentials / “set password” link
+
+Gym name
+
+4️⃣ Trainer UX – Multi-Gym Journey
+A. Gym Selector
+
+When trainer logs in and has more than one gym:
+
+Show a simple page:
+
+“Choose your gym”
+
+Cards: Gym name, city, role (Trainer), “Enter”
+
+After they pick a gym, store activeGymId in session / React state.
+
+Top navbar (on all trainer pages):
+
+Left: Gym ERP / Gymsaathi logo
+
+Center: Dropdown Current Gym: PowerFit ▾ → switch gyms
+
+Right: Trainer avatar + name
+
+B. Trainer Sidebar Layout (Per Gym)
+
+Sidebar entries:
+
+Dashboard
+
+Members
+
+Classes
+
+Leads
+
+Attendance
+
+(optional) Tools / Enquiry Link
+
+Same look as your Admin sidebar so it feels consistent.
+
+5️⃣ Trainer Dashboard – Per Gym
+
+Route: /trainer with activeGymId
+
+Top greeting:
+“Welcome, {TrainerName}! Here’s your day at {GymName}.”
+
+KPIs row:
+
+Today’s Classes
+
+Number of classes assigned to this trainer today
+
+Subtext: “X upcoming, Y finished”
+
+Members Seen Today
+
+Count of unique members marked “Attended” in today’s classes
+
+Check-ins Today (Gym)
+
+Total member check-ins for this gym today (read-only, from attendance table)
+
+New Leads
+
+Leads created in last 7 days (gym-wide)
+
+Middle section: “Today’s Schedule”
+
+List of this trainer’s classes today:
+
+Time, Class Name, Location
+
+Booked / Capacity badge
+
+Status (Scheduled / In progress / Completed)
+
+Button: “Open Class” → goes to manage attendance view
+
+Bottom section: “Quick Actions”
+
+Buttons:
+
+“View Members”
+
+“Add New Lead”
+
+“Share Enquiry Form” → copy link for this gym
+
+“View Attendance Stats”
+
+All responsive: 2 columns on desktop, 1 column on mobile.
+
+6️⃣ Trainer → Members Page
+
+Route: /trainer/members
+
+Trainer needs a read-only but rich member view:
+
+Header filters:
+
+Search by name / phone
+
+Filter by membership status: Active / Expired / Trial
+
+Sort by: Name, Last Visit, Join Date
+
+Members table:
+
+Member name
+
+Phone
+
+Plan name
+
+Days left / Expired label
+
+Last check-in date
+
+Actions: “View Profile”
+
+Member Profile Drawer:
+
+Top: Name, plan, expiry, primary goal
+
+Tabs:
+
+Overview
+
+Basic info, start date, notes
+
+Attendance
+
+List of last 10 visits
+
+Badge for number of visits in last 30 days
+
+Classes
+
+Upcoming & past class bookings
+
+Notes
+
+Trainer’s personal notes (editable)
+
+Trainers cannot change billing or membership details – only view.
+
+7️⃣ Trainer → Classes Page
+
+Route: /trainer/classes
+
+Top KPIs:
+
+Classes Today
+
+Classes This Week
+
+Average attendance rate (last 30 days)
+
+Schedule section:
+
+Filters:
+
+Date (Today / This Week / Custom)
+
+Status: Scheduled / Completed / Cancelled
+
+List:
+
+Date + Time
+
+Class Name
+
+Location
+
+Booked / Capacity
+
+Status
+
+“Manage Attendance” button
+
+Manage Attendance view:
+
+When trainer clicks a class:
+
+Show class header: Time, location, capacity, description
+
+Member list:
+
+Name
+
+Booking status (Booked / Waitlisted)
+
+Toggle: Attended / No-show
+
+Optional note per member
+
+Buttons:
+
+“Mark all as Attended”
+
+“Save Attendance”
+
+Trainer cannot:
+
+Change class time
+
+Change capacity
+
+Add/remove trainer
+(all controlled by admin)
+
+8️⃣ Trainer → Leads & Enquiry
+
+Route: /trainer/leads
+
+Trainer helps convert visitors to members, but within one gym only.
+
+Leads page:
+
+KPIs:
+
+New leads this week
+
+Converted leads this month
+
+Follow-ups due today
+
+Table:
+
+Name
+
+Phone
+
+Source (Walk-in, Enquiry Form, Referral)
+
+Status (New, Contacted, Interested, Converted, Lost)
+
+Next follow-up date
+
+Actions: View / Update
+
+Add Lead button:
+
+Opens a very simple, mobile-friendly form:
+
+Name
+
+Phone
+
+Goal
+
+Source
+
+Notes
+
+Next follow-up date
+
+Status defaults to New.
+
+Lead Detail Drawer:
+
+Trainer can:
+
+Update status: New → Contacted → Interested → Converted / Lost
+
+Add notes & follow-up date
+
+Trainer cannot actually create the member account (that stays with Admin), but they can mark Converted when they know the sale is done.
+
+Enquiry Form shortcut:
+
+On top-right of Leads page:
+
+Button: “Copy Enquiry Form Link”
+
+Copies the gym-specific enquiry URL to clipboard
+
+Text: “Share this link with prospects. Enquiries land directly here.”
+
+9️⃣ Trainer → Attendance Analytics
+
+Route: /trainer/attendance
+
+Trainers see gym-level attendance metrics in read-only mode:
+
+KPIs:
+
+Check-ins Today
+
+Check-ins Last 7 Days
+
+Unique members this week
+
+Charts:
+
+Line/Bar chart: Daily check-ins (last 14 days)
+
+Small list: “Members who haven’t visited in 7+ days” (just to help follow-up)
+
+No editing, just insights.
+
+🔟 API & Permissions Summary (High Level)
+
+Backend rules:
+
+Every trainer endpoint must:
+
+Authenticate session (role = trainer)
+
+Use activeGymId + userId to filter data:
+
+Members where members.gymId = activeGymId
+
+Classes where classes.trainerId = loggedInUserId AND gymId = activeGymId
+
+Leads where leads.gymId = activeGymId
+
+Attendance where attendance.gymId = activeGymId
+
+Frontend:
+
+On login: fetch list of gyms where this user is an active trainer.
+
+Store activeGymId in React state / context.
+
+All React Query hooks use activeGymId in their keys.
+
+1️⃣1️⃣ Replit Prompt (You Can Paste This)
+
+Here’s a short version you can paste:
+
+“In our Gymsaathi ERP (React + TS + Tailwind + shadcn on frontend, Express + TS + Drizzle + Postgres on backend), design and implement a production-ready trainer system with multi-gym support.
+
+Requirements:
+
+A user with role trainer can be linked to multiple gyms via a trainers table (userId + gymId + status).
+
+Trainer must choose an active gym after login. All data is scoped to activeGymId.
+
+Admin-only ‘Trainers’ page where gym admins can:
+
+Add existing users as trainers to their gym
+
+Invite new trainers (create user + trainer row)
+
+Activate/deactivate trainers
+
+See KPIs about trainers
+
+Trainer dashboard per gym with KPIs:
+
+Today’s Classes (for that trainer)
+
+Members Seen Today (attended classes)
+
+Gym Check-ins Today
+
+New Leads
+
+‘Today’s Schedule’ list and quick actions (View Members, Add Lead, Share Enquiry Link, View Attendance Stats)
+
+Trainer → Members page:
+
+Table of gym members (name, phone, plan, last visit)
+
+Search + filters
+
+Member profile drawer with tabs: Overview, Attendance, Classes, Notes
+
+Trainer → Classes page:
+
+List of this trainer’s classes with filters
+
+Manage Attendance view to mark Attended / No-show
+
+Trainer → Leads page:
+
+KPIs, table, add lead form
+
+Status flow: New → Contacted → Interested → Converted / Lost
+
+Button to copy the gym’s enquiry form link
+
+Trainer → Attendance page:
+
+Read-only KPIs and charts for gym attendance
+
+All pages must be responsive, use our existing dark/light theme, and sit under a left sidebar layout with a top activeGymId selector.
+
+Use TanStack Query for data fetching with proper cache keys using activeGymId and userId.
+
+Please wire this into the existing codebase cleanly, reusing existing components where possible.”

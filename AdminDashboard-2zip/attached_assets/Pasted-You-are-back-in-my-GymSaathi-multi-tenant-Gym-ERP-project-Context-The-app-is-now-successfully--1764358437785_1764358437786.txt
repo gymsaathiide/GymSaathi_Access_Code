@@ -1,0 +1,166 @@
+You are back in my GymSaathi (multi-tenant Gym ERP) project.
+
+Context:
+
+The app is now successfully connected to Supabase Postgres via DATABASE_URL.
+
+server/db.ts has been updated to use Supabase and the health endpoint /api/health/db returns {"ok": true, "gymsCount": "5"}.
+
+npm run db:push works and schema is in Supabase.
+
+The login page loads demo accounts from the Supabase DB.
+
+Now I want you to do post-migration cleanup + safety so the project is production-ready and not confusing in future.
+
+Please follow these steps and modify the codebase yourself.
+
+1. Remove any leftover usage of old PG env vars
+
+Search the whole project for:
+
+PGHOST
+
+PGPORT
+
+PGDATABASE
+
+PGUSER
+
+PGPASSWORD
+
+Tasks:
+
+Confirm that no runtime code depends on those env vars anymore.
+
+If any references still exist (comments or unused code), either:
+
+Remove them, or
+
+Update them to say: “Deprecated, we now use Supabase DATABASE_URL”.
+
+Do NOT touch Replit Secrets; I’ll remove old PG* secrets myself later.
+Just make sure the code runs purely on DATABASE_URL.
+
+2. Verify that all DB access goes through server/db.ts
+
+I want exactly one place that creates the DB connection.
+
+Tasks:
+
+Confirm that server/db.ts is the only file that constructs a Pool or connects to Postgres.
+
+If any other file creates its own Pool, Client, or reads DATABASE_URL directly:
+
+Refactor it to import and use the shared db from server/db.ts instead.
+
+Goal:
+
+“All database queries (Drizzle or raw SQL) go through the exported db instance from server/db.ts.”
+
+3. Add a DB sanity check script (optional but helpful)
+
+Create a small Node script, e.g. scripts/db-check.ts (or similar), that:
+
+Connects using the same db / DATABASE_URL
+
+Runs a few quick checks, for example:
+
+SELECT COUNT(*) FROM gyms
+
+SELECT COUNT(*) FROM users
+
+Logs a small summary like:
+
+DB OK:
+  gyms: 5
+  users: 4
+
+
+Add an npm script in package.json, for example:
+
+"scripts": {
+  "db:check": "ts-node scripts/db-check.ts"
+}
+
+
+Use the existing TypeScript tooling in the repo (ts-node / tsx, whichever is already used).
+
+This will help me quickly verify DB connectivity in the future.
+
+4. Confirm Drizzle CLI uses the same DATABASE_URL
+
+Re-check drizzle.config.ts:
+
+It should use process.env.DATABASE_URL only.
+
+It should not reference PGHOST or any other old env var.
+
+SSL settings should be compatible with Supabase (you already made db:push work; just keep that configuration stable).
+
+Run once:
+
+npm run db:push
+
+
+Just to confirm it still works after your changes.
+
+5. Improve replit.md documentation
+
+Update replit.md (or the main project README if that’s the convention) with a short “Database” section that clearly explains:
+
+We now use Supabase Postgres as the primary DB.
+
+The only required DB env var is:
+
+DATABASE_URL → Supabase Postgres connection string (with ?sslmode=require).
+
+How to:
+
+Run migrations: npm run db:push
+
+Run the health check: curl http://localhost:5000/api/health/db
+
+(Optional) Run npm run db:check once you add the script.
+
+Also add a one-line note:
+
+“Old Replit Neon PG env vars (PGHOST, PGDATABASE, etc.) are now deprecated and should not be used in new code.”
+
+6. Final verification
+
+After all code changes:
+
+Restart the dev server.
+
+Hit /api/health/db and confirm { ok: true }.
+
+Log in as superadmin and:
+
+Open Gyms, Members, Leads, Attendance, etc.
+
+Create one small test record (e.g. a test lead or test member).
+
+Confirm there are no DB connection errors in the server console.
+
+7. Final summary back to me
+
+When you’re done, please summarize:
+
+Which files you changed.
+
+Confirmation that:
+
+All DB connections use DATABASE_URL via server/db.ts.
+
+drizzle.config.ts uses DATABASE_URL only.
+
+No runtime code references PGHOST/PGUSER/etc.
+
+How to use:
+
+npm run db:push
+
+npm run db:check (if you implemented it)
+
+Don’t change business logic (attendance, QR, leads, trainers, billing, etc.).
+Just cleanup and harden the DB integration.

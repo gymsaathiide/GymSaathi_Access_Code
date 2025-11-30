@@ -1,0 +1,93 @@
+Prompt for Replit AI (Supabase Migration)
+
+We have a multi-tenant Gym ERP called GymSaathi built on Replit with:
+
+Frontend: React 18 + TypeScript + Vite + Tailwind + Radix + shadcn/ui + TanStack Query + Wouter
+
+Backend: Express + TypeScript + Drizzle ORM + Neon/Replit PostgreSQL
+
+Session auth with express-session + connect-pg-simple
+
+Data access layer in server/storage.ts
+
+DB connection helper in server/db.ts
+
+Drizzle config and migrations already set up
+
+We want to migrate completely from Replit’s built-in PostgreSQL (Neon) to Supabase PostgreSQL and stop using the Replit PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD env vars.
+
+I have already:
+
+Created a Supabase project.
+
+Set a Replit Secret DATABASE_URL with the full Supabase connection string including ?sslmode=require.
+
+Used pg_dump + pg_restore to copy the entire schema and data from the old Replit DB to Supabase (including enums, indexes, partial indexes).
+
+Your tasks (please modify the codebase accordingly):
+
+Centralize DB connection on DATABASE_URL
+
+In server/db.ts (or the main DB helper), stop using PGHOST, PGPORT, etc.
+
+Use a single env var process.env.DATABASE_URL to create the pg Pool (with ssl: { rejectUnauthorized: false } for Supabase).
+
+Export a single Pool/Client instance that can be reused across the backend.
+
+Drizzle configuration
+
+Update drizzle.config.ts or equivalent to also use process.env.DATABASE_URL as the connection string.
+
+Ensure there’s no reference to the old Replit/Neon connection envs.
+
+Session store migration
+
+Anywhere connect-pg-simple is used, ensure the store uses the same Pool / DATABASE_URL connection.
+
+Remove any hard-coded use of Replit PG* env vars for sessions.
+
+Storage layer and routes
+
+Confirm that server/storage.ts and server/routes.ts only depend on the shared Drizzle/Pool connection, and not on any Replit-specific configuration.
+
+If any helper still constructs a separate connection string using the PG* env vars, refactor it to use the centralized Supabase DATABASE_URL connection instead.
+
+db-setup & attendance index
+
+Ensure server/db-setup.sql (or equivalent) is compatible with Supabase.
+
+Verify that the attendance_unique_open_session unique partial index and enums (attendance_status, exit_type) are either created by migrations or present in the restored Supabase schema.
+
+If needed, add a safety check so running db-setup against Supabase won’t break.
+
+Environment cleanup
+
+Update any documentation / comments in the repo to mention:
+
+DATABASE_URL is now the single source of truth for the database (Supabase).
+
+Replit’s PGHOST, PGPORT, etc. are no longer used.
+
+Smoke test helpers
+
+Add or update a small helper (script or comments) I can run to sanity-check the connection, e.g. querying SELECT COUNT(*) FROM gyms against Supabase.
+
+Constraints:
+
+Do not change business logic (QR attendance, leads, trainers, billing, etc.). Only update how the database is connected.
+
+Keep TypeScript types clean and use existing patterns.
+
+The app must still run on Replit with npm run dev, but all data must now be read/written from Supabase.
+
+After code changes, please summarize:
+
+Which files were updated.
+
+How to run the app now.
+
+How to verify it’s using Supabase (example query or check).
+
+Treat this as a production migration: be careful about not breaking sessions, attendance state machine, or multi-tenant logic.
+
+End of prompt.

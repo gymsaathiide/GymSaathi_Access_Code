@@ -1,0 +1,456 @@
+🛒 STORE MODULE – FEATURE LIST
+A) Admin Dashboard Store Features
+1. Store Overview (Dashboard)
+
+Shows gym admin:
+
+Total store revenue (this month)
+
+Orders today
+
+Pending orders
+
+Completed orders
+
+Low stock alerts (products under threshold)
+
+Best selling products (top 5)
+
+Recent orders list (last 10 orders)
+
+Purpose: quick snapshot of their store performance.
+
+2. Product Management
+
+Gym admins can:
+
+Create Product
+
+Name
+
+Category
+
+Description
+
+Price (₹)
+
+MRP (₹)
+
+Tax % (optional)
+
+SKU
+
+Stock quantity
+
+Low stock alert threshold
+
+Upload image URL
+
+Toggle “Active / Inactive”
+
+Edit Product
+
+Change any field above
+
+Update stock
+
+Change price
+
+Replace product image
+
+Deactivate Product
+
+Product remains in database, but members can't see it.
+
+Product Listing Page
+
+Admin can filter by:
+
+Category
+
+Low stock
+
+Active / inactive
+
+Search by name / SKU
+
+Product cards show:
+
+Thumbnail
+
+Name
+
+Price
+
+Stock
+
+Status badge
+
+Edit / Archive buttons
+
+3. Category Management
+
+Admin can:
+
+Create categories (e.g., Supplements, Accessories, Clothing)
+
+Edit category names
+
+Deactivate categories
+
+Filter products by category
+
+4. Order Management
+
+Admins see all orders from their gym:
+
+Order List
+
+Shows:
+
+Order number
+
+Member name
+
+Total amount
+
+Date
+
+Status (Pending / Confirmed / Packed / Completed / Cancelled)
+
+Payment mode
+
+Payment status
+
+Order Detail View
+
+Includes:
+
+Order items
+
+Unit price
+
+Quantity
+
+Subtotal
+
+GST/taxes
+
+Discounts (if any)
+
+Total
+
+Payment info
+
+Notes
+
+Order timeline
+
+Update Order Status
+
+Admin can change to:
+
+Confirmed
+
+Packed
+
+Completed
+
+Cancelled
+
+Mark as Paid
+
+If payment was made at gym:
+
+Admin clicks “Paid via Cash/UPI”
+
+5. Store Settings
+
+Gym admin can configure:
+
+Enable/Disable Store for members
+
+Show products even if out of stock
+
+Default TAX %
+
+Allowed payment modes:
+
+Cash at gym
+
+UPI at gym
+
+Online (Razorpay)
+
+Razorpay API key setup
+
+B) Member Dashboard Store Features
+1. Store Home Page
+
+Members see:
+
+Gym logo + title “Store - Your Gym’s Products”
+
+Categories horizontally scrollable
+
+Search bar
+
+Product grid
+
+Filters: Price Low→High, Popular, Newest
+
+Each product card includes:
+
+Image
+
+Name
+
+Price (₹)
+
+Stock badge
+
+“Low Stock” tag if needed
+
+“Add to Cart” button
+
+2. Product Detail Page
+
+Shows:
+
+Big product image
+
+Name
+
+Description
+
+Price & tax
+
+Stock count
+
+Quantity selector
+
+Add to Cart button
+
+3. Cart Page
+
+Member can:
+
+View all items
+
+Change quantities
+
+Remove items
+
+See totals:
+
+Subtotal
+
+Tax
+
+Total payable
+
+Select payment method:
+
+Cash at Gym
+
+UPI at Gym
+
+Online (Razorpay, only if enabled)
+
+Checkout (Place Order)
+
+4. Order Confirmation
+
+After checkout:
+
+Order number
+
+Order summary
+
+Pickup instructions
+
+Payment method
+
+5. Order History Page
+
+Member can view:
+
+All past orders
+
+Status updates
+
+Detailed order info
+
+🔐 MULTI-TENANCY & DATA ISOLATION RULES
+1. Gym Admin
+
+Can manage ONLY their own gym store
+
+gymId comes from session
+
+2. Members
+
+Can browse & order ONLY from their gym
+
+Member must never see products from other gyms
+
+3. Superadmin
+
+Can override and inspect any gym’s store
+
+But cannot act like a buyer
+
+4. All data saved in Replit DB MUST follow:
+store:products:<gymId>
+store:categories:<gymId>
+store:orders:<gymId>
+store:settings:<gymId>
+
+💰 PAYMENT SYSTEM Behavior
+Default Payment = CASH / UPI at gym
+
+No need for online gateway.
+Flow:
+
+Member places order
+
+Order saved with paymentStatus = "unpaid"
+
+Member picks product at gym & pays
+
+Admin marks “Paid”
+
+Optional Razorpay (Online Payment)
+
+If gym admin enables:
+
+On checkout, member sees Razorpay button
+
+After success, update:
+
+paymentMode="razorpay"
+
+paymentStatus="paid"
+
+Even if Razorpay fails:
+
+Member can still choose CASH/UPI
+
+Store is always operational
+
+🔄 ORDER LIFECYCLE
+
+Pending
+Order placed by member.
+
+Confirmed
+Admin reviews order & confirms availability.
+
+Packed
+Product ready for pickup.
+
+Completed
+Member received product.
+
+Cancelled
+Admin cancels.
+
+📊 ANALYTICS NEEDED
+
+Admin should see:
+
+Revenue this month
+
+Orders today
+
+Best selling items
+
+Payment type summary (cash, upi, online)
+
+Store usage chart
+
+📱 RESPONSIVE UI REQUIREMENTS
+
+All pages must work smoothly on:
+
+Desktop
+
+Laptop
+
+Tablet
+
+Mobile
+
+Components must follow your new GYMSAATHI brand style (dark, neon accents, orange primary).
+
+Use:
+
+Cards
+
+Mini dashboards
+
+Clean typography
+
+Smooth spacing
+
+Icons for actions
+
+🎨 UI STYLE MUST MATCH
+
+The login page theme you generated
+
+Your blue/orange gradient
+
+Your dark-glass UI
+
+shadcn/radix style
+
+Consistent button styles
+
+🧠 SYSTEM WORKFLOW SUMMARY
+Admin Flow
+
+Admin logs in
+
+Goes to “Store” section
+
+Creates categories
+
+Adds products
+
+Manages stock
+
+Tracks and fulfills orders
+
+Views store analytics
+
+Member Flow
+
+Member logs in
+
+Goes to “Store” tab
+
+Browses products only from THEIR gym
+
+Adds to cart
+
+Places order
+
+Pays at gym / or Razorpay
+
+Checks order status
+
+🏁 DELIVERABLE EXPECTATION
+
+From this prompt, produce:
+
+✔ Full functional specification
+✔ API definitions (not code)
+✔ Data models (not code)
+✔ UX flowcharts / screen descriptions
+✔ Admin UI layout
+✔ Member UI layout
+✔ Business logic rules
+✔ Multi-tenant behavior
+✔ Payment flow behavior
+✔ Order journey
