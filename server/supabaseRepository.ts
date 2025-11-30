@@ -173,6 +173,66 @@ export const supabaseRepo = {
     }
   },
 
+  async getGymIdForUser(userId: string, role: string): Promise<string | null> {
+    try {
+      if (role === 'admin') {
+        const { data, error } = await supabase
+          .from('gym_admins')
+          .select('gym_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .single();
+        
+        if (error) {
+          if (error.code !== 'PGRST116') {
+            console.error('Supabase getGymIdForUser (admin) error:', error);
+          }
+          return null;
+        }
+        return data?.gym_id || null;
+      }
+
+      if (role === 'trainer') {
+        const { data, error } = await supabase
+          .from('trainers')
+          .select('gym_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .single();
+        
+        if (error) {
+          if (error.code !== 'PGRST116') {
+            console.error('Supabase getGymIdForUser (trainer) error:', error);
+          }
+          return null;
+        }
+        return data?.gym_id || null;
+      }
+
+      if (role === 'member') {
+        const { data, error } = await supabase
+          .from('members')
+          .select('gym_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .single();
+        
+        if (error) {
+          if (error.code !== 'PGRST116') {
+            console.error('Supabase getGymIdForUser (member) error:', error);
+          }
+          return null;
+        }
+        return data?.gym_id || null;
+      }
+
+      return null;
+    } catch (e) {
+      console.error('Supabase getGymIdForUser unexpected error:', e);
+      return null;
+    }
+  },
+
   async getGymById(gymId: string): Promise<SupabaseGym | null> {
     const { data, error } = await supabase
       .from('gyms')

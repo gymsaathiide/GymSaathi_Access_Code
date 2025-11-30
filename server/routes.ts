@@ -543,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.get('/api/health/db', async (_req, res) => {
     try {
-      const result = await db.select({ count: sql<number>`count(*)` }).from(schema.gyms);
+      const result = await db!.select({ count: sql<number>`count(*)` }).from(schema.gyms);
       res.json({ ok: true, gymsCount: result[0]?.count ?? 0 });
     } catch (err) {
       console.error('DB health check failed:', err);
@@ -597,9 +597,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let gym;
       if (isUuid) {
-        gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, gymIdOrSlug)).limit(1).then(rows => rows[0]);
+        gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       } else {
-        gym = await db.select().from(schema.gyms).where(eq(schema.gyms.slug, gymIdOrSlug)).limit(1).then(rows => rows[0]);
+        gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.slug, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       }
       
       if (!gym) {
@@ -611,7 +611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get gym branding if available
-      const branding = await db.select().from(schema.branding).where(eq(schema.branding.gymId, gym.id)).limit(1).then(rows => rows[0]);
+      const branding = await db!.select().from(schema.branding).where(eq(schema.branding.gymId, gym.id)).limit(1).then(rows => rows[0]);
 
       res.json({
         id: gym.id,
@@ -692,9 +692,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let gym;
       if (isUuid) {
-        gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, gymIdOrSlug)).limit(1).then(rows => rows[0]);
+        gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       } else {
-        gym = await db.select().from(schema.gyms).where(eq(schema.gyms.slug, gymIdOrSlug)).limit(1).then(rows => rows[0]);
+        gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.slug, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       }
       
       if (!gym) {
@@ -710,7 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       // Create lead record
-      const lead = await db.insert(schema.leads).values({
+      const lead = await db!.insert(schema.leads).values({
         gymId: gym.id,
         name: name.trim(),
         email: email?.trim() || null,
@@ -734,7 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[enquiry] New lead created for gym ${gym.name}: ${lead.id}`);
 
       // Get the gym admin(s) for notifications
-      const gymAdmins = await db.select({
+      const gymAdmins = await db!.select({
         userId: schema.gymAdmins.userId,
         userName: schema.users.name,
         userEmail: schema.users.email,
@@ -847,7 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No gym associated with this user' });
       }
 
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, gymId)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, gymId)).limit(1).then(rows => rows[0]);
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
@@ -874,7 +874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { customSlug } = req.body;
 
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, id)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, id)).limit(1).then(rows => rows[0]);
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
@@ -888,7 +888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .trim();
 
       // Ensure uniqueness
-      const existingGym = await db.select().from(schema.gyms)
+      const existingGym = await db!.select().from(schema.gyms)
         .where(and(eq(schema.gyms.slug, slug), sql`${schema.gyms.id} != ${id}`))
         .limit(1).then(rows => rows[0]);
 
@@ -897,7 +897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
       }
 
-      await db.update(schema.gyms).set({ slug }).where(eq(schema.gyms.id, id));
+      await db!.update(schema.gyms).set({ slug }).where(eq(schema.gyms.id, id));
 
       res.json({ slug });
     } catch (error: any) {
@@ -920,7 +920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (phone !== undefined) updateData.phone = phone;
       if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
 
-      const updatedUser = await db.update(schema.users).set(updateData).where(eq(schema.users.id, userId)).returning().then(rows => rows[0]);
+      const updatedUser = await db!.update(schema.users).set(updateData).where(eq(schema.users.id, userId)).returning().then(rows => rows[0]);
 
       if (!updatedUser) {
         return res.status(404).json({ error: 'User not found' });
@@ -1483,7 +1483,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/subscriptions', requireRole('superadmin'), async (req, res) => {
     try {
-      const subscriptions = await db.select().from(schema.subscriptions);
+      if (!isDbAvailable()) {
+        return res.json([]);
+      }
+      const subscriptions = await db!.select().from(schema.subscriptions);
       res.json(subscriptions);
     } catch (error: any) {
       console.error('Error fetching subscriptions:', error);
@@ -1493,7 +1496,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/transactions', requireRole('superadmin'), async (req, res) => {
     try {
-      const transactions = await db.select().from(schema.transactions);
+      if (!isDbAvailable()) {
+        return res.json([]);
+      }
+      const transactions = await db!.select().from(schema.transactions);
       res.json(transactions);
     } catch (error: any) {
       console.error('Error fetching transactions:', error);
@@ -1503,7 +1509,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/branding/:gymId', requireRole('superadmin'), async (req, res) => {
     try {
-      const branding = await db.select().from(schema.branding).where(eq(schema.branding.gymId, req.params.gymId)).limit(1).then(rows => rows[0]);
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database unavailable' });
+      }
+      const branding = await db!.select().from(schema.branding).where(eq(schema.branding.gymId, req.params.gymId)).limit(1).then(rows => rows[0]);
       if (!branding) {
         return res.status(404).json({ error: 'Branding config not found' });
       }
@@ -1516,12 +1525,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/branding/:gymId', requireRole('superadmin'), async (req, res) => {
     try {
-      const existing = await db.select().from(schema.branding).where(eq(schema.branding.gymId, req.params.gymId)).limit(1).then(rows => rows[0]);
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database unavailable' });
+      }
+      const existing = await db!.select().from(schema.branding).where(eq(schema.branding.gymId, req.params.gymId)).limit(1).then(rows => rows[0]);
       let branding;
       if (existing) {
-        branding = await db.update(schema.branding).set(req.body).where(eq(schema.branding.gymId, req.params.gymId)).returning().then(rows => rows[0]);
+        branding = await db!.update(schema.branding).set(req.body).where(eq(schema.branding.gymId, req.params.gymId)).returning().then(rows => rows[0]);
       } else {
-        branding = await db.insert(schema.branding).values({ ...req.body, gymId: req.params.gymId }).returning().then(rows => rows[0]);
+        branding = await db!.insert(schema.branding).values({ ...req.body, gymId: req.params.gymId }).returning().then(rows => rows[0]);
       }
       res.json(branding);
     } catch (error: any) {
@@ -1562,7 +1574,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/audit-logs', requireRole('superadmin'), async (req, res) => {
     try {
-      const logs = await db.select().from(schema.auditLogs);
+      if (!isDbAvailable()) {
+        return res.json([]);
+      }
+      const logs = await db!.select().from(schema.auditLogs);
       res.json(logs);
     } catch (error: any) {
       console.error('Error fetching audit logs:', error);
@@ -1572,7 +1587,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/integrations', requireRole('superadmin'), async (req, res) => {
     try {
-      const integrations = await db.select().from(schema.integrations);
+      if (!isDbAvailable()) {
+        return res.json([]);
+      }
+      const integrations = await db!.select().from(schema.integrations);
       res.json(integrations);
     } catch (error: any) {
       console.error('Error fetching integrations:', error);
@@ -1582,7 +1600,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/integrations', requireRole('superadmin'), async (req, res) => {
     try {
-      const integration = await db.insert(schema.integrations).values(req.body).returning().then(rows => rows[0]);
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database unavailable' });
+      }
+      const integration = await db!.insert(schema.integrations).values(req.body).returning().then(rows => rows[0]);
       res.status(201).json(integration);
     } catch (error: any) {
       console.error('Error creating integration:', error);
@@ -1592,12 +1613,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/integrations/:id/toggle', requireRole('superadmin'), async (req, res) => {
     try {
-      const existing = await db.select().from(schema.integrations).where(eq(schema.integrations.id, req.params.id)).limit(1).then(rows => rows[0]);
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database unavailable' });
+      }
+      const existing = await db!.select().from(schema.integrations).where(eq(schema.integrations.id, req.params.id)).limit(1).then(rows => rows[0]);
       if (!existing) {
         return res.status(404).json({ error: 'Integration not found' });
       }
       const newStatus = existing.status === 'active' ? 'inactive' : 'active';
-      const integration = await db.update(schema.integrations).set({ status: newStatus as any, lastSync: new Date() }).where(eq(schema.integrations.id, req.params.id)).returning().then(rows => rows[0]);
+      const integration = await db!.update(schema.integrations).set({ status: newStatus as any, lastSync: new Date() }).where(eq(schema.integrations.id, req.params.id)).returning().then(rows => rows[0]);
       res.json(integration);
     } catch (error: any) {
       console.error(`Error toggling integration ${req.params.id}:`, error);
@@ -1607,7 +1631,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/integrations/:id', requireRole('superadmin'), async (req, res) => {
     try {
-      await db.delete(schema.integrations).where(eq(schema.integrations.id, req.params.id));
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database unavailable' });
+      }
+      await db!.delete(schema.integrations).where(eq(schema.integrations.id, req.params.id));
       res.status(204).send();
     } catch (error: any) {
       console.error(`Error deleting integration ${req.params.id}:`, error);
@@ -1629,7 +1656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
       // Get all active gyms
-      const allGyms = await db.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
+      const allGyms = await db!.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
       
       // Calculate active members for each gym
       let totalActiveMembers = 0;
@@ -1638,7 +1665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let customPlanRevenue = 0;
 
       for (const gym of allGyms) {
-        const activeMembers = await db.select({ count: sql<number>`count(*)` })
+        const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.gymId, gym.id),
@@ -1661,7 +1688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get last month's revenue from gym invoices or snapshot
-      const lastMonthInvoices = await db.select({
+      const lastMonthInvoices = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
       }).from(schema.gymInvoices).where(and(
         eq(schema.gymInvoices.month, lastMonth),
@@ -1675,7 +1702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : 100;
 
       // Get paid and pending amounts for current month
-      const currentMonthInvoices = await db.select({
+      const currentMonthInvoices = await db!.select({
         paid: sql<number>`COALESCE(SUM(CASE WHEN status = 'paid' THEN CAST(total_amount AS DECIMAL) ELSE 0 END), 0)`,
         pending: sql<number>`COALESCE(SUM(CASE WHEN status IN ('pending', 'overdue') THEN CAST(total_amount AS DECIMAL) ELSE 0 END), 0)`
       }).from(schema.gymInvoices).where(and(
@@ -1715,7 +1742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const monthNum = month.getMonth() + 1;
         const year = month.getFullYear();
 
-        const invoiceData = await db.select({
+        const invoiceData = await db!.select({
           total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`,
           members: sql<number>`COALESCE(SUM(active_members), 0)`
         }).from(schema.gymInvoices).where(and(
@@ -1732,7 +1759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get plan type breakdown
-      const allGyms = await db.select().from(schema.gyms);
+      const allGyms = await db!.select().from(schema.gyms);
       const standardGyms = allGyms.filter(g => g.pricingPlanType !== 'custom').length;
       const customGyms = allGyms.filter(g => g.pricingPlanType === 'custom').length;
 
@@ -1740,7 +1767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let standardRevenue = 0;
       let customRevenue = 0;
       for (const gym of allGyms) {
-        const activeMembers = await db.select({ count: sql<number>`count(*)` })
+        const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.gymId, gym.id),
@@ -1774,10 +1801,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/superadmin/top-gyms', requireRole('superadmin'), async (req, res) => {
     try {
       const now = new Date();
-      const allGyms = await db.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
+      const allGyms = await db!.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
       
       const gymStats = await Promise.all(allGyms.map(async (gym) => {
-        const activeMembers = await db.select({ count: sql<number>`count(*)` })
+        const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.gymId, gym.id),
@@ -1814,10 +1841,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/superadmin/gym-billing', requireRole('superadmin'), async (req, res) => {
     try {
       const now = new Date();
-      const allGyms = await db.select().from(schema.gyms);
+      const allGyms = await db!.select().from(schema.gyms);
       
       const billingData = await Promise.all(allGyms.map(async (gym) => {
-        const activeMembers = await db.select({ count: sql<number>`count(*)` })
+        const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.gymId, gym.id),
@@ -1829,7 +1856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rate = parseFloat(gym.ratePerMember || '75');
         
         // Get latest invoice for this gym
-        const latestInvoice = await db.select()
+        const latestInvoice = await db!.select()
           .from(schema.gymInvoices)
           .where(eq(schema.gymInvoices.gymId, gym.id))
           .orderBy(desc(schema.gymInvoices.createdAt))
@@ -1877,7 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (ratePerMember) updateData.ratePerMember = String(ratePerMember);
       if (billingCycleStart) updateData.billingCycleStart = billingCycleStart;
 
-      const gym = await db.update(schema.gyms)
+      const gym = await db!.update(schema.gyms)
         .set(updateData)
         .where(eq(schema.gyms.id, req.params.id))
         .returning()
@@ -1905,7 +1932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status) conditions.push(eq(schema.gymInvoices.status, status as any));
       if (gymId) conditions.push(eq(schema.gymInvoices.gymId, gymId as string));
 
-      const invoices = await db.select({
+      const invoices = await db!.select({
         invoice: schema.gymInvoices,
         gym: schema.gyms
       })
@@ -1934,12 +1961,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetYear = year || new Date().getFullYear();
       const now = new Date();
 
-      const allGyms = await db.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
+      const allGyms = await db!.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
       const generatedInvoices = [];
 
       for (const gym of allGyms) {
         // Check if invoice already exists for this month
-        const existingInvoice = await db.select()
+        const existingInvoice = await db!.select()
           .from(schema.gymInvoices)
           .where(and(
             eq(schema.gymInvoices.gymId, gym.id),
@@ -1952,7 +1979,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingInvoice) continue; // Skip if already generated
 
         // Count active members
-        const activeMembers = await db.select({ count: sql<number>`count(*)` })
+        const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.gymId, gym.id),
@@ -1970,7 +1997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Due date is 15th of the month
         const dueDate = new Date(targetYear, targetMonth - 1, 15);
 
-        const invoice = await db.insert(schema.gymInvoices).values({
+        const invoice = await db!.insert(schema.gymInvoices).values({
           invoiceNumber,
           gymId: gym.id,
           month: targetMonth,
@@ -2017,7 +2044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (notes !== undefined) updateData.notes = notes;
       if (status === 'paid') updateData.paidDate = new Date();
 
-      const invoice = await db.update(schema.gymInvoices)
+      const invoice = await db!.update(schema.gymInvoices)
         .set(updateData)
         .where(eq(schema.gymInvoices.id, req.params.id))
         .returning()
@@ -2029,13 +2056,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If marking as paid, check if gym was suspended and reactivate
       if (status === 'paid') {
-        const gym = await db.select().from(schema.gyms)
+        const gym = await db!.select().from(schema.gyms)
           .where(eq(schema.gyms.id, invoice.gymId))
           .limit(1)
           .then(rows => rows[0]);
 
         if (gym && gym.status === 'suspended' && gym.suspensionReason === 'unpaid_invoice') {
-          await db.update(schema.gyms).set({
+          await db!.update(schema.gyms).set({
             status: 'active',
             suspendedAt: null,
             suspensionReason: null
@@ -2060,7 +2087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
 
       // Find pending invoices past due date by more than 15 days
-      const overdueInvoices = await db.select()
+      const overdueInvoices = await db!.select()
         .from(schema.gymInvoices)
         .where(and(
           eq(schema.gymInvoices.status, 'pending'),
@@ -2071,12 +2098,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const invoice of overdueInvoices) {
         // Update invoice status to overdue
-        await db.update(schema.gymInvoices)
+        await db!.update(schema.gymInvoices)
           .set({ status: 'overdue' })
           .where(eq(schema.gymInvoices.id, invoice.id));
 
         // Suspend the gym
-        await db.update(schema.gyms)
+        await db!.update(schema.gyms)
           .set({
             status: 'suspended',
             suspendedAt: now,
@@ -2084,7 +2111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .where(eq(schema.gyms.id, invoice.gymId));
 
-        const gym = await db.select().from(schema.gyms)
+        const gym = await db!.select().from(schema.gyms)
           .where(eq(schema.gyms.id, invoice.gymId))
           .limit(1)
           .then(rows => rows[0]);
@@ -2136,7 +2163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endOfLastMonth = new Date(currentYear, currentMonth - 1, 0);
 
       // Get all gyms for calculations
-      const allGyms = await db.select().from(schema.gyms);
+      const allGyms = await db!.select().from(schema.gyms);
       const activeGyms = allGyms.filter(g => g.status === 'active');
 
       // Calculate MRR (Monthly Recurring Revenue) = Σ (active members × rate per member)
@@ -2144,7 +2171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalActiveMembers = 0;
 
       for (const gym of activeGyms) {
-        const activeMembers = await db.select({ count: sql<number>`count(*)` })
+        const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.gymId, gym.id),
@@ -2162,7 +2189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const arr = mrr * 12;
 
       // Total Revenue This Month (from paid invoices this month)
-      const thisMonthRevenue = await db.select({
+      const thisMonthRevenue = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
       }).from(schema.gymInvoices).where(and(
         eq(schema.gymInvoices.month, currentMonth),
@@ -2172,7 +2199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const revenueThisMonth = parseFloat(String(thisMonthRevenue[0]?.total || 0)) || mrr;
 
       // Total Revenue Last Month (for comparison)
-      const lastMonthRevenue = await db.select({
+      const lastMonthRevenue = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
       }).from(schema.gymInvoices).where(and(
         eq(schema.gymInvoices.month, lastMonth),
@@ -2187,7 +2214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : (revenueThisMonth > 0 ? 100 : 0);
 
       // Total Revenue All Time (lifetime)
-      const allTimeRevenue = await db.select({
+      const allTimeRevenue = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
       }).from(schema.gymInvoices).where(eq(schema.gymInvoices.status, 'paid'));
       const totalRevenueAllTime = parseFloat(String(allTimeRevenue[0]?.total || 0));
@@ -2197,7 +2224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let upcomingRevenue = 0;
 
       for (const gym of activeGyms) {
-        const renewingMembers = await db.select({ count: sql<number>`count(*)` })
+        const renewingMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.gymId, gym.id),
@@ -2223,7 +2250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const monthNum = month.getMonth() + 1;
         const year = month.getFullYear();
 
-        const monthRevenue = await db.select({
+        const monthRevenue = await db!.select({
           total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
         }).from(schema.gymInvoices).where(and(
           eq(schema.gymInvoices.month, monthNum),
@@ -2273,7 +2300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
       // Get all gyms
-      const allGyms = await db.select().from(schema.gyms);
+      const allGyms = await db!.select().from(schema.gyms);
 
       // Gym status breakdown
       const activeGyms = allGyms.filter(g => g.status === 'active').length;
@@ -2281,12 +2308,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingGyms = allGyms.filter(g => g.status === 'pending').length;
 
       // Total members on platform
-      const totalMembers = await db.select({ count: sql<number>`count(*)` })
+      const totalMembers = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.members);
       const memberCount = Number(totalMembers[0]?.count || 0);
 
       // Active members (with active memberships)
-      const activeMembers = await db.select({ count: sql<number>`count(DISTINCT member_id)` })
+      const activeMembers = await db!.select({ count: sql<number>`count(DISTINCT member_id)` })
         .from(schema.memberships)
         .where(and(
           eq(schema.memberships.status, 'active'),
@@ -2370,7 +2397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const monthNum = month.getMonth() + 1;
         const year = month.getFullYear();
 
-        const monthRevenue = await db.select({
+        const monthRevenue = await db!.select({
           total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`,
           paid: sql<number>`COALESCE(SUM(CASE WHEN status = 'paid' THEN CAST(total_amount AS DECIMAL) ELSE 0 END), 0)`
         }).from(schema.gymInvoices).where(and(
@@ -2387,14 +2414,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Member growth trend
-      const allGyms = await db.select().from(schema.gyms);
+      const allGyms = await db!.select().from(schema.gyms);
       const memberTrend = [];
       
       for (let i = months - 1; i >= 0; i--) {
         const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
         
         // Count active memberships at end of each month
-        const activeAtMonth = await db.select({ count: sql<number>`count(DISTINCT member_id)` })
+        const activeAtMonth = await db!.select({ count: sql<number>`count(DISTINCT member_id)` })
           .from(schema.memberships)
           .where(and(
             eq(schema.memberships.status, 'active'),
@@ -2448,9 +2475,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      let gymId: string | null = null;
+      if (isDbAvailable()) {
+        if (user.role === 'admin') {
+          const gymAdmin = await db!.select().from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = gymAdmin?.gymId || null;
+        } else if (user.role === 'trainer') {
+          const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = trainer?.gymId || null;
+        }
+      } else {
+        gymId = await supabaseRepo.getGymIdForUser(user.id, user.role);
+      }
+
+      if (!gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      if (!isDbAvailable()) {
+        return res.json([]);
       }
 
       const filters = {
@@ -2458,7 +2506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search: req.query.search as string | undefined,
       };
 
-      const members = await storage.listMembers(user.gymId, filters);
+      const members = await storage.listMembers(gymId, filters);
       res.json(members);
     } catch (error: any) {
       console.error('Error fetching members:', error);
@@ -2468,7 +2516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members/:id', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
@@ -2514,7 +2562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: validationError.message });
       }
 
-      const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, validationResult.data.email)).limit(1).then(rows => rows[0]);
+      const existingUser = await db!.select().from(schema.users).where(eq(schema.users.email, validationResult.data.email)).limit(1).then(rows => rows[0]);
 
       if (existingUser) {
         return res.status(400).json({ error: 'A user with this email already exists' });
@@ -2522,7 +2570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const passwordHash = await bcrypt.hash(password, 10);
 
-      const newUser = await db.insert(schema.users).values({
+      const newUser = await db!.insert(schema.users).values({
         email: validationResult.data.email,
         passwordHash: passwordHash,
         role: 'member',
@@ -2532,7 +2580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).returning().then(rows => rows[0]);
 
       try {
-        const member = await db.insert(schema.members).values({
+        const member = await db!.insert(schema.members).values({
           userId: newUser.id,
           gymId: user.gymId,
           name: validationResult.data.name,
@@ -2550,7 +2598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transactionDate: validationResult.data.transactionDate || null,
         }).returning().then(rows => rows[0]);
 
-        const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
+        const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
         const gymName = gym?.name || 'Your Gym';
 
         const memberPortalUrl = process.env.REPLIT_DEV_DOMAIN 
@@ -2576,7 +2624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         let membership = null;
         if (planId && planId !== 'no-plan') {
-          const plan = await db.select().from(schema.membershipPlans)
+          const plan = await db!.select().from(schema.membershipPlans)
             .where(and(
               eq(schema.membershipPlans.id, planId),
               eq(schema.membershipPlans.gymId, user.gymId),
@@ -2589,7 +2637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + plan.duration);
             
-            membership = await db.insert(schema.memberships).values({
+            membership = await db!.insert(schema.memberships).values({
               memberId: member.id,
               planId: plan.id,
               gymId: user.gymId,
@@ -2611,7 +2659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (memberError: any) {
         console.error('Member creation failed, rolling back user creation:', memberError);
-        await db.delete(schema.users).where(eq(schema.users.id, newUser.id));
+        await db!.delete(schema.users).where(eq(schema.users.id, newUser.id));
         throw new Error(`Failed to create member: ${memberError.message}`);
       }
     } catch (error: any) {
@@ -2622,7 +2670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/members/:id', requireRole('admin'), async (req, res) => {
     try {
-      const existingMember = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingMember = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingMember) {
         return res.status(404).json({ error: 'Member not found' });
@@ -2646,19 +2694,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: validationError.message });
       }
 
-      const updatedMember = await db.update(schema.members).set(validationResult.data).where(eq(schema.members.id, req.params.id)).returning().then(rows => rows[0]);
+      const updatedMember = await db!.update(schema.members).set(validationResult.data).where(eq(schema.members.id, req.params.id)).returning().then(rows => rows[0]);
 
       let membership = null;
       if (planId !== undefined) {
         if (planId === 'no-plan' || planId === '') {
-          await db.update(schema.memberships)
+          await db!.update(schema.memberships)
             .set({ status: 'cancelled' })
             .where(and(
               eq(schema.memberships.memberId, req.params.id),
               eq(schema.memberships.status, 'active')
             ));
         } else {
-          const plan = await db.select().from(schema.membershipPlans)
+          const plan = await db!.select().from(schema.membershipPlans)
             .where(and(
               eq(schema.membershipPlans.id, planId),
               eq(schema.membershipPlans.gymId, existingMember.gymId),
@@ -2667,7 +2715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .limit(1).then(rows => rows[0]);
           
           if (plan) {
-            await db.update(schema.memberships)
+            await db!.update(schema.memberships)
               .set({ status: 'cancelled' })
               .where(and(
                 eq(schema.memberships.memberId, req.params.id),
@@ -2678,7 +2726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + plan.duration);
             
-            membership = await db.insert(schema.memberships).values({
+            membership = await db!.insert(schema.memberships).values({
               memberId: req.params.id,
               planId: plan.id,
               gymId: existingMember.gymId,
@@ -2705,7 +2753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const membership = await db.select().from(schema.memberships)
+      const membership = await db!.select().from(schema.memberships)
         .where(and(
           eq(schema.memberships.memberId, req.params.id),
           eq(schema.memberships.gymId, user.gymId),
@@ -2727,7 +2775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/members/:id', requireRole('admin'), async (req, res) => {
     try {
-      const existingMember = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingMember = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingMember) {
         return res.status(404).json({ error: 'Member not found' });
@@ -2738,7 +2786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this member' });
       }
 
-      await db.delete(schema.members).where(eq(schema.members.id, req.params.id));
+      await db!.delete(schema.members).where(eq(schema.members.id, req.params.id));
       res.status(204).send();
     } catch (error: any) {
       console.error(`Error deleting member ${req.params.id}:`, error);
@@ -2753,7 +2801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const plans = await db.select().from(schema.membershipPlans).where(eq(schema.membershipPlans.gymId, user.gymId));
+      const plans = await db!.select().from(schema.membershipPlans).where(eq(schema.membershipPlans.gymId, user.gymId));
       res.json(plans);
     } catch (error: any) {
       console.error('Error fetching membership plans:', error);
@@ -2777,7 +2825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         durationInDays = duration * 365;
       }
 
-      const plan = await db.insert(schema.membershipPlans).values({
+      const plan = await db!.insert(schema.membershipPlans).values({
         name,
         description,
         price: String(price),
@@ -2801,7 +2849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const existingPlan = await db.select().from(schema.membershipPlans)
+      const existingPlan = await db!.select().from(schema.membershipPlans)
         .where(eq(schema.membershipPlans.id, req.params.id))
         .limit(1).then(rows => rows[0]);
 
@@ -2830,7 +2878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (features !== undefined) updateData.features = features ? JSON.stringify(features) : null;
       if (isActive !== undefined) updateData.isActive = isActive ? 1 : 0;
 
-      const updatedPlan = await db.update(schema.membershipPlans)
+      const updatedPlan = await db!.update(schema.membershipPlans)
         .set(updateData)
         .where(eq(schema.membershipPlans.id, req.params.id))
         .returning().then(rows => rows[0]);
@@ -2849,7 +2897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const existingPlan = await db.select().from(schema.membershipPlans)
+      const existingPlan = await db!.select().from(schema.membershipPlans)
         .where(eq(schema.membershipPlans.id, req.params.id))
         .limit(1).then(rows => rows[0]);
 
@@ -2861,7 +2909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this plan' });
       }
 
-      await db.delete(schema.membershipPlans).where(eq(schema.membershipPlans.id, req.params.id));
+      await db!.delete(schema.membershipPlans).where(eq(schema.membershipPlans.id, req.params.id));
       res.status(204).send();
     } catch (error: any) {
       console.error('Error deleting membership plan:', error);
@@ -2876,7 +2924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const membership = await db.insert(schema.memberships).values({
+      const membership = await db!.insert(schema.memberships).values({
         ...req.body,
         gymId: user.gymId,
       }).returning().then(rows => rows[0]);
@@ -2890,7 +2938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members/:id/memberships', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
@@ -2901,7 +2949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this member' });
       }
 
-      const memberships = await db.select().from(schema.memberships).where(eq(schema.memberships.memberId, req.params.id));
+      const memberships = await db!.select().from(schema.memberships).where(eq(schema.memberships.memberId, req.params.id));
       res.json(memberships);
     } catch (error: any) {
       console.error(`Error fetching memberships for member ${req.params.id}:`, error);
@@ -2912,12 +2960,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============= ADMIN DASHBOARD API =============
   app.get('/api/admin/dashboard', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+      
+      // Get gym ID for the user
+      let gymId: string | null = null;
+      if (isDbAvailable()) {
+        if (user.role === 'admin') {
+          const gymAdmin = await db!.select().from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = gymAdmin?.gymId || null;
+        } else if (user.role === 'trainer') {
+          const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = trainer?.gymId || null;
+        }
+      } else {
+        gymId = await supabaseRepo.getGymIdForUser(user.id, user.role);
+      }
+      
+      if (!gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
-
-      const gymId = user.gymId;
+      
+      // If database is not available, return fallback dashboard data
+      if (!isDbAvailable()) {
+        console.log('Database not available, returning fallback dashboard data');
+        return res.json({
+          kpis: {
+            activeMembers: 0,
+            newMembersThisMonth: 0,
+            revenueThisMonth: 0,
+            revenueChangePercent: 0,
+            pendingDues: 0,
+            membersWithDues: 0,
+            todayCheckIns: 0,
+            todayCheckOuts: 0
+          },
+          upcomingRenewals: [],
+          recentActivity: [],
+          memberStatusDistribution: { active: 0, expired: 0, pending: 0 },
+          membershipTypeDistribution: [],
+          checkInTrend: [],
+          revenueTrend: [],
+          gymInfo: { 
+            name: 'Loading...',
+            logoUrl: null
+          },
+          _note: 'Using fallback data - database unavailable'
+        });
+      }
+      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
@@ -2940,7 +3033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sevenDaysAgoStr = sevenDaysAgo.toISOString();
 
       // KPIs: Active Members
-      const activeMembers = await db.select({ count: sql<number>`count(DISTINCT ${schema.memberships.memberId})` })
+      const activeMembers = await db!.select({ count: sql<number>`count(DISTINCT ${schema.memberships.memberId})` })
         .from(schema.memberships)
         .where(and(
           eq(schema.memberships.gymId, gymId),
@@ -2950,7 +3043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeMemberCount = Number(activeMembers[0]?.count || 0);
 
       // New members this month
-      const newMembersThisMonth = await db.select({ count: sql<number>`count(*)` })
+      const newMembersThisMonth = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.members)
         .where(and(
           eq(schema.members.gymId, gymId),
@@ -2959,7 +3052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newMemberCount = Number(newMembersThisMonth[0]?.count || 0);
 
       // Revenue this month
-      const revenueThisMonth = await db.select({
+      const revenueThisMonth = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(${schema.payments.amount} AS DECIMAL)), 0)`
       })
         .from(schema.payments)
@@ -2971,7 +3064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const revenueThisMonthValue = parseFloat(String(revenueThisMonth[0]?.total || 0));
 
       // Revenue last month (for comparison)
-      const revenueLastMonth = await db.select({
+      const revenueLastMonth = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(${schema.payments.amount} AS DECIMAL)), 0)`
       })
         .from(schema.payments)
@@ -2987,7 +3080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : (revenueThisMonthValue > 0 ? 100 : 0);
 
       // Pending dues
-      const pendingDues = await db.select({
+      const pendingDues = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(${schema.payments.amountDue} AS DECIMAL)), 0)`,
         count: sql<number>`count(DISTINCT ${schema.payments.memberId})`
       })
@@ -3000,7 +3093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingDuesMembers = Number(pendingDues[0]?.count || 0);
 
       // Leads in pipeline
-      const leadsInPipeline = await db.select({ count: sql<number>`count(*)` })
+      const leadsInPipeline = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.leads)
         .where(and(
           eq(schema.leads.gymId, gymId),
@@ -3009,7 +3102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const leadsCount = Number(leadsInPipeline[0]?.count || 0);
 
       // Follow-ups today
-      const followupsToday = await db.select({ count: sql<number>`count(*)` })
+      const followupsToday = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.leads)
         .where(and(
           eq(schema.leads.gymId, gymId),
@@ -3019,7 +3112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followupsTodayCount = Number(followupsToday[0]?.count || 0);
 
       // Today's check-ins
-      const todaysCheckins = await db.select({ count: sql<number>`count(*)` })
+      const todaysCheckins = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.attendance)
         .where(and(
           eq(schema.attendance.gymId, gymId),
@@ -3028,7 +3121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const todaysCheckinsCount = Number(todaysCheckins[0]?.count || 0);
 
       // Yesterday's check-ins
-      const yesterdaysCheckins = await db.select({ count: sql<number>`count(*)` })
+      const yesterdaysCheckins = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.attendance)
         .where(and(
           eq(schema.attendance.gymId, gymId),
@@ -3038,7 +3131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const yesterdaysCheckinsCount = Number(yesterdaysCheckins[0]?.count || 0);
 
       // Today's Classes Summary
-      const todaysClasses = await db.select()
+      const todaysClasses = await db!.select()
         .from(schema.classes)
         .where(and(
           eq(schema.classes.gymId, gymId),
@@ -3052,7 +3145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const classesUpcoming = todaysClasses.filter(c => c.status === 'scheduled').length;
 
       // Today's Collections by method
-      const todayPayments = await db.select({
+      const todayPayments = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(${schema.payments.amount} AS DECIMAL)), 0)`,
         paymentType: schema.payments.paymentType
       })
@@ -3076,7 +3169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Expiring Soon (next 15 days)
-      const expiringSoon = await db.select({
+      const expiringSoon = await db!.select({
         membership: schema.memberships,
         member: schema.members,
         plan: schema.membershipPlans
@@ -3104,7 +3197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Overdue memberships
-      const overdueMembers = await db.select({
+      const overdueMembers = await db!.select({
         membership: schema.memberships,
         member: schema.members,
         plan: schema.membershipPlans
@@ -3130,7 +3223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Leads: new this month and conversion rate
-      const newLeadsThisMonth = await db.select({ count: sql<number>`count(*)` })
+      const newLeadsThisMonth = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.leads)
         .where(and(
           eq(schema.leads.gymId, gymId),
@@ -3138,7 +3231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ));
       const newLeadsCount = Number(newLeadsThisMonth[0]?.count || 0);
 
-      const convertedLeadsThisMonth = await db.select({ count: sql<number>`count(*)` })
+      const convertedLeadsThisMonth = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.leads)
         .where(and(
           eq(schema.leads.gymId, gymId),
@@ -3149,7 +3242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const conversionRate = newLeadsCount > 0 ? (convertedCount / newLeadsCount) * 100 : 0;
 
       // Follow-ups today list
-      const followupsData = await db.select()
+      const followupsData = await db!.select()
         .from(schema.leads)
         .where(and(
           eq(schema.leads.gymId, gymId),
@@ -3171,7 +3264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Billing: invoices summary
-      const paidInvoicesCount = await db.select({ count: sql<number>`count(*)` })
+      const paidInvoicesCount = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.invoices)
         .where(and(
           eq(schema.invoices.gymId, gymId),
@@ -3179,7 +3272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sql`${schema.invoices.createdAt} >= ${startOfMonthStr}::timestamp`
         ));
 
-      const pendingInvoicesCount = await db.select({ count: sql<number>`count(*)` })
+      const pendingInvoicesCount = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.invoices)
         .where(and(
           eq(schema.invoices.gymId, gymId),
@@ -3188,7 +3281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ));
 
       // Members with dues
-      const membersWithDues = await db.select({
+      const membersWithDues = await db!.select({
         payment: schema.payments,
         member: schema.members
       })
@@ -3211,7 +3304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Today's Classes with details
-      const todaysClassesWithDetails = await db.select({
+      const todaysClassesWithDetails = await db!.select({
         class: schema.classes,
         classType: schema.classTypes,
         trainer: schema.users
@@ -3248,7 +3341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dayStartStr = dayStart.toISOString();
         const dayEndStr = dayEnd.toISOString();
 
-        const dayCheckins = await db.select({ count: sql<number>`count(*)` })
+        const dayCheckins = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.attendance)
           .where(and(
             eq(schema.attendance.gymId, gymId),
@@ -3263,7 +3356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Shop stats
-      const shopRevenueThisMonth = await db.select({
+      const shopRevenueThisMonth = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(${schema.orders.totalAmount} AS DECIMAL)), 0)`
       })
         .from(schema.orders)
@@ -3273,14 +3366,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sql`${schema.orders.orderDate} >= ${startOfMonthStr}::timestamp`
         ));
 
-      const ordersToday = await db.select({ count: sql<number>`count(*)` })
+      const ordersToday = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.orders)
         .where(and(
           eq(schema.orders.gymId, gymId),
           sql`${schema.orders.orderDate} >= ${todayStr}::timestamp`
         ));
 
-      const pendingOrders = await db.select({ count: sql<number>`count(*)` })
+      const pendingOrders = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.orders)
         .where(and(
           eq(schema.orders.gymId, gymId),
@@ -3288,7 +3381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ));
 
       // Recent orders
-      const recentOrders = await db.select({
+      const recentOrders = await db!.select({
         order: schema.orders,
         member: schema.members
       })
@@ -3299,7 +3392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(5);
 
       const orderRows = await Promise.all(recentOrders.map(async row => {
-        const itemsCount = await db.select({ count: sql<number>`count(*)` })
+        const itemsCount = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.orderItems)
           .where(eq(schema.orderItems.orderId, row.order.id));
         
@@ -3315,7 +3408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Low stock products
-      const lowStockProducts = await db.select()
+      const lowStockProducts = await db!.select()
         .from(schema.products)
         .where(and(
           eq(schema.products.gymId, gymId),
@@ -3477,7 +3570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gymId = user.gymId;
 
       // Search members
-      const members = await db.select()
+      const members = await db!.select()
         .from(schema.members)
         .where(and(
           eq(schema.members.gymId, gymId),
@@ -3486,7 +3579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(5);
 
       // Search leads
-      const leads = await db.select()
+      const leads = await db!.select()
         .from(schema.leads)
         .where(and(
           eq(schema.leads.gymId, gymId),
@@ -3523,7 +3616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dateTo = to ? new Date(to as string) : endOfMonth;
 
       // Get all payments for the gym within date range
-      const allPayments = await db.select({
+      const allPayments = await db!.select({
         id: schema.payments.id,
         amount: schema.payments.amount,
         amountDue: schema.payments.amountDue,
@@ -3659,7 +3752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/payments/:id', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const payment = await db.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const payment = await db!.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!payment) {
         return res.status(404).json({ error: 'Payment not found' });
@@ -3705,7 +3798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paymentSource = data.paymentSource || 
         (data.membershipId ? 'membership' : data.orderId ? 'shop' : 'other');
 
-      const payment = await db.insert(schema.payments).values({
+      const payment = await db!.insert(schema.payments).values({
         ...data,
         gymId: user.gymId,
         totalAmount: totalAmount.toString(),
@@ -3730,7 +3823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const existing = await db.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existing = await db!.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existing) {
         return res.status(404).json({ error: 'Payment not found' });
@@ -3748,7 +3841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = { ...validationResult.data };
       if (updateData.amount) updateData.amount = updateData.amount.toString();
 
-      const payment = await db.update(schema.payments).set(updateData).where(eq(schema.payments.id, req.params.id)).returning().then(rows => rows[0]);
+      const payment = await db!.update(schema.payments).set(updateData).where(eq(schema.payments.id, req.params.id)).returning().then(rows => rows[0]);
 
       res.json(payment);
     } catch (error: any) {
@@ -3759,7 +3852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/payments/:id', requireRole('admin'), async (req, res) => {
     try {
-      const existingPayment = await db.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingPayment = await db!.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingPayment) {
         return res.status(404).json({ error: 'Payment not found' });
@@ -3770,7 +3863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this payment' });
       }
 
-      await db.delete(schema.payments).where(eq(schema.payments.id, req.params.id));
+      await db!.delete(schema.payments).where(eq(schema.payments.id, req.params.id));
       res.status(204).send();
     } catch (error: any) {
       console.error(`Error deleting payment ${req.params.id}:`, error);
@@ -3780,7 +3873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members/:id/payments', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
@@ -3791,7 +3884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this member' });
       }
 
-      const payments = await db.select().from(schema.payments).where(eq(schema.payments.memberId, req.params.id));
+      const payments = await db!.select().from(schema.payments).where(eq(schema.payments.memberId, req.params.id));
       res.json(payments);
     } catch (error: any) {
       console.error(`Error fetching payments for member ${req.params.id}:`, error);
@@ -3807,7 +3900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const existingPayment = await db.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingPayment = await db!.select().from(schema.payments).where(eq(schema.payments.id, req.params.id)).limit(1).then(rows => rows[0]);
       if (!existingPayment) {
         return res.status(404).json({ error: 'Payment not found' });
       }
@@ -3829,7 +3922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newAmountDue = currentDue - amount;
       const newStatus = newAmountDue <= 0 ? 'paid' : 'partially_paid';
 
-      const updatedPayment = await db.update(schema.payments).set({
+      const updatedPayment = await db!.update(schema.payments).set({
         amount: newAmountPaid.toString(),
         amountDue: newAmountDue.toString(),
         status: newStatus,
@@ -3853,7 +3946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const payment = await db.select({
+      const payment = await db!.select({
         id: schema.payments.id,
         memberId: schema.payments.memberId,
         totalAmount: schema.payments.totalAmount,
@@ -3873,12 +3966,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Payment is already complete, no reminder needed' });
       }
 
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, payment.memberId)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, payment.memberId)).limit(1).then(rows => rows[0]);
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
       }
 
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
       const gymName = gym?.name || 'Your Gym';
       const amountDue = parseFloat(payment.amountDue || '0');
 
@@ -3943,7 +4036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const paymentsWithDues = await db.select({
+      const paymentsWithDues = await db!.select({
         id: schema.payments.id,
         memberId: schema.payments.memberId,
         memberName: schema.members.name,
@@ -3986,7 +4079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const payments = await db.select({
+      const payments = await db!.select({
         id: schema.payments.id,
         amount: schema.payments.amount,
         status: schema.payments.status,
@@ -4045,7 +4138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let csvContent = '';
       
       if (type === 'invoices') {
-        const invoices = await db.select({
+        const invoices = await db!.select({
           invoiceNumber: schema.invoices.invoiceNumber,
           memberName: schema.members.name,
           amount: schema.invoices.amount,
@@ -4073,7 +4166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           csvContent += `"${inv.invoiceNumber}","${inv.memberName}",${inv.amount},${inv.subtotal || ''},${inv.taxAmount || ''},${inv.discountAmount || ''},${inv.amountPaid || ''},${inv.amountDue || ''},"${inv.status}","${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN') : ''}","${inv.paidDate ? new Date(inv.paidDate).toLocaleDateString('en-IN') : ''}","${inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN') : ''}"\n`;
         });
       } else {
-        const payments = await db.select({
+        const payments = await db!.select({
           memberName: schema.members.name,
           totalAmount: schema.payments.totalAmount,
           amountPaid: schema.payments.amount,
@@ -4150,8 +4243,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: validationResult.data.amount.toString(),
       });
 
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, validationResult.data.memberId)).limit(1).then(rows => rows[0]);
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, validationResult.data.memberId)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
 
       if (member && gym) {
         const baseUrl = process.env.REPLIT_DEV_DOMAIN 
@@ -4218,7 +4311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const existing = await db.select().from(schema.invoices).where(eq(schema.invoices.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existing = await db!.select().from(schema.invoices).where(eq(schema.invoices.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existing) {
         return res.status(404).json({ error: 'Invoice not found' });
@@ -4236,7 +4329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = { ...validationResult.data };
       if (updateData.amount) updateData.amount = updateData.amount.toString();
 
-      const invoice = await db.update(schema.invoices).set(updateData).where(eq(schema.invoices.id, req.params.id)).returning().then(rows => rows[0]);
+      const invoice = await db!.update(schema.invoices).set(updateData).where(eq(schema.invoices.id, req.params.id)).returning().then(rows => rows[0]);
 
       res.json(invoice);
     } catch (error: any) {
@@ -4247,7 +4340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/invoices/:id', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const invoice = await db.select().from(schema.invoices).where(eq(schema.invoices.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const invoice = await db!.select().from(schema.invoices).where(eq(schema.invoices.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!invoice) {
         return res.status(404).json({ error: 'Invoice not found' });
@@ -4267,7 +4360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/invoices/:id/download', requireRole('admin', 'trainer', 'member'), async (req, res) => {
     try {
-      const invoice = await db.select().from(schema.invoices).where(eq(schema.invoices.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const invoice = await db!.select().from(schema.invoices).where(eq(schema.invoices.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!invoice) {
         return res.status(404).json({ error: 'Invoice not found' });
@@ -4278,8 +4371,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this invoice' });
       }
 
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, invoice.memberId)).limit(1).then(rows => rows[0]);
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, invoice.gymId)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, invoice.memberId)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, invoice.gymId)).limit(1).then(rows => rows[0]);
 
       if (!member || !gym) {
         return res.status(404).json({ error: 'Member or gym not found' });
@@ -4318,9 +4411,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/leads', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      let gymId: string | null = null;
+      if (isDbAvailable()) {
+        if (user.role === 'admin') {
+          const gymAdmin = await db!.select().from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = gymAdmin?.gymId || null;
+        } else if (user.role === 'trainer') {
+          const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = trainer?.gymId || null;
+        }
+      } else {
+        gymId = await supabaseRepo.getGymIdForUser(user.id, user.role);
+      }
+
+      if (!gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      if (!isDbAvailable()) {
+        return res.json([]);
       }
 
       const filters = {
@@ -4329,7 +4443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         search: req.query.search as string | undefined,
       };
 
-      let leads = await storage.listLeads(user.gymId, filters);
+      let leads = await storage.listLeads(gymId, filters);
 
       // For trainers, filter to show only leads they added or are assigned to
       if (user.role === 'trainer') {
@@ -4347,7 +4461,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/leads/:id', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const lead = await db.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const lead = await db!.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!lead) {
         return res.status(404).json({ error: 'Lead not found' });
@@ -4389,10 +4503,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         leadData.followUpDate = null;
       }
 
-      const lead = await db.insert(schema.leads).values(leadData).returning().then(rows => rows[0]);
+      const lead = await db!.insert(schema.leads).values(leadData).returning().then(rows => rows[0]);
 
       // Send welcome notifications to the lead
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
       
       if (gym) {
         // Send welcome email (only if lead has email)
@@ -4427,7 +4541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/leads/:id', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const existingLead = await db.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingLead = await db!.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingLead) {
         return res.status(404).json({ error: 'Lead not found' });
@@ -4458,7 +4572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.followUpDate = null;
       }
 
-      const lead = await db.update(schema.leads).set(updateData).where(eq(schema.leads.id, req.params.id)).returning().then(rows => rows[0]);
+      const lead = await db!.update(schema.leads).set(updateData).where(eq(schema.leads.id, req.params.id)).returning().then(rows => rows[0]);
 
       res.json(lead);
     } catch (error: any) {
@@ -4469,7 +4583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/leads/:id', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const existingLead = await db.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingLead = await db!.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingLead) {
         return res.status(404).json({ error: 'Lead not found' });
@@ -4480,7 +4594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this lead' });
       }
 
-      await db.delete(schema.leads).where(eq(schema.leads.id, req.params.id));
+      await db!.delete(schema.leads).where(eq(schema.leads.id, req.params.id));
       res.status(204).send();
     } catch (error: any) {
       console.error(`Error deleting lead ${req.params.id}:`, error);
@@ -4490,7 +4604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/leads/:id/convert', requireRole('admin'), async (req, res) => {
     try {
-      const existingLead = await db.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingLead = await db!.select().from(schema.leads).where(eq(schema.leads.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingLead) {
         return res.status(404).json({ error: 'Lead not found' });
@@ -4507,14 +4621,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if user with this email already exists
       const memberEmail = req.body.email || existingLead.email;
-      const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, memberEmail)).limit(1).then(rows => rows[0]);
+      const existingUser = await db!.select().from(schema.users).where(eq(schema.users.email, memberEmail)).limit(1).then(rows => rows[0]);
       
       if (existingUser) {
         return res.status(400).json({ error: 'A user with this email already exists' });
       }
 
       // Get gym details for notifications
-      const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, existingLead.gymId)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, existingLead.gymId)).limit(1).then(rows => rows[0]);
       const gymName = gym?.name || 'Your Gym';
 
       // Generate a temporary password for the new member
@@ -4640,7 +4754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         conditions.push(eq(schema.productCategories.isActive, req.query.isActive === 'true' ? 1 : 0));
       }
 
-      const categories = await db.select().from(schema.productCategories).where(and(...conditions));
+      const categories = await db!.select().from(schema.productCategories).where(and(...conditions));
       res.json(categories.map(cat => ({
         ...cat,
         isActive: cat.isActive === 1,
@@ -4658,7 +4772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const category = await db.insert(schema.productCategories).values({
+      const category = await db!.insert(schema.productCategories).values({
         ...req.body,
         gymId: user.gymId,
       }).returning().then(rows => rows[0]);
@@ -4672,7 +4786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/product-categories/:id', requireRole('admin'), async (req, res) => {
     try {
-      const category = await db.update(schema.productCategories).set(req.body).where(eq(schema.productCategories.id, req.params.id)).returning().then(rows => rows[0]);
+      const category = await db!.update(schema.productCategories).set(req.body).where(eq(schema.productCategories.id, req.params.id)).returning().then(rows => rows[0]);
       
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
@@ -4687,7 +4801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/product-categories/:id', requireRole('admin'), async (req, res) => {
     try {
-      await db.delete(schema.productCategories).where(eq(schema.productCategories.id, req.params.id));
+      await db!.delete(schema.productCategories).where(eq(schema.productCategories.id, req.params.id));
       res.status(204).send();
     } catch (error: any) {
       console.error('Error deleting product category:', error);
@@ -4718,7 +4832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/products/:id', requireAuth, async (req, res) => {
     try {
-      const product = await db.select().from(schema.products).where(eq(schema.products.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const product = await db!.select().from(schema.products).where(eq(schema.products.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!product) {
         return res.status(404).json({ error: 'Product not found' });
@@ -4765,7 +4879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/products/:id', requireRole('admin'), async (req, res) => {
     try {
-      const existingProduct = await db.select().from(schema.products).where(eq(schema.products.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingProduct = await db!.select().from(schema.products).where(eq(schema.products.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingProduct) {
         return res.status(404).json({ error: 'Product not found' });
@@ -4797,7 +4911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/products/:id', requireRole('admin'), async (req, res) => {
     try {
-      const existingProduct = await db.select().from(schema.products).where(eq(schema.products.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingProduct = await db!.select().from(schema.products).where(eq(schema.products.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingProduct) {
         return res.status(404).json({ error: 'Product not found' });
@@ -4808,7 +4922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied to this product' });
       }
 
-      await db.delete(schema.products).where(eq(schema.products.id, req.params.id));
+      await db!.delete(schema.products).where(eq(schema.products.id, req.params.id));
       res.status(204).send();
     } catch (error: any) {
       console.error(`Error deleting product ${req.params.id}:`, error);
@@ -4894,7 +5008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/orders/:id/status', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const existingOrder = await db.select().from(schema.orders).where(eq(schema.orders.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingOrder = await db!.select().from(schema.orders).where(eq(schema.orders.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingOrder) {
         return res.status(404).json({ error: 'Order not found' });
@@ -4920,7 +5034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/orders/:id/payment', requireRole('admin', 'trainer'), async (req, res) => {
     try {
-      const existingOrder = await db.select().from(schema.orders).where(eq(schema.orders.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const existingOrder = await db!.select().from(schema.orders).where(eq(schema.orders.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!existingOrder) {
         return res.status(404).json({ error: 'Order not found' });
@@ -4946,7 +5060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members/:id/orders', requireAuth, async (req, res) => {
     try {
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
@@ -5130,7 +5244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let memberId: string;
       if (user.role === 'member') {
-        const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+        const member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
 
         if (!member) {
           return res.status(404).json({ error: 'Member profile not found' });
@@ -5141,7 +5255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!providedMemberId) {
           return res.status(400).json({ error: 'memberId is required for non-member users' });
         }
-        const memberToCheck = await db.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
+        const memberToCheck = await db!.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
         if (!memberToCheck || memberToCheck.gymId !== user.gymId) {
           return res.status(403).json({ error: 'Member not found or does not belong to your gym.' });
         }
@@ -5165,7 +5279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let memberId: string;
       if (user.role === 'member') {
-        const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+        const member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
 
         if (!member) {
           return res.status(404).json({ error: 'Member profile not found' });
@@ -5176,7 +5290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!providedMemberId) {
           return res.status(400).json({ error: 'memberId is required for non-member users' });
         }
-        const memberToCheck = await db.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
+        const memberToCheck = await db!.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
         if (!memberToCheck || memberToCheck.gymId !== user.gymId) {
           return res.status(403).json({ error: 'Member not found or does not belong to your gym.' });
         }
@@ -5214,7 +5328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members/:id/bookings', requireAuth, async (req, res) => {
     try {
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
@@ -5235,12 +5349,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/trainers', requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      let gymId: string | null = null;
+      if (isDbAvailable()) {
+        if (user.role === 'admin') {
+          const gymAdmin = await db!.select().from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = gymAdmin?.gymId || null;
+        } else if (user.role === 'trainer') {
+          const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+          gymId = trainer?.gymId || null;
+        }
+      } else {
+        gymId = await supabaseRepo.getGymIdForUser(user.id, user.role);
+      }
+
+      if (!gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const trainers = await storage.getTrainersByGym(user.gymId);
+      if (!isDbAvailable()) {
+        return res.json([]);
+      }
+
+      const trainers = await storage.getTrainersByGym(gymId);
       res.json(trainers);
     } catch (error: any) {
       console.error('Error fetching trainers:', error);
@@ -5298,14 +5433,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if email already exists for a user
-      const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, validationResult.data.email)).limit(1).then(rows => rows[0]);
+      const existingUser = await db!.select().from(schema.users).where(eq(schema.users.email, validationResult.data.email)).limit(1).then(rows => rows[0]);
       
       let trainerUserId: string;
       let passwordToSend: string;
       
       if (existingUser) {
         // Check if this user is already a trainer at this gym
-        const existingTrainer = await db.select().from(schema.trainers).where(and(eq(schema.trainers.userId, existingUser.id), eq(schema.trainers.gymId, user.gymId))).limit(1).then(rows => rows[0]);
+        const existingTrainer = await db!.select().from(schema.trainers).where(and(eq(schema.trainers.userId, existingUser.id), eq(schema.trainers.gymId, user.gymId))).limit(1).then(rows => rows[0]);
         if (existingTrainer) {
           return res.status(400).json({ error: 'This email is already registered as a trainer at your gym' });
         }
@@ -5317,7 +5452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passwordToSend = tempPassword;
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
         
-        const newUser = await db.insert(schema.users).values({
+        const newUser = await db!.insert(schema.users).values({
           email: validationResult.data.email,
           passwordHash: hashedPassword,
           name: validationResult.data.name,
@@ -5332,7 +5467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? `https://${process.env.REPLIT_DEV_DOMAIN}/login`
           : 'https://gymsaathi.com/login';
         
-        const gym = await db.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
+        const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
         
         if (gym) {
           // Send welcome email
@@ -5462,10 +5597,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - today.getDay());
 
-      const members = await db.select().from(schema.members).where(eq(schema.members.gymId, user.gymId));
+      const members = await db!.select().from(schema.members).where(eq(schema.members.gymId, user.gymId));
       const activeMembers = members.filter(m => m.status === 'active');
 
-      const allClasses = await db.select().from(schema.classes).where(eq(schema.classes.gymId, user.gymId));
+      const allClasses = await db!.select().from(schema.classes).where(eq(schema.classes.gymId, user.gymId));
       const todayClasses = allClasses.filter(c => {
         const classDate = new Date(c.startTime);
         return classDate >= today && classDate <= todayEnd;
@@ -5475,14 +5610,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const upcomingClasses = todayClasses.filter(c => new Date(c.startTime) > now).length;
       const completedClasses = todayClasses.filter(c => new Date(c.endTime) < now).length;
 
-      const todayAttendance = await db.select().from(schema.attendance)
+      const todayAttendance = await db!.select().from(schema.attendance)
         .where(and(
           eq(schema.attendance.gymId, user.gymId),
           gte(schema.attendance.checkInTime, today),
           lte(schema.attendance.checkInTime, todayEnd)
         ));
 
-      const weekAttendance = await db.select().from(schema.attendance)
+      const weekAttendance = await db!.select().from(schema.attendance)
         .where(and(
           eq(schema.attendance.gymId, user.gymId),
           gte(schema.attendance.checkInTime, weekStart)
@@ -5520,7 +5655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const todayEnd = new Date(today);
       todayEnd.setHours(23, 59, 59, 999);
 
-      const allClasses = await db.select().from(schema.classes)
+      const allClasses = await db!.select().from(schema.classes)
         .where(and(
           eq(schema.classes.gymId, user.gymId),
           gte(schema.classes.startTime, today),
@@ -5531,7 +5666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const upcomingClasses = await Promise.all(allClasses.map(async (cls) => {
         const bookings = await storage.listClassBookings(cls.id);
         const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
-        const classType = await db.select().from(schema.classTypes).where(eq(schema.classTypes.id, cls.classTypeId)).limit(1).then(rows => rows[0]);
+        const classType = await db!.select().from(schema.classTypes).where(eq(schema.classTypes.id, cls.classTypeId)).limit(1).then(rows => rows[0]);
         return {
           id: cls.id,
           name: classType?.name || 'Class',
@@ -5559,7 +5694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const recentAttendance = await db.select({
+      const recentAttendance = await db!.select({
         id: schema.attendance.id,
         memberId: schema.attendance.memberId,
         checkInTime: schema.attendance.checkInTime,
@@ -5617,7 +5752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error.message });
       }
 
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, validationResult.data.memberId)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, validationResult.data.memberId)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
@@ -5677,7 +5812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let memberId: string;
       if (user.role === 'member') {
-        const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+        const member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
 
         if (!member) {
           return res.status(404).json({ error: 'Member profile not found' });
@@ -5687,7 +5822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!providedMemberId) {
           return res.status(400).json({ error: 'memberId is required for admin/trainer' });
         }
-        const memberToCheck = await db.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
+        const memberToCheck = await db!.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
 
         if (!memberToCheck || memberToCheck.gymId !== user.gymId) {
           return res.status(403).json({ error: 'Member not found or does not belong to your gym.' });
@@ -5741,7 +5876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members/:id/attendance', requireAuth, async (req, res) => {
     try {
-      const member = await db.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
@@ -5783,7 +5918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'User not found' });
       }
 
-      const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member profile not found' });
@@ -6000,7 +6135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get member profile
-      const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
       if (!member) {
         return res.status(404).json({ 
           status: 'error', 
@@ -6043,14 +6178,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'User not found' });
       }
 
-      const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
       if (!member) {
         return res.status(404).json({ error: 'Member profile not found' });
       }
 
       const limit = parseInt(req.query.limit as string) || 30;
       
-      const history = await db.select()
+      const history = await db!.select()
         .from(schema.attendance)
         .where(eq(schema.attendance.memberId, member.id))
         .orderBy(desc(schema.attendance.checkInTime))
@@ -6080,7 +6215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'User not found' });
       }
 
-      const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+      const member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
       if (!member) {
         return res.status(404).json({ error: 'Member profile not found' });
       }
@@ -6129,11 +6264,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const settings = await db.select().from(schema.storeSettings).where(eq(schema.storeSettings.gymId, user.gymId)).limit(1).then(rows => rows[0]);
+      const settings = await db!.select().from(schema.storeSettings).where(eq(schema.storeSettings.gymId, user.gymId)).limit(1).then(rows => rows[0]);
       
       if (!settings) {
         // Create default settings if none exist
-        const newSettings = await db.insert(schema.storeSettings).values({
+        const newSettings = await db!.insert(schema.storeSettings).values({
           gymId: user.gymId,
         }).returning().then(rows => rows[0]);
         return res.json(newSettings);
@@ -6153,13 +6288,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const existing = await db.select().from(schema.storeSettings).where(eq(schema.storeSettings.gymId, user.gymId)).limit(1).then(rows => rows[0]);
+      const existing = await db!.select().from(schema.storeSettings).where(eq(schema.storeSettings.gymId, user.gymId)).limit(1).then(rows => rows[0]);
 
       let settings;
       if (existing) {
-        settings = await db.update(schema.storeSettings).set({ ...req.body, updatedAt: new Date() }).where(eq(schema.storeSettings.gymId, user.gymId)).returning().then(rows => rows[0]);
+        settings = await db!.update(schema.storeSettings).set({ ...req.body, updatedAt: new Date() }).where(eq(schema.storeSettings.gymId, user.gymId)).returning().then(rows => rows[0]);
       } else {
-        settings = await db.insert(schema.storeSettings).values({
+        settings = await db!.insert(schema.storeSettings).values({
           ...req.body,
           gymId: user.gymId,
         }).returning().then(rows => rows[0]);
@@ -6184,31 +6319,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date(new Date().toISOString().split('T')[0]);
 
       // Revenue this month
-      const monthlyOrders = await db.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), gte(schema.orders.orderDate, startOfMonth)));
+      const monthlyOrders = await db!.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), gte(schema.orders.orderDate, startOfMonth)));
       const revenueThisMonth = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
 
       // Orders today
-      const todayOrders = await db.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), gte(schema.orders.orderDate, today)));
+      const todayOrders = await db!.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), gte(schema.orders.orderDate, today)));
       const ordersToday = todayOrders.length;
 
       // Pending orders
-      const pendingOrders = await db.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), eq(schema.orders.status, 'pending')));
+      const pendingOrders = await db!.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), eq(schema.orders.status, 'pending')));
       const pendingCount = pendingOrders.length;
 
       // Completed orders
-      const completedOrders = await db.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), eq(schema.orders.status, 'delivered')));
+      const completedOrders = await db!.select().from(schema.orders).where(and(eq(schema.orders.gymId, user.gymId), eq(schema.orders.status, 'delivered')));
       const completedCount = completedOrders.length;
 
       // Low stock alerts
-      const products = await db.select().from(schema.products).where(eq(schema.products.gymId, user.gymId));
+      const products = await db!.select().from(schema.products).where(eq(schema.products.gymId, user.gymId));
       const lowStock = products.filter(p => p.stock <= (p.lowStockAlert ?? 10) && p.stock > 0).length;
 
       // Best selling products (top 5)
-      const allOrders = await db.select().from(schema.orders).where(eq(schema.orders.gymId, user.gymId));
+      const allOrders = await db!.select().from(schema.orders).where(eq(schema.orders.gymId, user.gymId));
       const orderIds = allOrders.map(o => o.id);
       
       const orderItems = orderIds.length > 0 
-        ? await db.select().from(schema.orderItems).where(sql`${schema.orderItems.orderId} IN ${orderIds}`)
+        ? await db!.select().from(schema.orderItems).where(sql`${schema.orderItems.orderId} IN ${orderIds}`)
         : [];
 
       const productSales: Record<string, { productId: string; productName: string; totalQuantity: number; revenue: number }> = {};
@@ -6230,7 +6365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .slice(0, 5);
 
       // Recent orders
-      const recentOrders = await db.select().from(schema.orders)
+      const recentOrders = await db!.select().from(schema.orders)
         .where(eq(schema.orders.gymId, user.gymId))
         .orderBy(desc(schema.orders.orderDate))
         .limit(10);
@@ -6256,7 +6391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      const notifications = await db.select()
+      const notifications = await db!.select()
         .from(schema.notifications)
         .where(eq(schema.notifications.userId, userId))
         .orderBy(desc(schema.notifications.createdAt))
@@ -6273,7 +6408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications/unread-count', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      const result = await db.select({ count: sql<number>`count(*)` })
+      const result = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.notifications)
         .where(and(
           eq(schema.notifications.userId, userId),
@@ -6291,7 +6426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/notifications/:id/read', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      const notification = await db.select()
+      const notification = await db!.select()
         .from(schema.notifications)
         .where(and(
           eq(schema.notifications.id, req.params.id),
@@ -6304,7 +6439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Notification not found' });
       }
 
-      await db.update(schema.notifications)
+      await db!.update(schema.notifications)
         .set({ isRead: 1 })
         .where(eq(schema.notifications.id, req.params.id));
       
@@ -6319,7 +6454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/notifications/mark-all-read', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      await db.update(schema.notifications)
+      await db!.update(schema.notifications)
         .set({ isRead: 1 })
         .where(eq(schema.notifications.userId, userId));
       
