@@ -10,7 +10,7 @@ function getDb() {
   return db;
 }
 
-function isDbAvailable(): boolean {
+export function isDbAvailable(): boolean {
   return db !== null;
 }
 
@@ -558,6 +558,26 @@ class Storage {
   }
 
   async getUserById(userId: string) {
+    if (!isDbAvailable()) {
+      const { supabaseRepo } = await import('./supabaseRepository');
+      const supabaseUser = await supabaseRepo.getUserById(userId);
+      if (!supabaseUser) return null;
+      
+      const gymId = await supabaseRepo.getGymIdForUser(userId, supabaseUser.role);
+      
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        name: supabaseUser.name,
+        role: supabaseUser.role,
+        phone: supabaseUser.phone,
+        isActive: supabaseUser.is_active,
+        createdAt: new Date(supabaseUser.created_at),
+        lastLogin: supabaseUser.last_login ? new Date(supabaseUser.last_login) : null,
+        gymId: gymId,
+      };
+    }
+    
     const user = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1).then(rows => rows[0]);
 
     if (!user) {
