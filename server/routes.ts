@@ -295,11 +295,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.post('/api/auth/forgot-password', async (req, res) => {
     try {
-      if (!isDbAvailable()) {
-        console.log('⚠️ Password reset unavailable - database connection required');
-        return res.status(503).json({ error: 'Password reset is temporarily unavailable. Please try again later.' });
-      }
-
       const { email } = req.body;
 
       if (!email) {
@@ -308,11 +303,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🔑 Password reset requested for: ${email}`);
 
-      const user = await db!.select()
-        .from(schema.users)
-        .where(eq(schema.users.email, email.toLowerCase()))
-        .limit(1)
-        .then(rows => rows[0]);
+      let user: any = null;
+
+      if (isDbAvailable()) {
+        user = await db!.select()
+          .from(schema.users)
+          .where(eq(schema.users.email, email.toLowerCase()))
+          .limit(1)
+          .then(rows => rows[0]);
+      } else {
+        const supabaseUser = await supabaseRepo.getUserByEmail(email);
+        if (supabaseUser) {
+          user = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            name: supabaseUser.name,
+            isActive: supabaseUser.is_active,
+          };
+        }
+      }
 
       if (!user) {
         console.log(`⚠️ Password reset requested for non-existent email: ${email}`);
@@ -331,15 +340,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resetToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
-      await db!.delete(schema.passwordResetTokens)
-        .where(eq(schema.passwordResetTokens.userId, user.id));
+      if (isDbAvailable()) {
+        await db!.delete(schema.passwordResetTokens)
+          .where(eq(schema.passwordResetTokens.userId, user.id));
 
-      await db!.insert(schema.passwordResetTokens).values({
-        userId: user.id,
-        token: resetToken,
-        expiresAt: expiresAt,
-        used: 0,
-      });
+        await db!.insert(schema.passwordResetTokens).values({
+          userId: user.id,
+          token: resetToken,
+          expiresAt: expiresAt,
+          used: 0,
+        });
+      } else {
+        await supabaseRepo.deletePasswordResetTokensForUser(user.id);
+        await supabaseRepo.createPasswordResetToken({
+          user_id: user.id,
+          token: resetToken,
+          expires_at: expiresAt.toISOString(),
+          used: 0,
+        });
+      }
 
       const baseUrl = process.env.REPLIT_DEV_DOMAIN 
         ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
@@ -373,11 +392,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.post('/api/auth/reset-password', async (req, res) => {
     try {
-      if (!isDbAvailable()) {
-        console.log('⚠️ Password reset unavailable - database connection required');
-        return res.status(503).json({ error: 'Password reset is temporarily unavailable. Please try again later.' });
-      }
-
       const { token, password } = req.body;
 
       if (!token || !password) {
@@ -388,11 +402,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Password must be at least 6 characters' });
       }
 
-      const resetToken = await db!.select()
-        .from(schema.passwordResetTokens)
-        .where(eq(schema.passwordResetTokens.token, token))
-        .limit(1)
-        .then(rows => rows[0]);
+      let resetToken: any = null;
+      let user: any = null;
+
+      if (isDbAvailable()) {
+        resetToken = await db!.select()
+          .from(schema.passwordResetTokens)
+          .where(eq(schema.passwordResetTokens.token, token))
+          .limit(1)
+          .then(rows => rows[0]);
+      } else {
+        const supabaseToken = await supabaseRepo.getPasswordResetToken(token);
+        if (supabaseToken) {
+          resetToken = {
+            id: supabaseToken.id,
+            userId: supabaseToken.user_id,
+            token: supabaseToken.token,
+            expiresAt: supabaseToken.expires_at,
+            used: supabaseToken.used,
+          };
+        }
+      }
 
       if (!resetToken) {
         console.log('❌ Invalid password reset token');
@@ -409,11 +439,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'This reset link has expired. Please request a new one.' });
       }
 
-      const user = await db.select()
-        .from(schema.users)
-        .where(eq(schema.users.id, resetToken.userId))
-        .limit(1)
-        .then(rows => rows[0]);
+      if (isDbAvailable()) {
+        user = await db!.select()
+          .from(schema.users)
+          .where(eq(schema.users.id, resetToken.userId))
+          .limit(1)
+          .then(rows => rows[0]);
+      } else {
+        const supabaseUser = await supabaseRepo.getUserById(resetToken.userId);
+        if (supabaseUser) {
+          user = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+          };
+        }
+      }
 
       if (!user) {
         console.log('❌ User not found for password reset token');
@@ -422,13 +462,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const passwordHash = await bcrypt.hash(password, 10);
 
-      await db.update(schema.users)
-        .set({ passwordHash: passwordHash })
-        .where(eq(schema.users.id, user.id));
+      if (isDbAvailable()) {
+        await db!.update(schema.users)
+          .set({ passwordHash: passwordHash })
+          .where(eq(schema.users.id, user.id));
 
-      await db.update(schema.passwordResetTokens)
-        .set({ used: 1 })
-        .where(eq(schema.passwordResetTokens.id, resetToken.id));
+        await db!.update(schema.passwordResetTokens)
+          .set({ used: 1 })
+          .where(eq(schema.passwordResetTokens.id, resetToken.id));
+      } else {
+        const updated = await supabaseRepo.updateUserPassword(user.id, passwordHash);
+        if (!updated) {
+          return res.status(500).json({ error: 'Failed to update password' });
+        }
+        await supabaseRepo.markPasswordResetTokenUsed(resetToken.id);
+      }
 
       console.log(`✅ Password successfully reset for: ${user.email}`);
 
@@ -450,11 +498,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ valid: false, error: 'Token is required' });
       }
 
-      const resetToken = await db.select()
-        .from(schema.passwordResetTokens)
-        .where(eq(schema.passwordResetTokens.token, token))
-        .limit(1)
-        .then(rows => rows[0]);
+      let resetToken: any = null;
+
+      if (isDbAvailable()) {
+        resetToken = await db!.select()
+          .from(schema.passwordResetTokens)
+          .where(eq(schema.passwordResetTokens.token, token))
+          .limit(1)
+          .then(rows => rows[0]);
+      } else {
+        const supabaseToken = await supabaseRepo.getPasswordResetToken(token);
+        if (supabaseToken) {
+          resetToken = {
+            id: supabaseToken.id,
+            userId: supabaseToken.user_id,
+            token: supabaseToken.token,
+            expiresAt: supabaseToken.expires_at,
+            used: supabaseToken.used,
+          };
+        }
+      }
 
       if (!resetToken) {
         return res.json({ valid: false, error: 'Invalid reset link' });

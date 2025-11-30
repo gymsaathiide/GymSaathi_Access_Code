@@ -47,6 +47,15 @@ export interface SupabaseGymUser {
   is_primary: number;
 }
 
+export interface SupabasePasswordResetToken {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  used: number;
+  created_at: string;
+}
+
 export const supabaseRepo = {
   async getUserByEmail(email: string): Promise<SupabaseUser | null> {
     const { data, error } = await supabase
@@ -229,5 +238,77 @@ export const supabaseRepo = {
     if (error) {
       console.error('Supabase logAuditEvent error:', error);
     }
+  },
+
+  async deletePasswordResetTokensForUser(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('password_reset_tokens')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Supabase deletePasswordResetTokensForUser error:', error);
+    }
+  },
+
+  async createPasswordResetToken(tokenData: {
+    user_id: string;
+    token: string;
+    expires_at: string;
+    used: number;
+  }): Promise<SupabasePasswordResetToken | null> {
+    const { data, error } = await supabase
+      .from('password_reset_tokens')
+      .insert([tokenData])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Supabase createPasswordResetToken error:', error);
+      return null;
+    }
+    return data as SupabasePasswordResetToken;
+  },
+
+  async getPasswordResetToken(token: string): Promise<SupabasePasswordResetToken | null> {
+    const { data, error } = await supabase
+      .from('password_reset_tokens')
+      .select('*')
+      .eq('token', token)
+      .limit(1)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Supabase getPasswordResetToken error:', error);
+      return null;
+    }
+    return data as SupabasePasswordResetToken;
+  },
+
+  async markPasswordResetTokenUsed(tokenId: string): Promise<void> {
+    const { error } = await supabase
+      .from('password_reset_tokens')
+      .update({ used: 1 })
+      .eq('id', tokenId);
+    
+    if (error) {
+      console.error('Supabase markPasswordResetTokenUsed error:', error);
+    }
+  },
+
+  async updateUserPassword(userId: string, passwordHash: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('users')
+      .update({ password_hash: passwordHash })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Supabase updateUserPassword error:', error);
+      return false;
+    }
+    return true;
   }
 };
