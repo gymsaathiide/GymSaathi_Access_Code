@@ -1,6 +1,7 @@
 import { db } from '../db';
 import * as schema from '../../shared/schema';
 import { Request } from 'express';
+import { supabaseRepo } from '../supabaseRepository';
 
 export type AuditSeverity = 'info' | 'warning' | 'critical';
 export type AuditStatus = 'success' | 'failed';
@@ -29,16 +30,29 @@ function getClientIP(req: Request): string {
 
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
   try {
-    await db.insert(schema.auditLogs).values({
-      userId: entry.userId,
-      userName: entry.userName,
-      action: entry.action,
-      resource: entry.resource,
-      severity: entry.severity,
-      status: entry.status,
-      ipAddress: entry.ipAddress,
-      details: entry.details || null,
-    });
+    if (db) {
+      await db.insert(schema.auditLogs).values({
+        userId: entry.userId,
+        userName: entry.userName,
+        action: entry.action,
+        resource: entry.resource,
+        severity: entry.severity,
+        status: entry.status,
+        ipAddress: entry.ipAddress,
+        details: entry.details || null,
+      });
+    } else {
+      await supabaseRepo.logAuditEvent({
+        user_id: entry.userId,
+        user_name: entry.userName,
+        action: entry.action,
+        resource: entry.resource,
+        severity: entry.severity,
+        ip_address: entry.ipAddress,
+        details: entry.details,
+        status: entry.status,
+      });
+    }
   } catch (error) {
     console.error('Failed to log audit event:', error);
   }

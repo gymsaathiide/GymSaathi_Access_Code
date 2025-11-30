@@ -14,6 +14,12 @@ import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sen
 import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber } from "./services/whatsappService";
 import { generateInvoicePdf, type InvoiceData } from "./services/invoicePdfService";
 import * as auditService from "./services/auditService";
+import { supabaseRepo } from "./supabaseRepository";
+import * as userAccess from "./services/userAccess";
+
+function isDbAvailable(): boolean {
+  return db !== null;
+}
 
 const createPaymentSchema = z.object({
   memberId: z.string().uuid(),
@@ -147,7 +153,7 @@ export function requireRole(...roles: string[]) {
       return res.status(401).json({ error: 'Unauthorized - Please log in' });
     }
 
-    const user = await storage.getUserById(req.session.userId);
+    const user = await userAccess.getUserById(req.session.userId);
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized - User not found' });
     }
@@ -172,11 +178,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
-      const user = await db.select().from(schema.users).where(eq(schema.users.email, email.toLowerCase())).limit(1).then(rows => rows[0]);
+      let user: any = null;
+      let gymIds: string[] = [];
+
+      if (isDbAvailable()) {
+        user = await db!.select().from(schema.users).where(eq(schema.users.email, email.toLowerCase())).limit(1).then(rows => rows[0]);
+      } else {
+        const supabaseUser = await supabaseRepo.getUserByEmail(email);
+        if (supabaseUser) {
+          user = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            passwordHash: supabaseUser.password_hash,
+            role: supabaseUser.role,
+            name: supabaseUser.name,
+            phone: supabaseUser.phone,
+            profileImageUrl: supabaseUser.profile_image_url,
+            isActive: supabaseUser.is_active,
+            createdAt: supabaseUser.created_at,
+            lastLogin: supabaseUser.last_login,
+          };
+        }
+      }
 
       if (!user) {
         console.log(`❌ User not found: ${email}`);
-        await auditService.logFailedLoginAttempt(req, email);
+        try { await auditService.logFailedLoginAttempt(req, email); } catch (e) {}
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
@@ -185,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!validPassword) {
         console.log(`❌ Invalid password for: ${email}`);
-        await auditService.logFailedLoginAttempt(req, email);
+        try { await auditService.logFailedLoginAttempt(req, email); } catch (e) {}
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
@@ -194,12 +221,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Account is inactive' });
       }
 
-      await db.update(schema.users).set({ lastLogin: new Date() }).where(eq(schema.users.id, user.id));
+      if (isDbAvailable()) {
+        await db!.update(schema.users).set({ lastLogin: new Date() }).where(eq(schema.users.id, user.id));
+        gymIds = await storage.getUserGyms(user.id, user.role);
+      } else {
+        await supabaseRepo.updateUserLastLogin(user.id);
+        gymIds = await supabaseRepo.getUserGyms(user.id, user.role);
+      }
 
       req.session.userId = user.id;
       req.session.userRole = user.role;
 
-      const gymIds = await storage.getUserGyms(user.id, user.role);
       const primaryGymId = gymIds.length > 0 ? gymIds[0] : null;
       req.session.gymId = primaryGymId;
 
@@ -230,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Login successful: ${email} (${user.role})`);
       
-      await auditService.logLogin(req, user.id, user.name, true);
+      try { await auditService.logLogin(req, user.id, user.name, true); } catch (e) {}
       
       res.json({
         user: userResponse,
@@ -244,10 +276,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/logout', async (req, res) => {
     const userId = req.session?.userId;
-    const user = userId ? await storage.getUserById(userId) : null;
+    const user = userId ? await userAccess.getUserById(userId) : null;
     
     if (user) {
-      await auditService.logLogout(req, user.id, user.name);
+      try { await auditService.logLogout(req, user.id, user.name); } catch (e) {}
     }
     
     req.session.destroy((err) => {
@@ -263,6 +295,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.post('/api/auth/forgot-password', async (req, res) => {
     try {
+      if (!isDbAvailable()) {
+        console.log('⚠️ Password reset unavailable - database connection required');
+        return res.status(503).json({ error: 'Password reset is temporarily unavailable. Please try again later.' });
+      }
+
       const { email } = req.body;
 
       if (!email) {
@@ -271,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🔑 Password reset requested for: ${email}`);
 
-      const user = await db.select()
+      const user = await db!.select()
         .from(schema.users)
         .where(eq(schema.users.email, email.toLowerCase()))
         .limit(1)
@@ -294,10 +331,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resetToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
-      await db.delete(schema.passwordResetTokens)
+      await db!.delete(schema.passwordResetTokens)
         .where(eq(schema.passwordResetTokens.userId, user.id));
 
-      await db.insert(schema.passwordResetTokens).values({
+      await db!.insert(schema.passwordResetTokens).values({
         userId: user.id,
         token: resetToken,
         expiresAt: expiresAt,
@@ -336,6 +373,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
   app.post('/api/auth/reset-password', async (req, res) => {
     try {
+      if (!isDbAvailable()) {
+        console.log('⚠️ Password reset unavailable - database connection required');
+        return res.status(503).json({ error: 'Password reset is temporarily unavailable. Please try again later.' });
+      }
+
       const { token, password } = req.body;
 
       if (!token || !password) {
@@ -346,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Password must be at least 6 characters' });
       }
 
-      const resetToken = await db.select()
+      const resetToken = await db!.select()
         .from(schema.passwordResetTokens)
         .where(eq(schema.passwordResetTokens.token, token))
         .limit(1)
@@ -854,7 +896,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`👤 Session found for user ID: ${req.session.userId}`);
 
-      const user = await db.select().from(schema.users).where(eq(schema.users.id, req.session.userId)).limit(1).then(rows => rows[0]);
+      let user: any = null;
+      let gymIds: string[] = [];
+
+      if (isDbAvailable()) {
+        user = await db!.select().from(schema.users).where(eq(schema.users.id, req.session.userId)).limit(1).then(rows => rows[0]);
+        if (user) {
+          gymIds = await storage.getUserGyms(user.id, user.role);
+        }
+      } else {
+        const supabaseUser = await supabaseRepo.getUserById(req.session.userId);
+        if (supabaseUser) {
+          user = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            role: supabaseUser.role,
+            name: supabaseUser.name,
+            phone: supabaseUser.phone,
+            profileImageUrl: supabaseUser.profile_image_url,
+            isActive: supabaseUser.is_active,
+            createdAt: supabaseUser.created_at,
+            lastLogin: supabaseUser.last_login,
+          };
+          gymIds = await supabaseRepo.getUserGyms(user.id, user.role);
+        }
+      }
 
       if (!user) {
         console.log(`❌ User not found in DB for session userId: ${req.session.userId}`);
@@ -863,7 +929,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Authenticated user: ${user.email} (${user.role})`);
 
-      const gymIds = await storage.getUserGyms(user.id, user.role);
       const primaryGymId = gymIds.length > 0 ? gymIds[0] : null;
 
       const userResponse = {
@@ -888,7 +953,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/me', requireAuth, async (req, res) => {
     try {
-      const user = await db.select().from(schema.users).where(eq(schema.users.id, req.session!.userId!)).limit(1).then(rows => rows[0]);
+      let user: any = null;
+      let member: any = null;
+
+      if (isDbAvailable()) {
+        user = await db!.select().from(schema.users).where(eq(schema.users.id, req.session!.userId!)).limit(1).then(rows => rows[0]);
+        if (user && user.role === 'member') {
+          member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+        }
+      } else {
+        const supabaseUser = await supabaseRepo.getUserById(req.session!.userId!);
+        if (supabaseUser) {
+          user = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            role: supabaseUser.role,
+            name: supabaseUser.name,
+            phone: supabaseUser.phone,
+            isActive: supabaseUser.is_active,
+            createdAt: supabaseUser.created_at,
+            lastLogin: supabaseUser.last_login,
+          };
+        }
+      }
 
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
@@ -905,17 +992,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastLogin: user.lastLogin,
       };
 
-      if (user.role === 'member') {
-        const member = await db.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
-
-        if (!member) {
-          console.warn(`Member profile not found for user ID: ${user.id}`);
-          return res.json({ user: userResponse, member: null });
-        }
-        return res.json({ user: userResponse, member });
+      if (user.role === 'member' && !member) {
+        console.warn(`Member profile not found for user ID: ${user.id}`);
       }
 
-      res.json({ user: userResponse, member: null });
+      res.json({ user: userResponse, member: member || null });
     } catch (error: any) {
       console.error('Error in /api/me:', error);
       res.status(500).json({ error: error.message });
