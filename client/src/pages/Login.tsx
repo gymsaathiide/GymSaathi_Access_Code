@@ -90,7 +90,7 @@ export default function Login() {
 
   const fillDemoCredentials = (role: 'superadmin' | 'admin' | 'trainer') => {
     const credentials = {
-      superadmin: { email: 'superadmin@gymsaathi.com', password: 'password123' },
+      superadmin: { email: 'superadmin@gym.com', password: 'password123' },
       admin: { email: 'admin@powerfit.com', password: 'password123' },
       trainer: { email: 'trainer@powerfit.com', password: 'password123' },
     };
@@ -315,12 +315,12 @@ export default function Login() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  form.setValue('email', 'superadmin@gymsaathi.com', { shouldValidate: true });
+                  form.setValue('email', 'superadmin@gym.com', { shouldValidate: true });
                 }}
                 disabled={isLoading}
                 className="text-gray-500 hover:text-gray-300 text-xs"
               >
-                superadmin@gymsaathi.com
+                superadmin@gym.com
               </Button>
               <Button
                 variant="ghost"

@@ -55,6 +55,16 @@ Old Replit Neon PG env vars (PGHOST, PGDATABASE, PGUSER, PGPASSWORD, PGPORT) are
 
 **Session-based authentication** is implemented using Express sessions with a PostgreSQL session store. Security features include CORS, raw body capture for webhook verification, and an audit logging system.
 
+**Demo Credentials (for development/testing):**
+| Role | Email | Password |
+|------|-------|----------|
+| Superadmin | superadmin@gym.com | password123 |
+| Gym Admin | admin@powerfit.com | password123 |
+| Trainer | trainer@powerfit.com | password123 |
+| Member | member@powerfit.com | password123 |
+
+**Note:** When DATABASE_URL is unavailable, the system falls back to Supabase REST API for authentication. Full data operations require a valid DATABASE_URL pointing to Supabase's pooled PostgreSQL connection.
+
 # External Dependencies
 
 **UI Component Libraries**: Radix UI, Lucide React, class-variance-authority, tailwind-merge, clsx.
