@@ -3,6 +3,17 @@ import { eq, and, desc, asc, sql, gte, lte, or, like, isNull } from 'drizzle-orm
 import * as schema from '@shared/schema';
 import bcrypt from 'bcrypt';
 
+function getDb() {
+  if (!db) {
+    throw new Error('Database connection not available. Please check your DATABASE_URL or Supabase configuration.');
+  }
+  return db;
+}
+
+function isDbAvailable(): boolean {
+  return db !== null;
+}
+
 class Storage {
   private initialized = false;
 
@@ -12,7 +23,7 @@ class Storage {
       const password = 'password123';
       const passwordHash = await bcrypt.hash(password, 10);
 
-      const powerFitGym = await db.select().from(schema.gyms).where(eq(schema.gyms.name, 'PowerFit Gym')).limit(1).then(rows => rows[0]);
+      const powerFitGym = await getDb().select().from(schema.gyms).where(eq(schema.gyms.name, 'PowerFit Gym')).limit(1).then(rows => rows[0]);
       const gymId = powerFitGym?.id || null;
 
       const demoUsers = [
@@ -24,7 +35,7 @@ class Storage {
 
       for (const user of demoUsers) {
         try {
-          await db.insert(schema.users).values(user);
+          await getDb().insert(schema.users).values(user);
         } catch (err: any) {
           if (err.code !== '23505') {
             console.error(`Error creating user ${user.email}:`, err);
@@ -43,14 +54,21 @@ class Storage {
   async initializeSampleData() {
     if (this.initialized) return;
 
+    if (!isDbAvailable()) {
+      console.log('⚠️ Database not available, skipping sample data initialization');
+      console.log('📌 Using Supabase client - please ensure your tables are created via Supabase dashboard');
+      this.initialized = true;
+      return;
+    }
+
     try {
-      const userCount = await db.select({ count: sql<number>`count(*)` }).from(schema.users).then(rows => rows[0]?.count || 0);
+      const userCount = await getDb().select({ count: sql<number>`count(*)` }).from(schema.users).then(rows => rows[0]?.count || 0);
 
       if (!userCount || userCount === 0) {
         await this.createDemoUsers();
       }
 
-      const gymCount = await db.select({ count: sql<number>`count(*)` }).from(schema.gyms).then(rows => rows[0]?.count || 0);
+      const gymCount = await getDb().select({ count: sql<number>`count(*)` }).from(schema.gyms).then(rows => rows[0]?.count || 0);
 
       if (gymCount && gymCount > 0) {
         this.initialized = true;
@@ -68,10 +86,10 @@ class Storage {
       ];
 
       for (const gymData of gymsData) {
-        const gym = await db.insert(schema.gyms).values(gymData).returning().then(rows => rows[0]);
+        const gym = await getDb().insert(schema.gyms).values(gymData).returning().then(rows => rows[0]);
 
         const subscriptionStatus = gym.status === 'active' ? 'active' : gym.status === 'suspended' ? 'past_due' : 'trialing';
-        await db.insert(schema.subscriptions).values({
+        await getDb().insert(schema.subscriptions).values({
           gymId: gym.id,
           gymName: gym.name,
           plan: gym.plan,
@@ -83,7 +101,7 @@ class Storage {
 
         for (let i = 0; i < 3; i++) {
           const transactionStatus = i === 0 ? 'paid' : Math.random() > 0.8 ? 'failed' : 'paid';
-          await db.insert(schema.transactions).values({
+          await getDb().insert(schema.transactions).values({
             gymId: gym.id,
             gymName: gym.name,
             amount: gym.revenue || '0',
@@ -93,7 +111,7 @@ class Storage {
           });
         }
 
-        await db.insert(schema.branding).values({
+        await getDb().insert(schema.branding).values({
           gymId: gym.id,
           primaryColor: '#3b82f6',
           secondaryColor: '#10b981',
@@ -106,7 +124,7 @@ class Storage {
       const password = 'password123';
       const passwordHash = await bcrypt.hash(password, 10);
 
-      const powerFitGym = await db.select().from(schema.gyms).where(eq(schema.gyms.name, 'PowerFit Gym')).limit(1).then(rows => rows[0]);
+      const powerFitGym = await getDb().select().from(schema.gyms).where(eq(schema.gyms.name, 'PowerFit Gym')).limit(1).then(rows => rows[0]);
       const gymId = powerFitGym?.id;
 
       const demoUsers = [
@@ -118,7 +136,7 @@ class Storage {
 
       for (const user of demoUsers) {
         try {
-          await db.insert(schema.users).values(user);
+          await getDb().insert(schema.users).values(user);
         } catch (err: any) {
           if (err.code !== '23505') {
             console.error(`Error creating user ${user.email}:`, err);
@@ -139,33 +157,33 @@ class Storage {
   }
 
   async getAllGyms() {
-    const data = await db.select().from(schema.gyms).orderBy(desc(schema.gyms.createdAt));
+    const data = await getDb().select().from(schema.gyms).orderBy(desc(schema.gyms.createdAt));
     return data;
   }
 
   async getRecentGyms(limit = 5) {
-    const data = await db.select().from(schema.gyms).orderBy(desc(schema.gyms.createdAt)).limit(limit);
+    const data = await getDb().select().from(schema.gyms).orderBy(desc(schema.gyms.createdAt)).limit(limit);
     return data;
   }
 
   async getGym(id: string) {
-    const data = await db.select().from(schema.gyms).where(eq(schema.gyms.id, id)).limit(1).then(rows => rows[0]);
+    const data = await getDb().select().from(schema.gyms).where(eq(schema.gyms.id, id)).limit(1).then(rows => rows[0]);
     return data || null;
   }
 
   async createGym(data: any) {
     const revenue = data.plan === 'enterprise' ? '2500' : data.plan === 'professional' ? '1500' : '800';
-    const result = await db.insert(schema.gyms).values({ ...data, revenue }).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.gyms).values({ ...data, revenue }).returning().then(rows => rows[0]);
     return result;
   }
 
   async updateGym(id: string, data: any) {
-    const result = await db.update(schema.gyms).set(data).where(eq(schema.gyms.id, id)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.gyms).set(data).where(eq(schema.gyms.id, id)).returning().then(rows => rows[0]);
     return result || null;
   }
 
   async deleteGym(id: string) {
-    await db.delete(schema.gyms).where(eq(schema.gyms.id, id));
+    await getDb().delete(schema.gyms).where(eq(schema.gyms.id, id));
     return true;
   }
 
@@ -173,12 +191,12 @@ class Storage {
     const gym = await this.getGym(id);
     if (!gym) return null;
     const newStatus = gym.status === 'suspended' ? 'active' : 'suspended';
-    const result = await db.update(schema.gyms).set({ status: newStatus as any }).where(eq(schema.gyms.id, id)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.gyms).set({ status: newStatus as any }).where(eq(schema.gyms.id, id)).returning().then(rows => rows[0]);
     return result;
   }
 
   async getAllSubscriptions() {
-    const data = await db.select().from(schema.subscriptions).orderBy(asc(schema.subscriptions.nextBillingDate));
+    const data = await getDb().select().from(schema.subscriptions).orderBy(asc(schema.subscriptions.nextBillingDate));
     return data.map((row: any) => ({
       id: row.id,
       gymId: row.gymId,
@@ -193,7 +211,7 @@ class Storage {
   }
 
   async getAllTransactions() {
-    const data = await db.select().from(schema.transactions).orderBy(desc(schema.transactions.date));
+    const data = await getDb().select().from(schema.transactions).orderBy(desc(schema.transactions.date));
     return data.map((row: any) => ({
       id: row.id,
       gymId: row.gymId,
@@ -207,7 +225,7 @@ class Storage {
   }
 
   async getBranding(gymId: string) {
-    const data = await db.select().from(schema.branding).where(eq(schema.branding.gymId, gymId)).limit(1).then(rows => rows[0]);
+    const data = await getDb().select().from(schema.branding).where(eq(schema.branding.gymId, gymId)).limit(1).then(rows => rows[0]);
     if (!data) return null;
     return {
       id: data.id,
@@ -226,9 +244,9 @@ class Storage {
     let result;
 
     if (existing) {
-      result = await db.update(schema.branding).set(data).where(eq(schema.branding.gymId, gymId)).returning().then(rows => rows[0]);
+      result = await getDb().update(schema.branding).set(data).where(eq(schema.branding.gymId, gymId)).returning().then(rows => rows[0]);
     } else {
-      result = await db.insert(schema.branding).values({ ...data, gymId }).returning().then(rows => rows[0]);
+      result = await getDb().insert(schema.branding).values({ ...data, gymId }).returning().then(rows => rows[0]);
     }
 
     return {
@@ -251,16 +269,16 @@ class Storage {
     const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
     // Get all gyms
-    const gymRows = await db.select().from(schema.gyms);
+    const gymRows = await getDb().select().from(schema.gyms);
     const activeGyms = gymRows.filter((g: any) => g.status === 'active').length;
     const totalGyms = gymRows.length;
 
     // Get total members from members table
-    const membersResult = await db.select({ count: sql<number>`count(*)` }).from(schema.members);
+    const membersResult = await getDb().select({ count: sql<number>`count(*)` }).from(schema.members);
     const totalUsers = Number(membersResult[0]?.count || 0);
 
     // Get revenue from paid invoices (this month)
-    const thisMonthRevenue = await db.select({
+    const thisMonthRevenue = await getDb().select({
       total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
     }).from(schema.gymInvoices).where(and(
       eq(schema.gymInvoices.status, 'paid'),
@@ -269,14 +287,14 @@ class Storage {
     ));
     
     // Get total revenue all time from paid invoices
-    const allTimeRevenue = await db.select({
+    const allTimeRevenue = await getDb().select({
       total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
     }).from(schema.gymInvoices).where(eq(schema.gymInvoices.status, 'paid'));
     
     const totalRevenue = parseFloat(String(allTimeRevenue[0]?.total || 0));
 
     // Get last month's revenue for growth calculation
-    const lastMonthRevenue = await db.select({
+    const lastMonthRevenue = await getDb().select({
       total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
     }).from(schema.gymInvoices).where(and(
       eq(schema.gymInvoices.status, 'paid'),
@@ -310,7 +328,7 @@ class Storage {
       : (newGymsThisMonth > 0 ? 100 : 0);
 
     // Calculate user growth (new members this month vs last month)
-    const allMembers = await db.select().from(schema.members);
+    const allMembers = await getDb().select().from(schema.members);
     const newUsersThisMonth = allMembers.filter(m => {
       const createdAt = m.createdAt ? new Date(m.createdAt) : null;
       return createdAt && createdAt >= startOfMonth;
@@ -332,7 +350,7 @@ class Storage {
       const monthNum = month.getMonth() + 1;
       const year = month.getFullYear();
       
-      const monthRevenue = await db.select({
+      const monthRevenue = await getDb().select({
         total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
       }).from(schema.gymInvoices).where(and(
         eq(schema.gymInvoices.month, monthNum),
@@ -394,28 +412,28 @@ class Storage {
     const startOfLastMonth = new Date(lastMonthYear, lastMonth - 1, 1);
     const endOfLastMonth = new Date(currentYear, currentMonth - 1, 0);
 
-    const gymRows = await db.select().from(schema.gyms);
+    const gymRows = await getDb().select().from(schema.gyms);
     const activeGyms = gymRows.filter((g: any) => g.status === 'active').length;
     
     // Get total revenue from paid invoices
-    const allTimeRevenue = await db.select({
+    const allTimeRevenue = await getDb().select({
       total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
     }).from(schema.gymInvoices).where(eq(schema.gymInvoices.status, 'paid'));
     const totalRevenue = parseFloat(String(allTimeRevenue[0]?.total || 0));
     
     // Get total members
-    const membersResult = await db.select({ count: sql<number>`count(*)` }).from(schema.members);
+    const membersResult = await getDb().select({ count: sql<number>`count(*)` }).from(schema.members);
     const totalMembers = Number(membersResult[0]?.count || 0);
     
     // Calculate revenue change
-    const thisMonthRevenue = await db.select({
+    const thisMonthRevenue = await getDb().select({
       total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
     }).from(schema.gymInvoices).where(and(
       eq(schema.gymInvoices.status, 'paid'),
       eq(schema.gymInvoices.month, currentMonth),
       eq(schema.gymInvoices.year, currentYear)
     ));
-    const lastMonthRevenue = await db.select({
+    const lastMonthRevenue = await getDb().select({
       total: sql<number>`COALESCE(SUM(CAST(total_amount AS DECIMAL)), 0)`
     }).from(schema.gymInvoices).where(and(
       eq(schema.gymInvoices.status, 'paid'),
@@ -442,7 +460,7 @@ class Storage {
       : (newGymsThisMonth > 0 ? 100 : 0);
     
     // Calculate members change
-    const allMembers = await db.select().from(schema.members);
+    const allMembers = await getDb().select().from(schema.members);
     const newMembersThisMonth = allMembers.filter(m => {
       const createdAt = m.createdAt ? new Date(m.createdAt) : null;
       return createdAt && createdAt >= startOfMonth;
@@ -468,7 +486,7 @@ class Storage {
   }
 
   async getAllAuditLogs() {
-    const data = await db.select().from(schema.auditLogs).orderBy(desc(schema.auditLogs.timestamp));
+    const data = await getDb().select().from(schema.auditLogs).orderBy(desc(schema.auditLogs.timestamp));
     return data.map((row: any) => ({
       id: row.id,
       timestamp: row.timestamp,
@@ -484,7 +502,7 @@ class Storage {
   }
 
   async getAllIntegrations() {
-    const data = await db.select().from(schema.integrations);
+    const data = await getDb().select().from(schema.integrations);
     return data.map((row: any) => ({
       id: row.id,
       name: row.name,
@@ -497,7 +515,7 @@ class Storage {
   }
 
   async createIntegration(data: any) {
-    const result = await db.insert(schema.integrations).values({ ...data, status: 'inactive' as any, apiKey: '*********************' }).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.integrations).values({ ...data, status: 'inactive' as any, apiKey: '*********************' }).returning().then(rows => rows[0]);
     return {
       id: result.id,
       name: result.name,
@@ -510,18 +528,18 @@ class Storage {
   }
 
   async deleteIntegration(id: string) {
-    await db.delete(schema.integrations).where(eq(schema.integrations.id, id));
+    await getDb().delete(schema.integrations).where(eq(schema.integrations.id, id));
     return true;
   }
 
   async toggleIntegration(id: string) {
-    const current = await db.select().from(schema.integrations).where(eq(schema.integrations.id, id)).limit(1).then(rows => rows[0]);
+    const current = await getDb().select().from(schema.integrations).where(eq(schema.integrations.id, id)).limit(1).then(rows => rows[0]);
     if (!current) return null;
 
     const newStatus = current.status === 'active' ? 'inactive' : 'active';
     const lastSync = newStatus === 'active' ? new Date() : current.lastSync;
 
-    const result = await db.update(schema.integrations).set({ status: newStatus as any, lastSync }).where(eq(schema.integrations.id, id)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.integrations).set({ status: newStatus as any, lastSync }).where(eq(schema.integrations.id, id)).returning().then(rows => rows[0]);
 
     return {
       id: result.id,
@@ -535,12 +553,12 @@ class Storage {
   }
 
   async getUserByEmail(email: string) {
-    const data = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1).then(rows => rows[0]);
+    const data = await getDb().select().from(schema.users).where(eq(schema.users.email, email)).limit(1).then(rows => rows[0]);
     return data || null;
   }
 
   async getUserById(userId: string) {
-    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1).then(rows => rows[0]);
+    const user = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1).then(rows => rows[0]);
 
     if (!user) {
       console.error('Error fetching user: not found');
@@ -550,21 +568,21 @@ class Storage {
     let gymId: string | null = null;
 
     if (user.role === 'admin') {
-      const gymAdmin = await db.select().from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, userId)).limit(1).then(rows => rows[0]);
+      const gymAdmin = await getDb().select().from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, userId)).limit(1).then(rows => rows[0]);
       if (gymAdmin) {
         gymId = gymAdmin.gymId;
       }
     }
 
     if (!gymId && user.role === 'trainer') {
-      const trainer = await db.select().from(schema.trainers).where(eq(schema.trainers.userId, userId)).limit(1).then(rows => rows[0]);
+      const trainer = await getDb().select().from(schema.trainers).where(eq(schema.trainers.userId, userId)).limit(1).then(rows => rows[0]);
       if (trainer) {
         gymId = trainer.gymId;
       }
     }
 
     if (!gymId && user.role === 'member') {
-      const member = await db.select().from(schema.members).where(eq(schema.members.userId, userId)).limit(1).then(rows => rows[0]);
+      const member = await getDb().select().from(schema.members).where(eq(schema.members.userId, userId)).limit(1).then(rows => rows[0]);
       if (member) {
         gymId = member.gymId;
       }
@@ -585,22 +603,22 @@ class Storage {
 
   async getUserGyms(userId: string, role: string) {
     if (role === 'superadmin') {
-      const data = await db.select({ id: schema.gyms.id }).from(schema.gyms);
+      const data = await getDb().select({ id: schema.gyms.id }).from(schema.gyms);
       return data.map(g => g.id);
     }
 
     if (role === 'admin') {
-      const data = await db.select({ gymId: schema.gymAdmins.gymId }).from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, userId));
+      const data = await getDb().select({ gymId: schema.gymAdmins.gymId }).from(schema.gymAdmins).where(eq(schema.gymAdmins.userId, userId));
       return data.map(g => g.gymId);
     }
 
     if (role === 'trainer') {
-      const data = await db.select({ gymId: schema.trainers.gymId }).from(schema.trainers).where(eq(schema.trainers.userId, userId));
+      const data = await getDb().select({ gymId: schema.trainers.gymId }).from(schema.trainers).where(eq(schema.trainers.userId, userId));
       return data.map(g => g.gymId);
     }
 
     if (role === 'member') {
-      const data = await db.select({ gymId: schema.members.gymId }).from(schema.members).where(eq(schema.members.userId, userId));
+      const data = await getDb().select({ gymId: schema.members.gymId }).from(schema.members).where(eq(schema.members.userId, userId));
       return data.map(g => g.gymId);
     }
 
@@ -613,7 +631,7 @@ class Storage {
   }
 
   async createUser(data: { email: string; passwordHash: string; role: string; gymId?: string; name: string; phone?: string }) {
-    const result = await db.insert(schema.users).values({
+    const result = await getDb().insert(schema.users).values({
       email: data.email,
       passwordHash: data.passwordHash,
       role: data.role as any,
@@ -635,7 +653,7 @@ class Storage {
   }
 
   async updateUserLastLogin(userId: string) {
-    const result = await db.update(schema.users).set({ lastLogin: new Date() }).where(eq(schema.users.id, userId)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.users).set({ lastLogin: new Date() }).where(eq(schema.users.id, userId)).returning().then(rows => rows[0]);
     if (!result) return null;
     return {
       id: result.id,
@@ -656,7 +674,7 @@ class Storage {
       conditions.push(eq(schema.members.status, filters.status as any));
     }
 
-    let data = await db.select().from(schema.members).where(and(...conditions)).orderBy(desc(schema.members.createdAt));
+    let data = await getDb().select().from(schema.members).where(and(...conditions)).orderBy(desc(schema.members.createdAt));
 
     if (filters?.search) {
       const search = filters.search.toLowerCase();
@@ -688,7 +706,7 @@ class Storage {
   }
 
   async getMemberById(memberId: string) {
-    const data = await db.select().from(schema.members).where(eq(schema.members.id, memberId)).limit(1).then(rows => rows[0]);
+    const data = await getDb().select().from(schema.members).where(eq(schema.members.id, memberId)).limit(1).then(rows => rows[0]);
     if (!data) return null;
     return {
       id: data.id,
@@ -711,7 +729,7 @@ class Storage {
   }
 
   async getMemberByUserId(userId: string) {
-    const data = await db.select().from(schema.members).where(eq(schema.members.userId, userId)).limit(1).then(rows => rows[0]);
+    const data = await getDb().select().from(schema.members).where(eq(schema.members.userId, userId)).limit(1).then(rows => rows[0]);
     if (!data) return null;
     return {
       id: data.id,
@@ -734,7 +752,7 @@ class Storage {
   }
 
   async createMember(data: any) {
-    const result = await db.insert(schema.members).values(data).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.members).values(data).returning().then(rows => rows[0]);
     return {
       id: result.id,
       userId: result.userId,
@@ -756,7 +774,7 @@ class Storage {
   }
 
   async updateMember(memberId: string, data: any) {
-    const result = await db.update(schema.members).set(data).where(eq(schema.members.id, memberId)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.members).set(data).where(eq(schema.members.id, memberId)).returning().then(rows => rows[0]);
     if (!result) return null;
     return {
       id: result.id,
@@ -779,12 +797,12 @@ class Storage {
   }
 
   async deleteMember(memberId: string) {
-    await db.delete(schema.members).where(eq(schema.members.id, memberId));
+    await getDb().delete(schema.members).where(eq(schema.members.id, memberId));
     return true;
   }
 
   async listMembershipPlans(gymId: string) {
-    const data = await db.select().from(schema.membershipPlans).where(and(eq(schema.membershipPlans.gymId, gymId), eq(schema.membershipPlans.isActive, 1))).orderBy(asc(schema.membershipPlans.name));
+    const data = await getDb().select().from(schema.membershipPlans).where(and(eq(schema.membershipPlans.gymId, gymId), eq(schema.membershipPlans.isActive, 1))).orderBy(asc(schema.membershipPlans.name));
     return data.map((row: any) => ({
       id: row.id,
       gymId: row.gymId,
@@ -799,7 +817,7 @@ class Storage {
   }
 
   async createMembershipPlan(data: any) {
-    const result = await db.insert(schema.membershipPlans).values({ ...data, isActive: data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1 }).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.membershipPlans).values({ ...data, isActive: data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1 }).returning().then(rows => rows[0]);
     return {
       id: result.id,
       gymId: result.gymId,
@@ -814,7 +832,7 @@ class Storage {
   }
 
   async listMemberships(memberId: string) {
-    const data = await db.select().from(schema.memberships).where(eq(schema.memberships.memberId, memberId)).orderBy(desc(schema.memberships.createdAt));
+    const data = await getDb().select().from(schema.memberships).where(eq(schema.memberships.memberId, memberId)).orderBy(desc(schema.memberships.createdAt));
     return data.map((row: any) => ({
       id: row.id,
       memberId: row.memberId,
@@ -829,7 +847,7 @@ class Storage {
   }
 
   async createMembership(data: any) {
-    const result = await db.insert(schema.memberships).values({ ...data, autoRenew: data.autoRenew ? 1 : 0 }).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.memberships).values({ ...data, autoRenew: data.autoRenew ? 1 : 0 }).returning().then(rows => rows[0]);
     return {
       id: result.id,
       memberId: result.memberId,
@@ -851,7 +869,7 @@ class Storage {
     if (filters?.dateFrom) conditions.push(gte(schema.payments.paymentDate, new Date(filters.dateFrom)));
     if (filters?.dateTo) conditions.push(lte(schema.payments.paymentDate, new Date(filters.dateTo)));
 
-    const data = await db.select({
+    const data = await getDb().select({
       id: schema.payments.id,
       gymId: schema.payments.gymId,
       memberId: schema.payments.memberId,
@@ -903,7 +921,7 @@ class Storage {
   }
 
   async createPayment(data: any) {
-    const result = await db.insert(schema.payments).values(data).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.payments).values(data).returning().then(rows => rows[0]);
     return {
       id: result.id,
       gymId: result.gymId,
@@ -922,7 +940,7 @@ class Storage {
   }
 
   async getPaymentById(paymentId: string) {
-    const row = await db.select().from(schema.payments).where(eq(schema.payments.id, paymentId)).limit(1).then(rows => rows[0]);
+    const row = await getDb().select().from(schema.payments).where(eq(schema.payments.id, paymentId)).limit(1).then(rows => rows[0]);
     if (!row) return null;
     return {
       id: row.id,
@@ -942,7 +960,7 @@ class Storage {
   }
 
   async updatePayment(paymentId: string, data: any) {
-    const result = await db.update(schema.payments).set(data).where(eq(schema.payments.id, paymentId)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.payments).set(data).where(eq(schema.payments.id, paymentId)).returning().then(rows => rows[0]);
     if (!result) return null;
     return {
       id: result.id,
@@ -962,12 +980,12 @@ class Storage {
   }
 
   async deletePayment(paymentId: string) {
-    await db.delete(schema.payments).where(eq(schema.payments.id, paymentId));
+    await getDb().delete(schema.payments).where(eq(schema.payments.id, paymentId));
     return true;
   }
 
   async getPaymentsByMember(memberId: string) {
-    const data = await db.select().from(schema.payments).where(eq(schema.payments.memberId, memberId)).orderBy(desc(schema.payments.paymentDate));
+    const data = await getDb().select().from(schema.payments).where(eq(schema.payments.memberId, memberId)).orderBy(desc(schema.payments.paymentDate));
     return data.map((row: any) => ({
       id: row.id,
       gymId: row.gymId,
@@ -992,7 +1010,7 @@ class Storage {
     if (filters?.dateFrom) conditions.push(gte(schema.invoices.dueDate, new Date(filters.dateFrom)));
     if (filters?.dateTo) conditions.push(lte(schema.invoices.dueDate, new Date(filters.dateTo)));
 
-    const data = await db.select().from(schema.invoices).where(and(...conditions)).orderBy(desc(schema.invoices.createdAt));
+    const data = await getDb().select().from(schema.invoices).where(and(...conditions)).orderBy(desc(schema.invoices.createdAt));
 
     return data.map((row: any) => ({
       id: row.id,
@@ -1011,7 +1029,7 @@ class Storage {
 
   async createInvoice(data: any) {
     const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const result = await db.insert(schema.invoices).values({
+    const result = await getDb().insert(schema.invoices).values({
       ...data,
       invoiceNumber,
       status: data.status || 'pending',
@@ -1033,7 +1051,7 @@ class Storage {
   }
 
   async getInvoiceById(invoiceId: string) {
-    const row = await db.select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId)).limit(1).then(rows => rows[0]);
+    const row = await getDb().select().from(schema.invoices).where(eq(schema.invoices.id, invoiceId)).limit(1).then(rows => rows[0]);
     if (!row) return null;
     return {
       id: row.id,
@@ -1051,7 +1069,7 @@ class Storage {
   }
 
   async updateInvoice(invoiceId: string, data: any) {
-    const result = await db.update(schema.invoices).set(data).where(eq(schema.invoices.id, invoiceId)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.invoices).set(data).where(eq(schema.invoices.id, invoiceId)).returning().then(rows => rows[0]);
     if (!result) return null;
     return {
       id: result.id,
@@ -1073,7 +1091,7 @@ class Storage {
     if (filters?.status) conditions.push(eq(schema.leads.status, filters.status as any));
     if (filters?.source) conditions.push(eq(schema.leads.source, filters.source));
 
-    let data = await db.select().from(schema.leads).where(and(...conditions)).orderBy(desc(schema.leads.createdAt));
+    let data = await getDb().select().from(schema.leads).where(and(...conditions)).orderBy(desc(schema.leads.createdAt));
 
     if (filters?.search) {
       const search = filters.search.toLowerCase();
@@ -1105,7 +1123,7 @@ class Storage {
   }
 
   async getLeadById(leadId: string) {
-    const row = await db.select().from(schema.leads).where(eq(schema.leads.id, leadId)).limit(1).then(rows => rows[0]);
+    const row = await getDb().select().from(schema.leads).where(eq(schema.leads.id, leadId)).limit(1).then(rows => rows[0]);
     if (!row) return null;
     return {
       id: row.id,
@@ -1127,7 +1145,7 @@ class Storage {
   }
 
   async createLead(data: any) {
-    const result = await db.insert(schema.leads).values({
+    const result = await getDb().insert(schema.leads).values({
       ...data,
       status: data.status || 'new',
     }).returning().then(rows => rows[0]);
@@ -1152,7 +1170,7 @@ class Storage {
   }
 
   async updateLead(leadId: string, data: any) {
-    const result = await db.update(schema.leads).set({ ...data, updatedAt: new Date() }).where(eq(schema.leads.id, leadId)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.leads).set({ ...data, updatedAt: new Date() }).where(eq(schema.leads.id, leadId)).returning().then(rows => rows[0]);
     if (!result) return null;
     return {
       id: result.id,
@@ -1174,7 +1192,7 @@ class Storage {
   }
 
   async deleteLead(leadId: string) {
-    await db.delete(schema.leads).where(eq(schema.leads.id, leadId));
+    await getDb().delete(schema.leads).where(eq(schema.leads.id, leadId));
     return true;
   }
 
@@ -1192,7 +1210,7 @@ class Storage {
     const { planId, userId: existingUserId, ...otherData } = memberData;
 
     // Use a transaction for atomicity - includes user creation
-    return await db.transaction(async (tx) => {
+    return await getDb().transaction(async (tx) => {
       // Create user account first if userData is provided
       let userId = existingUserId || null;
       let createdUser = null;
@@ -1352,7 +1370,7 @@ class Storage {
     if (filters?.category) conditions.push(eq(schema.products.categoryId, filters.category));
     if (filters?.isActive !== undefined) conditions.push(eq(schema.products.isActive, filters.isActive ? 1 : 0));
 
-    let data = await db.select().from(schema.products).where(and(...conditions)).orderBy(desc(schema.products.createdAt));
+    let data = await getDb().select().from(schema.products).where(and(...conditions)).orderBy(desc(schema.products.createdAt));
 
     if (filters?.search) {
       const search = filters.search.toLowerCase();
@@ -1385,7 +1403,7 @@ class Storage {
   }
 
   async getProductById(productId: string) {
-    const row = await db.select().from(schema.products).where(eq(schema.products.id, productId)).limit(1).then(rows => rows[0]);
+    const row = await getDb().select().from(schema.products).where(eq(schema.products.id, productId)).limit(1).then(rows => rows[0]);
     if (!row) return null;
     return {
       id: row.id,
@@ -1410,7 +1428,7 @@ class Storage {
   }
 
   async createProduct(data: any) {
-    const result = await db.insert(schema.products).values({
+    const result = await getDb().insert(schema.products).values({
       ...data,
       stock: data.stock || 0,
       lowStockAlert: data.lowStockAlert || 10,
@@ -1445,7 +1463,7 @@ class Storage {
     if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured ? 1 : 0;
     if (data.isActive !== undefined) updateData.isActive = data.isActive ? 1 : 0;
 
-    const result = await db.update(schema.products).set(updateData).where(eq(schema.products.id, productId)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.products).set(updateData).where(eq(schema.products.id, productId)).returning().then(rows => rows[0]);
     if (!result) return null;
 
     return {
@@ -1471,7 +1489,7 @@ class Storage {
   }
 
   async deleteProduct(productId: string) {
-    await db.delete(schema.products).where(eq(schema.products.id, productId));
+    await getDb().delete(schema.products).where(eq(schema.products.id, productId));
     return true;
   }
 
@@ -1481,7 +1499,7 @@ class Storage {
     if (filters?.memberId) conditions.push(eq(schema.orders.memberId, filters.memberId));
     if (filters?.paymentStatus) conditions.push(eq(schema.orders.paymentStatus, filters.paymentStatus as any));
 
-    const data = await db.select().from(schema.orders).where(and(...conditions)).orderBy(desc(schema.orders.orderDate));
+    const data = await getDb().select().from(schema.orders).where(and(...conditions)).orderBy(desc(schema.orders.orderDate));
 
     return data.map((row: any) => ({
       id: row.id,
@@ -1505,10 +1523,10 @@ class Storage {
   }
 
   async getOrderById(orderId: string) {
-    const orderData = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).limit(1).then(rows => rows[0]);
+    const orderData = await getDb().select().from(schema.orders).where(eq(schema.orders.id, orderId)).limit(1).then(rows => rows[0]);
     if (!orderData) return null;
 
-    const items = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
+    const items = await getDb().select().from(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
 
     return {
       id: orderData.id,
@@ -1543,7 +1561,7 @@ class Storage {
   async createOrder(data: any) {
     if (data.items && data.items.length > 0) {
       for (const item of data.items) {
-        const productData = await db.select().from(schema.products).where(eq(schema.products.id, item.productId)).limit(1).then(rows => rows[0]);
+        const productData = await getDb().select().from(schema.products).where(eq(schema.products.id, item.productId)).limit(1).then(rows => rows[0]);
         if (!productData) throw new Error(`Product ${item.productId} not found`);
         if ((productData.stock || 0) < item.quantity) {
           throw new Error(`Insufficient stock for ${item.productName}. Available: ${productData.stock}, Requested: ${item.quantity}`);
@@ -1553,7 +1571,7 @@ class Storage {
 
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-    const order = await db.insert(schema.orders).values({
+    const order = await getDb().insert(schema.orders).values({
       gymId: data.gymId,
       memberId: data.memberId,
       subtotal: (data.subtotal || data.totalAmount).toString(),
@@ -1572,7 +1590,7 @@ class Storage {
 
     if (data.items && data.items.length > 0) {
       for (const item of data.items) {
-        await db.insert(schema.orderItems).values({
+        await getDb().insert(schema.orderItems).values({
           orderId: order.id,
           productId: item.productId,
           productName: item.productName,
@@ -1581,9 +1599,9 @@ class Storage {
           variant: item.variant || null,
         });
 
-        const productData = await db.select().from(schema.products).where(eq(schema.products.id, item.productId)).limit(1).then(rows => rows[0]);
+        const productData = await getDb().select().from(schema.products).where(eq(schema.products.id, item.productId)).limit(1).then(rows => rows[0]);
         if (productData) {
-          await db.update(schema.products).set({ stock: (productData.stock || 0) - item.quantity }).where(eq(schema.products.id, item.productId));
+          await getDb().update(schema.products).set({ stock: (productData.stock || 0) - item.quantity }).where(eq(schema.products.id, item.productId));
         }
       }
     }
@@ -1610,7 +1628,7 @@ class Storage {
   }
 
   async updateOrderStatus(orderId: string, status: string) {
-    const result = await db.update(schema.orders).set({
+    const result = await getDb().update(schema.orders).set({
       status: status as any,
       deliveryDate: status === 'delivered' ? new Date() : null
     }).where(eq(schema.orders.id, orderId)).returning().then(rows => rows[0]);
@@ -1638,7 +1656,7 @@ class Storage {
   }
 
   async updateOrderPaymentStatus(orderId: string, paymentStatus: string, paymentType?: string) {
-    const result = await db.update(schema.orders).set({
+    const result = await getDb().update(schema.orders).set({
       paymentStatus: paymentStatus as any,
       paymentType: paymentType as any || undefined,
     }).where(eq(schema.orders.id, orderId)).returning().then(rows => rows[0]);
@@ -1666,7 +1684,7 @@ class Storage {
   }
 
   async getOrdersByMember(memberId: string) {
-    const data = await db.select().from(schema.orders).where(eq(schema.orders.memberId, memberId)).orderBy(desc(schema.orders.orderDate));
+    const data = await getDb().select().from(schema.orders).where(eq(schema.orders.memberId, memberId)).orderBy(desc(schema.orders.orderDate));
     return data.map((row: any) => ({
       id: row.id,
       orderNumber: row.orderNumber,
@@ -1689,7 +1707,7 @@ class Storage {
   }
 
   async listClassTypes(gymId: string) {
-    const data = await db.select().from(schema.classTypes).where(and(eq(schema.classTypes.gymId, gymId), eq(schema.classTypes.isActive, 1))).orderBy(asc(schema.classTypes.name));
+    const data = await getDb().select().from(schema.classTypes).where(and(eq(schema.classTypes.gymId, gymId), eq(schema.classTypes.isActive, 1))).orderBy(asc(schema.classTypes.name));
     return data.map((row: any) => ({
       id: row.id,
       gymId: row.gymId,
@@ -1703,7 +1721,7 @@ class Storage {
   }
 
   async createClassType(data: any) {
-    const result = await db.insert(schema.classTypes).values({ ...data, isActive: data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1 }).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.classTypes).values({ ...data, isActive: data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1 }).returning().then(rows => rows[0]);
     return {
       id: result.id,
       gymId: result.gymId,
@@ -1724,7 +1742,7 @@ class Storage {
     if (filters?.startDate) conditions.push(gte(schema.classes.startTime, filters.startDate));
     if (filters?.endDate) conditions.push(lte(schema.classes.endTime, filters.endDate));
 
-    const data = await db.select().from(schema.classes).where(and(...conditions)).orderBy(asc(schema.classes.startTime));
+    const data = await getDb().select().from(schema.classes).where(and(...conditions)).orderBy(asc(schema.classes.startTime));
 
     return data.map((row: any) => ({
       id: row.id,
@@ -1744,7 +1762,7 @@ class Storage {
   }
 
   async getClassById(classId: string) {
-    const row = await db.select().from(schema.classes).where(eq(schema.classes.id, classId)).limit(1).then(rows => rows[0]);
+    const row = await getDb().select().from(schema.classes).where(eq(schema.classes.id, classId)).limit(1).then(rows => rows[0]);
     if (!row) return null;
     return {
       id: row.id,
@@ -1764,7 +1782,7 @@ class Storage {
   }
 
   async createClass(data: any) {
-    const result = await db.insert(schema.classes).values({ ...data, bookedCount: 0 }).returning().then(rows => rows[0]);
+    const result = await getDb().insert(schema.classes).values({ ...data, bookedCount: 0 }).returning().then(rows => rows[0]);
     return {
       id: result.id,
       gymId: result.gymId,
@@ -1783,7 +1801,7 @@ class Storage {
   }
 
   async updateClass(classId: string, data: any) {
-    const result = await db.update(schema.classes).set(data).where(eq(schema.classes.id, classId)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.classes).set(data).where(eq(schema.classes.id, classId)).returning().then(rows => rows[0]);
     if (!result) return null;
     return {
       id: result.id,
@@ -1803,7 +1821,7 @@ class Storage {
   }
 
   async deleteClass(classId: string) {
-    await db.delete(schema.classes).where(eq(schema.classes.id, classId));
+    await getDb().delete(schema.classes).where(eq(schema.classes.id, classId));
     return true;
   }
 
@@ -1812,16 +1830,16 @@ class Storage {
     if (!classData) throw new Error('Class not found');
     if ((classData.bookedCount || 0) >= (classData.capacity || 0)) throw new Error('Class is fully booked');
 
-    const existingBooking = await db.select().from(schema.classBookings).where(and(eq(schema.classBookings.classId, classId), eq(schema.classBookings.memberId, memberId))).limit(1).then(rows => rows[0]);
+    const existingBooking = await getDb().select().from(schema.classBookings).where(and(eq(schema.classBookings.classId, classId), eq(schema.classBookings.memberId, memberId))).limit(1).then(rows => rows[0]);
     if (existingBooking) throw new Error('Already booked for this class');
 
-    const booking = await db.insert(schema.classBookings).values({
+    const booking = await getDb().insert(schema.classBookings).values({
       classId,
       memberId,
       status: 'confirmed',
     }).returning().then(rows => rows[0]);
 
-    await db.update(schema.classes).set({ bookedCount: (classData.bookedCount || 0) + 1 }).where(eq(schema.classes.id, classId));
+    await getDb().update(schema.classes).set({ bookedCount: (classData.bookedCount || 0) + 1 }).where(eq(schema.classes.id, classId));
 
     return {
       id: booking.id,
@@ -1836,20 +1854,20 @@ class Storage {
     const classData = await this.getClassById(classId);
     if (!classData) throw new Error('Class not found');
 
-    const booking = await db.select().from(schema.classBookings).where(and(eq(schema.classBookings.classId, classId), eq(schema.classBookings.memberId, memberId))).limit(1).then(rows => rows[0]);
+    const booking = await getDb().select().from(schema.classBookings).where(and(eq(schema.classBookings.classId, classId), eq(schema.classBookings.memberId, memberId))).limit(1).then(rows => rows[0]);
     if (!booking) throw new Error('No booking found');
 
-    await db.delete(schema.classBookings).where(eq(schema.classBookings.id, booking.id));
+    await getDb().delete(schema.classBookings).where(eq(schema.classBookings.id, booking.id));
 
     if ((classData.bookedCount || 0) > 0) {
-      await db.update(schema.classes).set({ bookedCount: (classData.bookedCount || 0) - 1 }).where(eq(schema.classes.id, classId));
+      await getDb().update(schema.classes).set({ bookedCount: (classData.bookedCount || 0) - 1 }).where(eq(schema.classes.id, classId));
     }
 
     return true;
   }
 
   async listClassBookings(classId: string) {
-    const data = await db.select().from(schema.classBookings).where(eq(schema.classBookings.classId, classId)).orderBy(desc(schema.classBookings.bookedAt));
+    const data = await getDb().select().from(schema.classBookings).where(eq(schema.classBookings.classId, classId)).orderBy(desc(schema.classBookings.bookedAt));
     return data.map((row: any) => ({
       id: row.id,
       classId: row.classId,
@@ -1860,7 +1878,7 @@ class Storage {
   }
 
   async getMemberBookings(memberId: string) {
-    const data = await db.select().from(schema.classBookings).where(and(eq(schema.classBookings.memberId, memberId), eq(schema.classBookings.status, 'confirmed'))).orderBy(desc(schema.classBookings.bookedAt));
+    const data = await getDb().select().from(schema.classBookings).where(and(eq(schema.classBookings.memberId, memberId), eq(schema.classBookings.status, 'confirmed'))).orderBy(desc(schema.classBookings.bookedAt));
     return data.map((row: any) => ({
       id: row.id,
       classId: row.classId,
@@ -1871,7 +1889,7 @@ class Storage {
   }
 
   async getTrainersByGym(gymId: string) {
-    const data = await db.select().from(schema.trainers).where(eq(schema.trainers.gymId, gymId)).orderBy(asc(schema.trainers.name));
+    const data = await getDb().select().from(schema.trainers).where(eq(schema.trainers.gymId, gymId)).orderBy(asc(schema.trainers.name));
     return data.map((row: any) => ({
       id: row.id,
       userId: row.userId,
@@ -1893,7 +1911,7 @@ class Storage {
   }
 
   async getTrainerById(id: string) {
-    const data = await db.select().from(schema.trainers).where(eq(schema.trainers.id, id)).limit(1).then(rows => rows[0]);
+    const data = await getDb().select().from(schema.trainers).where(eq(schema.trainers.id, id)).limit(1).then(rows => rows[0]);
     if (!data) return null;
     return {
       id: data.id,
@@ -1916,7 +1934,7 @@ class Storage {
   }
 
   async createTrainer(data: { userId: string; gymId: string; name: string; email: string; phone?: string; role?: string; specializations?: string; certifications?: string; experience?: number; bio?: string; photoUrl?: string }) {
-    const result = await db.insert(schema.trainers).values({
+    const result = await getDb().insert(schema.trainers).values({
       userId: data.userId,
       gymId: data.gymId,
       name: data.name,
@@ -1965,7 +1983,7 @@ class Storage {
     if (data.status !== undefined) updateData.status = data.status;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-    const result = await db.update(schema.trainers).set(updateData).where(eq(schema.trainers.id, id)).returning().then(rows => rows[0]);
+    const result = await getDb().update(schema.trainers).set(updateData).where(eq(schema.trainers.id, id)).returning().then(rows => rows[0]);
     if (!result) return null;
     return {
       id: result.id,
@@ -1988,22 +2006,22 @@ class Storage {
   }
 
   async deleteTrainer(id: string) {
-    await db.delete(schema.trainers).where(eq(schema.trainers.id, id));
+    await getDb().delete(schema.trainers).where(eq(schema.trainers.id, id));
     return true;
   }
 
   async markClassAttendance(classId: string, memberId: string, status: string) {
-    const existing = await db.select().from(schema.classAttendance).where(and(eq(schema.classAttendance.classId, classId), eq(schema.classAttendance.memberId, memberId))).limit(1).then(rows => rows[0]);
+    const existing = await getDb().select().from(schema.classAttendance).where(and(eq(schema.classAttendance.classId, classId), eq(schema.classAttendance.memberId, memberId))).limit(1).then(rows => rows[0]);
 
     let result;
     if (existing) {
-      result = await db.update(schema.classAttendance).set({ status: status as any, markedAt: new Date() }).where(and(eq(schema.classAttendance.classId, classId), eq(schema.classAttendance.memberId, memberId))).returning().then(rows => rows[0]);
+      result = await getDb().update(schema.classAttendance).set({ status: status as any, markedAt: new Date() }).where(and(eq(schema.classAttendance.classId, classId), eq(schema.classAttendance.memberId, memberId))).returning().then(rows => rows[0]);
     } else {
-      result = await db.insert(schema.classAttendance).values({ classId, memberId, status: status as any }).returning().then(rows => rows[0]);
+      result = await getDb().insert(schema.classAttendance).values({ classId, memberId, status: status as any }).returning().then(rows => rows[0]);
     }
 
     if (status === 'present') {
-      await db.update(schema.classBookings).set({ status: 'attended' }).where(and(eq(schema.classBookings.classId, classId), eq(schema.classBookings.memberId, memberId)));
+      await getDb().update(schema.classBookings).set({ status: 'attended' }).where(and(eq(schema.classBookings.classId, classId), eq(schema.classBookings.memberId, memberId)));
     }
 
     return {
@@ -2016,7 +2034,7 @@ class Storage {
   }
 
   async listClassAttendance(classId: string) {
-    const data = await db.select().from(schema.classAttendance).where(eq(schema.classAttendance.classId, classId)).orderBy(desc(schema.classAttendance.markedAt));
+    const data = await getDb().select().from(schema.classAttendance).where(eq(schema.classAttendance.classId, classId)).orderBy(desc(schema.classAttendance.markedAt));
     return data.map((row: any) => ({
       id: row.id,
       classId: row.classId,
@@ -2028,13 +2046,13 @@ class Storage {
 
   async markGymAttendance(gymId: string, memberId: string, action: 'checkIn' | 'checkOut', source: string = 'manual') {
     if (action === 'checkIn') {
-      const existing = await db.select().from(schema.attendance).where(and(eq(schema.attendance.memberId, memberId), eq(schema.attendance.status, 'in'), isNull(schema.attendance.checkOutTime))).orderBy(desc(schema.attendance.checkInTime)).limit(1).then(rows => rows[0]);
+      const existing = await getDb().select().from(schema.attendance).where(and(eq(schema.attendance.memberId, memberId), eq(schema.attendance.status, 'in'), isNull(schema.attendance.checkOutTime))).orderBy(desc(schema.attendance.checkInTime)).limit(1).then(rows => rows[0]);
 
       if (existing) {
         throw new Error('Member is already checked in');
       }
 
-      const result = await db.insert(schema.attendance).values({ gymId, memberId, source, status: 'in', exitType: null }).returning().then(rows => rows[0]);
+      const result = await getDb().insert(schema.attendance).values({ gymId, memberId, source, status: 'in', exitType: null }).returning().then(rows => rows[0]);
       return {
         id: result.id,
         gymId: result.gymId,
@@ -2047,7 +2065,7 @@ class Storage {
         createdAt: result.createdAt,
       };
     } else {
-      const result = await db.update(schema.attendance).set({ checkOutTime: new Date(), status: 'out', exitType: 'manual' }).where(and(eq(schema.attendance.memberId, memberId), eq(schema.attendance.status, 'in'), isNull(schema.attendance.checkOutTime))).returning().then(rows => rows[0]);
+      const result = await getDb().update(schema.attendance).set({ checkOutTime: new Date(), status: 'out', exitType: 'manual' }).where(and(eq(schema.attendance.memberId, memberId), eq(schema.attendance.status, 'in'), isNull(schema.attendance.checkOutTime))).returning().then(rows => rows[0]);
 
       if (!result) {
         throw new Error('No active check-in found');
@@ -2072,7 +2090,7 @@ class Storage {
     if (filters?.dateFrom) conditions.push(gte(schema.attendance.checkInTime, new Date(filters.dateFrom)));
     if (filters?.dateTo) conditions.push(lte(schema.attendance.checkInTime, new Date(filters.dateTo)));
 
-    const data = await db.select().from(schema.attendance).where(and(...conditions)).orderBy(desc(schema.attendance.checkInTime));
+    const data = await getDb().select().from(schema.attendance).where(and(...conditions)).orderBy(desc(schema.attendance.checkInTime));
 
     return data.map((row: any) => ({
       id: row.id,
@@ -2085,8 +2103,8 @@ class Storage {
   }
 
   async getMemberAttendanceHistory(memberId: string) {
-    const classAttendanceData = await db.select().from(schema.classAttendance).where(eq(schema.classAttendance.memberId, memberId)).orderBy(desc(schema.classAttendance.markedAt)).limit(50);
-    const gymAttendanceData = await db.select().from(schema.attendance).where(eq(schema.attendance.memberId, memberId)).orderBy(desc(schema.attendance.checkInTime)).limit(50);
+    const classAttendanceData = await getDb().select().from(schema.classAttendance).where(eq(schema.classAttendance.memberId, memberId)).orderBy(desc(schema.classAttendance.markedAt)).limit(50);
+    const gymAttendanceData = await getDb().select().from(schema.attendance).where(eq(schema.attendance.memberId, memberId)).orderBy(desc(schema.attendance.checkInTime)).limit(50);
 
     return {
       classAttendance: classAttendanceData.map((row: any) => ({
@@ -2117,7 +2135,7 @@ class Storage {
       dateFilter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    const attendanceData = await db.select().from(schema.attendance).where(and(eq(schema.attendance.gymId, gymId), gte(schema.attendance.checkInTime, dateFilter)));
+    const attendanceData = await getDb().select().from(schema.attendance).where(and(eq(schema.attendance.gymId, gymId), gte(schema.attendance.checkInTime, dateFilter)));
 
     const totalCheckIns = attendanceData.length;
     const uniqueMembers = new Set(attendanceData.map(a => a.memberId)).size;
@@ -2139,7 +2157,7 @@ class Storage {
     // Convert back to UTC for query
     const todayStartUtc = new Date(istToday.getTime() - istOffset);
 
-    const data = await db.select({
+    const data = await getDb().select({
       attendance: schema.attendance,
       member: schema.members
     })
@@ -2163,7 +2181,7 @@ class Storage {
   }
 
   async getMemberActiveCheckIn(memberId: string) {
-    const row = await db.select().from(schema.attendance).where(and(eq(schema.attendance.memberId, memberId), isNull(schema.attendance.checkOutTime))).orderBy(desc(schema.attendance.checkInTime)).limit(1).then(rows => rows[0]);
+    const row = await getDb().select().from(schema.attendance).where(and(eq(schema.attendance.memberId, memberId), isNull(schema.attendance.checkOutTime))).orderBy(desc(schema.attendance.checkInTime)).limit(1).then(rows => rows[0]);
 
     if (!row) return null;
     return {
@@ -2179,7 +2197,7 @@ class Storage {
 
   // QR Config Methods
   async getAttendanceQrConfig(gymId: string) {
-    const row = await db.select().from(schema.attendanceQrConfig).where(eq(schema.attendanceQrConfig.gymId, gymId)).limit(1).then(rows => rows[0]);
+    const row = await getDb().select().from(schema.attendanceQrConfig).where(eq(schema.attendanceQrConfig.gymId, gymId)).limit(1).then(rows => rows[0]);
     if (!row) return null;
     return {
       id: row.id,
@@ -2193,7 +2211,7 @@ class Storage {
 
   async createAttendanceQrConfig(gymId: string) {
     const secret = this.generateQrSecret();
-    const result = await db.insert(schema.attendanceQrConfig).values({
+    const result = await getDb().insert(schema.attendanceQrConfig).values({
       gymId,
       secret,
       isEnabled: 1,
@@ -2211,7 +2229,7 @@ class Storage {
 
   async regenerateQrSecret(gymId: string) {
     const secret = this.generateQrSecret();
-    const result = await db.update(schema.attendanceQrConfig)
+    const result = await getDb().update(schema.attendanceQrConfig)
       .set({ secret, lastRotatedAt: new Date(), isEnabled: 1 })
       .where(eq(schema.attendanceQrConfig.gymId, gymId))
       .returning()
@@ -2232,7 +2250,7 @@ class Storage {
   }
 
   async toggleQrAttendance(gymId: string, isEnabled: boolean) {
-    const result = await db.update(schema.attendanceQrConfig)
+    const result = await getDb().update(schema.attendanceQrConfig)
       .set({ isEnabled: isEnabled ? 1 : 0 })
       .where(eq(schema.attendanceQrConfig.gymId, gymId))
       .returning()
@@ -2278,7 +2296,7 @@ class Storage {
     const { todayStartUtc } = this.getIstDayBoundaries(now);
     
     // Find latest open session (status = 'in' and no checkOutTime)
-    const openSession = await db.select()
+    const openSession = await getDb().select()
       .from(schema.attendance)
       .where(and(
         eq(schema.attendance.gymId, gymId),
@@ -2300,7 +2318,7 @@ class Storage {
     if (diffHours > 3) {
       // Auto-close the session
       const autoCheckOutTime = new Date(checkInTime.getTime() + 3 * 60 * 60 * 1000);
-      await db.update(schema.attendance)
+      await getDb().update(schema.attendance)
         .set({ 
           checkOutTime: autoCheckOutTime, 
           status: 'out', 
@@ -2320,7 +2338,7 @@ class Storage {
       // Insert directly - rely on unique partial index to prevent duplicates
       // The index attendance_unique_open_session on (gym_id, member_id) WHERE status='in' AND check_out_time IS NULL
       // ensures only one active session per member per gym
-      const result = await db.insert(schema.attendance).values({
+      const result = await getDb().insert(schema.attendance).values({
         gymId,
         memberId,
         source,
@@ -2350,7 +2368,7 @@ class Storage {
 
   // Close a check-in manually
   async closeCheckInManually(recordId: string, now: Date = new Date()): Promise<any> {
-    const result = await db.update(schema.attendance)
+    const result = await getDb().update(schema.attendance)
       .set({ 
         checkOutTime: now, 
         status: 'out', 
@@ -2397,7 +2415,7 @@ class Storage {
 
     // Get the last record for today (if any)
     const { todayStartUtc } = this.getIstDayBoundaries(now);
-    const lastRecord = await db.select()
+    const lastRecord = await getDb().select()
       .from(schema.attendance)
       .where(and(
         eq(schema.attendance.gymId, gymId),
@@ -2448,7 +2466,7 @@ class Storage {
   // Check member eligibility for QR attendance
   async checkMemberQrEligibility(memberId: string, gymId: string): Promise<{ eligible: boolean; reason?: string }> {
     // Get member
-    const member = await db.select().from(schema.members).where(eq(schema.members.id, memberId)).limit(1).then(rows => rows[0]);
+    const member = await getDb().select().from(schema.members).where(eq(schema.members.id, memberId)).limit(1).then(rows => rows[0]);
     
     if (!member) {
       return { eligible: false, reason: 'Member not found' };
@@ -2464,7 +2482,7 @@ class Storage {
 
     // Check for active membership
     const today = new Date();
-    const activeMembership = await db.select({
+    const activeMembership = await getDb().select({
       membership: schema.memberships,
       plan: schema.membershipPlans
     })
@@ -2493,7 +2511,7 @@ class Storage {
 
   // Get member by user ID and gym ID
   async getMemberByUserIdAndGym(userId: string, gymId: string) {
-    const row = await db.select().from(schema.members).where(and(
+    const row = await getDb().select().from(schema.members).where(and(
       eq(schema.members.userId, userId),
       eq(schema.members.gymId, gymId)
     )).limit(1).then(rows => rows[0]);
