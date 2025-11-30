@@ -1,6 +1,9 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
 const fromEmail = process.env.RESEND_FROM_EMAIL || 'no-reply@gymsaathi.com';
 
 export interface GymAdminWelcomeEmailPayload {
@@ -236,7 +239,7 @@ export async function sendGymAdminWelcomeEmail(payload: GymAdminWelcomeEmailPayl
     return false;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping email');
     return false;
   }
@@ -274,7 +277,7 @@ export async function sendLeadWelcomeEmail(payload: LeadWelcomeEmailPayload): Pr
     return false;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping email');
     return false;
   }
@@ -312,7 +315,7 @@ export async function sendMemberWelcomeEmail(payload: MemberWelcomeEmailPayload)
     return false;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping email');
     return false;
   }
@@ -367,7 +370,7 @@ export async function sendTrainerWelcomeEmail(payload: TrainerWelcomeEmailPayloa
     return false;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping email');
     return false;
   }
@@ -563,7 +566,7 @@ export async function sendInvoiceEmail(payload: InvoiceEmailPayload): Promise<bo
     return false;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping email');
     return false;
   }
@@ -677,7 +680,7 @@ export async function sendPaymentReminderEmail(payload: PaymentReminderEmailPayl
     return false;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping email');
     return false;
   }
@@ -827,7 +830,7 @@ export async function sendNewLeadNotificationEmail(payload: NewLeadNotificationE
     return false;
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping email');
     return false;
   }
@@ -923,7 +926,7 @@ function getPasswordResetEmailHtml(payload: PasswordResetEmailPayload): string {
 }
 
 export async function sendPasswordResetEmail(payload: PasswordResetEmailPayload): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
+  if (!resend) {
     console.log('[email] RESEND_API_KEY not configured, skipping password reset email');
     return false;
   }

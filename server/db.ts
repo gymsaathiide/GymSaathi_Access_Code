@@ -19,6 +19,9 @@ const poolConfig: PoolConfig = {
   ssl: {
     rejectUnauthorized: false,
   },
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10,
 };
 
 const pool = new Pool(poolConfig);
@@ -29,17 +32,20 @@ console.log('✅ Connected to Supabase PostgreSQL database');
 
 export async function initializeDatabase() {
   try {
+    console.log('⏳ Testing database connection...');
     const result = await pool.query('SELECT 1 as test');
     console.log('✅ Database connection verified');
     
+    console.log('⏳ Setting up database constraints...');
     await pool.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS attendance_unique_open_session 
       ON attendance (gym_id, member_id) 
       WHERE status = 'in' AND check_out_time IS NULL
     `);
     console.log('✅ Database constraints verified');
-  } catch (error) {
-    console.error('❌ Error connecting to database:', error);
+  } catch (error: any) {
+    console.error('❌ Error connecting to database:', error.message || error);
+    console.error('⚠️  Please check your DATABASE_URL and ensure Supabase allows connections from this IP');
     throw error;
   }
 }
