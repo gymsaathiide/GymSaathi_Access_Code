@@ -34,6 +34,15 @@ The primary database is **Supabase PostgreSQL**, accessed via the `pg` driver an
 DATABASE_URL → Supabase Postgres connection string (with ?sslmode=require)
 ```
 
+**How to Get the Supabase PostgreSQL Connection String:**
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
+2. Select your project
+3. Navigate to **Project Settings** → **Database** → **Connection string** (URI)
+4. Copy the "Connection string (URI)" - it looks like: `postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres`
+5. Update the `DATABASE_URL` secret in Replit with this value
+
+**Important:** The pooled connection (port 6543) is recommended for serverless/Replit environments.
+
 **Deprecated (do not use in new code):**
 Old Replit Neon PG env vars (PGHOST, PGDATABASE, PGUSER, PGPASSWORD, PGPORT) are now deprecated and should not be used.
 
