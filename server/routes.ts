@@ -6773,7 +6773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload QR code to Supabase storage
+  // Upload QR code - stores base64 directly in database (no external storage needed)
   app.post('/api/admin/payment-details/upload-qr', requireRole('admin'), async (req, res) => {
     try {
       const user = await storage.getUserById(req.session!.userId!);
@@ -6781,45 +6781,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      const { base64Image, fileName } = req.body;
+      const { base64Image } = req.body;
       if (!base64Image) {
         return res.status(400).json({ error: 'Base64 image data is required' });
       }
 
-      // Extract base64 data (remove data:image/...;base64, prefix if present)
-      const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-
-      // Determine file extension from base64 header or use default
-      let extension = 'png';
-      if (base64Image.includes('data:image/jpeg')) {
-        extension = 'jpg';
-      } else if (base64Image.includes('data:image/gif')) {
-        extension = 'gif';
+      // Validate base64 image format
+      if (!base64Image.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Invalid image format. Please upload a valid image file.' });
       }
 
-      const uniqueFileName = fileName || `qr_${user.gymId}_${Date.now()}.${extension}`;
-      const filePath = `payment-qr/${user.gymId}/${uniqueFileName}`;
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('gym-assets')
-        .upload(filePath, buffer, {
-          contentType: `image/${extension}`,
-          upsert: true
-        });
-
-      if (error) {
-        console.error('Supabase storage upload error:', error);
-        return res.status(500).json({ error: 'Failed to upload QR code: ' + error.message });
+      // Check image size (max 2MB for base64 storage)
+      const sizeInBytes = (base64Image.length * 3) / 4;
+      if (sizeInBytes > 2 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Image too large. Please upload an image smaller than 2MB.' });
       }
 
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('gym-assets')
-        .getPublicUrl(filePath);
-
-      const qrUrl = publicUrlData.publicUrl;
+      // Store base64 directly as qrUrl
+      const qrUrl = base64Image;
 
       // Update payment details with new QR URL
       if (isDbAvailable()) {

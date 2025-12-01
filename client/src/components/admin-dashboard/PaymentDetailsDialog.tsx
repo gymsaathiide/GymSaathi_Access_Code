@@ -13,6 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import {
   Upload,
@@ -20,10 +26,13 @@ import {
   Save,
   Send,
   Loader2,
-  Check,
-  X,
   Phone,
   Mail,
+  ChevronDown,
+  Search,
+  X,
+  Users,
+  CheckCircle2,
 } from "lucide-react";
 
 interface PaymentDetailsDialogProps {
@@ -68,6 +77,8 @@ export function PaymentDetailsDialog({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [sendChannels, setSendChannels] = useState({ email: true, whatsapp: true });
+  const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
   const { data: paymentDetailsData, isLoading: isLoadingDetails } = useQuery<PaymentDetailsResponse>({
     queryKey: ["/api/admin/payment-details"],
@@ -196,10 +207,10 @@ export function PaymentDetailsDialog({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "File Too Large",
-        description: "Please select an image smaller than 5MB",
+        description: "Please select an image smaller than 2MB",
         variant: "destructive",
       });
       return;
@@ -254,6 +265,10 @@ export function PaymentDetailsDialog({
     );
   };
 
+  const removeMember = (memberId: string) => {
+    setSelectedMembers((prev) => prev.filter((id) => id !== memberId));
+  };
+
   const selectAllMembers = () => {
     const members = membersData?.members || [];
     if (selectedMembers.length === members.length) {
@@ -264,10 +279,22 @@ export function PaymentDetailsDialog({
   };
 
   const members: Member[] = membersData?.members || [];
+  
+  const filteredMembers = members.filter((member) =>
+    member.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+    member.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+    member.phone?.includes(memberSearchQuery)
+  );
+
+  const getSelectedMemberNames = () => {
+    return members
+      .filter((m) => selectedMembers.includes(m.id))
+      .map((m) => m.name);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-[hsl(220,26%,14%)] border-white/10 text-white">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[hsl(220,26%,14%)] border-white/10 text-white">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-white">
             My Payment Details
@@ -303,9 +330,9 @@ export function PaymentDetailsDialog({
                 <div className="space-y-4">
                   <div className="border border-dashed border-white/20 rounded-lg p-4">
                     <Label className="text-white/80 mb-2 block">UPI QR Code</Label>
-                    <div className="flex items-start gap-4">
+                    <div className="flex flex-col sm:flex-row items-start gap-4">
                       <div
-                        className="w-32 h-32 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 overflow-hidden cursor-pointer hover:border-orange-500/50 transition-colors"
+                        className="w-28 h-28 sm:w-32 sm:h-32 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 overflow-hidden cursor-pointer hover:border-orange-500/50 transition-colors flex-shrink-0"
                         onClick={() => fileInputRef.current?.click()}
                       >
                         {previewImage ? (
@@ -324,7 +351,7 @@ export function PaymentDetailsDialog({
                       <div className="flex-1">
                         <Button
                           variant="outline"
-                          className="gap-2 border-white/20 text-white/80 hover:bg-white/10"
+                          className="gap-2 border-white/20 text-white/80 hover:bg-white/10 w-full sm:w-auto"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploadQrMutation.isPending}
                         >
@@ -343,7 +370,7 @@ export function PaymentDetailsDialog({
                           onChange={handleFileSelect}
                         />
                         <p className="text-xs text-white/40 mt-2">
-                          Upload your UPI QR code image (PNG, JPG, max 5MB)
+                          Upload your UPI QR code image (PNG, JPG, max 2MB)
                         </p>
                       </div>
                     </div>
@@ -387,7 +414,7 @@ export function PaymentDetailsDialog({
                             className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <Label htmlFor="bankAccountNumber" className="text-white/80">
                               Account Number
@@ -455,75 +482,146 @@ export function PaymentDetailsDialog({
               <>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-white/80">Select Members</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={selectAllMembers}
-                      className="text-orange-500 hover:text-orange-400 hover:bg-transparent"
-                    >
-                      {selectedMembers.length === members.length
-                        ? "Deselect All"
-                        : "Select All"}
-                    </Button>
-                  </div>
-
-                  <ScrollArea className="h-48 rounded-lg border border-white/10 bg-white/5">
-                    {isLoadingMembers ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
-                      </div>
-                    ) : members.length === 0 ? (
-                      <div className="text-center py-8 text-white/40">
-                        No members found
-                      </div>
-                    ) : (
-                      <div className="p-2">
-                        {members.map((member: Member) => (
-                          <div
-                            key={member.id}
-                            className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                              selectedMembers.includes(member.id)
-                                ? "bg-orange-500/20"
-                                : "hover:bg-white/5"
-                            }`}
-                            onClick={() => toggleMember(member.id)}
-                          >
-                            <Checkbox
-                              checked={selectedMembers.includes(member.id)}
-                              className="border-white/30 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">
-                                {member.name}
-                              </p>
-                              <p className="text-xs text-white/50 truncate">
-                                {member.email || member.phone}
-                              </p>
-                            </div>
-                            <div className="flex gap-1">
-                              {member.phone && (
-                                <Phone className="h-3 w-3 text-white/30" />
-                              )}
-                              {member.email && (
-                                <Mail className="h-3 w-3 text-white/30" />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    <Label className="text-white/80 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Select Members
+                    </Label>
+                    {members.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={selectAllMembers}
+                        className="text-orange-500 hover:text-orange-400 hover:bg-transparent text-xs"
+                      >
+                        {selectedMembers.length === members.length
+                          ? "Deselect All"
+                          : "Select All"}
+                      </Button>
                     )}
-                  </ScrollArea>
-
-                  <div className="text-sm text-white/50">
-                    {selectedMembers.length} member(s) selected
                   </div>
+
+                  <Popover open={memberDropdownOpen} onOpenChange={setMemberDropdownOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={memberDropdownOpen}
+                        className="w-full justify-between bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white h-auto min-h-[44px] py-2"
+                      >
+                        <span className="text-left flex-1 truncate text-white/60">
+                          {selectedMembers.length === 0
+                            ? "Click to select members..."
+                            : `${selectedMembers.length} member(s) selected`}
+                        </span>
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="w-[calc(100vw-4rem)] sm:w-[400px] p-0 bg-[hsl(220,26%,16%)] border-white/10"
+                      align="start"
+                    >
+                      <div className="p-2 border-b border-white/10">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                          <Input
+                            placeholder="Search members..."
+                            value={memberSearchQuery}
+                            onChange={(e) => setMemberSearchQuery(e.target.value)}
+                            className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                          />
+                        </div>
+                      </div>
+                      <ScrollArea className="h-[200px]">
+                        {isLoadingMembers ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+                          </div>
+                        ) : filteredMembers.length === 0 ? (
+                          <div className="text-center py-6 text-white/40 text-sm">
+                            {memberSearchQuery ? "No members match your search" : "No members found"}
+                          </div>
+                        ) : (
+                          <div className="p-1">
+                            {filteredMembers.map((member) => (
+                              <div
+                                key={member.id}
+                                className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
+                                  selectedMembers.includes(member.id)
+                                    ? "bg-orange-500/20 border border-orange-500/30"
+                                    : "hover:bg-white/5 border border-transparent"
+                                }`}
+                                onClick={() => toggleMember(member.id)}
+                              >
+                                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                  selectedMembers.includes(member.id)
+                                    ? "bg-orange-500 border-orange-500"
+                                    : "border-white/30"
+                                }`}>
+                                  {selectedMembers.includes(member.id) && (
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white truncate">
+                                    {member.name}
+                                  </p>
+                                  <p className="text-xs text-white/50 truncate">
+                                    {member.phone || member.email}
+                                  </p>
+                                </div>
+                                <div className="flex gap-1.5 shrink-0">
+                                  {member.phone && (
+                                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center" title="Has WhatsApp">
+                                      <Phone className="h-2.5 w-2.5 text-green-400" />
+                                    </div>
+                                  )}
+                                  {member.email && (
+                                    <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center" title="Has Email">
+                                      <Mail className="h-2.5 w-2.5 text-blue-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </PopoverContent>
+                  </Popover>
+
+                  {selectedMembers.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                      {getSelectedMemberNames().slice(0, 5).map((name, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="bg-orange-500/20 text-orange-300 border-orange-500/30 gap-1 pr-1"
+                        >
+                          {name}
+                          <button
+                            onClick={() => {
+                              const member = members.find((m) => m.name === name);
+                              if (member) removeMember(member.id);
+                            }}
+                            className="ml-1 hover:bg-white/10 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                      {selectedMembers.length > 5 && (
+                        <Badge variant="secondary" className="bg-white/10 text-white/70">
+                          +{selectedMembers.length - 5} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
                   <Label className="text-white/80">Send via</Label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
                       <Checkbox
                         checked={sendChannels.email}
                         onCheckedChange={(checked) =>
@@ -534,10 +632,14 @@ export function PaymentDetailsDialog({
                         }
                         className="border-white/30 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                       />
-                      <Mail className="h-4 w-4 text-white/60" />
-                      <span className="text-sm text-white/80">Email</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <Mail className="h-3.5 w-3.5 text-blue-400" />
+                        </div>
+                        <span className="text-sm text-white/80">Email</span>
+                      </div>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
                       <Checkbox
                         checked={sendChannels.whatsapp}
                         onCheckedChange={(checked) =>
@@ -548,18 +650,20 @@ export function PaymentDetailsDialog({
                         }
                         className="border-white/30 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                       />
-                      <Phone className="h-4 w-4 text-white/60" />
-                      <span className="text-sm text-white/80">WhatsApp</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                          <Phone className="h-3.5 w-3.5 text-green-400" />
+                        </div>
+                        <span className="text-sm text-white/80">WhatsApp</span>
+                      </div>
                     </label>
                   </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end pt-2">
                   <Button
                     onClick={handleSend}
-                    disabled={
-                      sendDetailsMutation.isPending || selectedMembers.length === 0
-                    }
+                    disabled={sendDetailsMutation.isPending || selectedMembers.length === 0}
                     className="gap-2 bg-green-600 hover:bg-green-700"
                   >
                     {sendDetailsMutation.isPending ? (
@@ -567,7 +671,7 @@ export function PaymentDetailsDialog({
                     ) : (
                       <Send className="h-4 w-4" />
                     )}
-                    Send Payment Details
+                    Send to {selectedMembers.length > 0 ? `${selectedMembers.length} Member(s)` : "Members"}
                   </Button>
                 </div>
               </>
