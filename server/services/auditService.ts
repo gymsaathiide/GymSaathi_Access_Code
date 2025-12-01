@@ -7,7 +7,7 @@ export type AuditSeverity = 'info' | 'warning' | 'critical';
 export type AuditStatus = 'success' | 'failed';
 
 export interface AuditLogEntry {
-  userId: string;
+  userId: string | null;
   userName: string;
   action: string;
   resource: string;
@@ -28,11 +28,15 @@ function getClientIP(req: Request): string {
   return req.socket?.remoteAddress || req.ip || 'unknown';
 }
 
+const ANONYMOUS_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
   try {
+    const validUserId = entry.userId && entry.userId !== 'unknown' ? entry.userId : ANONYMOUS_USER_ID;
+    
     if (db) {
       await db.insert(schema.auditLogs).values({
-        userId: entry.userId,
+        userId: validUserId,
         userName: entry.userName,
         action: entry.action,
         resource: entry.resource,
@@ -43,7 +47,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
       });
     } else {
       await supabaseRepo.logAuditEvent({
-        user_id: entry.userId,
+        user_id: validUserId,
         user_name: entry.userName,
         action: entry.action,
         resource: entry.resource,

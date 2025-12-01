@@ -279,7 +279,7 @@ export const supabaseRepo = {
   },
 
   async logAuditEvent(auditData: {
-    user_id: string;
+    user_id: string | null;
     user_name: string;
     action: string;
     resource: string;
