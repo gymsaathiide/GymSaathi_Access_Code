@@ -1,13 +1,23 @@
-import { ChevronDown, Bell, Search } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronDown, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { CreateBranchDialog } from './CreateBranchDialog';
+
+interface Branch {
+  id: string;
+  name: string;
+  isMain: boolean;
+  address?: string;
+  phone?: string;
+}
 
 interface DashboardHeaderProps {
   gymName: string;
@@ -66,63 +76,99 @@ export function DashboardHeader({
 }
 
 interface FilterBarProps {
-  branches?: string[];
-  selectedBranch?: string;
-  onBranchChange?: (branch: string) => void;
   periods?: string[];
   selectedPeriod?: string;
   onPeriodChange?: (period: string) => void;
 }
 
 export function FilterBar({
-  branches = ['Main Branch'],
-  selectedBranch = 'Main Branch',
-  onBranchChange,
   periods = ['This Month', 'Last Month', 'This Week', 'Today'],
   selectedPeriod = 'This Month',
   onPeriodChange,
 }: FilterBarProps) {
-  return (
-    <div className="flex flex-wrap gap-3 px-4 md:px-6 pb-4">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="branch-selector flex items-center gap-2">
-            {selectedBranch}
-            <ChevronDown className="h-4 w-4 opacity-70" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          {branches.map((branch) => (
-            <DropdownMenuItem
-              key={branch}
-              onClick={() => onBranchChange?.(branch)}
-              className={branch === selectedBranch ? 'bg-accent' : ''}
-            >
-              {branch}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+  const [showCreateBranchDialog, setShowCreateBranchDialog] = useState(false);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="period-selector flex items-center gap-2">
-            {selectedPeriod}
-            <ChevronDown className="h-4 w-4 opacity-70" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          {periods.map((period) => (
+  const { data: branches = [], refetch: refetchBranches } = useQuery<Branch[]>({
+    queryKey: ['/api/branches'],
+    refetchInterval: 30000,
+  });
+
+  const selectedBranch = branches.find(b => b.id === selectedBranchId) || branches.find(b => b.isMain) || branches[0];
+  const displayBranchName = selectedBranch?.isMain ? 'Main Branch' : selectedBranch?.name || 'Main Branch';
+
+  const handleBranchSelect = (branch: Branch) => {
+    setSelectedBranchId(branch.id);
+  };
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-3 px-4 md:px-6 pb-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="branch-selector flex items-center gap-2">
+              {displayBranchName}
+              <ChevronDown className="h-4 w-4 opacity-70" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-slate-900 border-white/10">
+            {branches.length > 0 ? (
+              branches.map((branch) => (
+                <DropdownMenuItem
+                  key={branch.id}
+                  onClick={() => handleBranchSelect(branch)}
+                  className={`text-white hover:bg-white/10 ${branch.id === selectedBranch?.id ? 'bg-white/10' : ''}`}
+                >
+                  <div className="flex flex-col">
+                    <span>{branch.isMain ? 'Main Branch' : branch.name}</span>
+                    {branch.address && (
+                      <span className="text-xs text-white/50 truncate max-w-[200px]">{branch.address}</span>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled className="text-white/50">
+                No branches found
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator className="bg-white/10" />
             <DropdownMenuItem
-              key={period}
-              onClick={() => onPeriodChange?.(period)}
-              className={period === selectedPeriod ? 'bg-accent' : ''}
+              onClick={() => setShowCreateBranchDialog(true)}
+              className="text-orange-400 hover:bg-orange-500/10 hover:text-orange-300 cursor-pointer"
             >
-              {period}
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Branch
             </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="period-selector flex items-center gap-2">
+              {selectedPeriod}
+              <ChevronDown className="h-4 w-4 opacity-70" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48 bg-slate-900 border-white/10">
+            {periods.map((period) => (
+              <DropdownMenuItem
+                key={period}
+                onClick={() => onPeriodChange?.(period)}
+                className={`text-white hover:bg-white/10 ${period === selectedPeriod ? 'bg-white/10' : ''}`}
+              >
+                {period}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <CreateBranchDialog
+        open={showCreateBranchDialog}
+        onOpenChange={setShowCreateBranchDialog}
+        onSuccess={() => refetchBranches()}
+      />
+    </>
   );
 }
