@@ -123,10 +123,6 @@ export default function AdminDashboardNew() {
     <div className="space-y-6">
       <WelcomeBanner />
 
-      <PendingPaymentsTable />
-
-      <AdminAnalyticsDashboard />
-
       <FilterBar
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
@@ -219,8 +215,8 @@ export default function AdminDashboardNew() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {dashboard.renewals.expiringSoon.length > 0 && (
+        {dashboard.renewals.expiringSoon.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <AlertCard
               title="Expires today"
               subtitle={`${dashboard.renewals.expiringSoon.filter((m) => m.daysLeft <= 0).length} memberships`}
@@ -228,18 +224,13 @@ export default function AdminDashboardNew() {
               icon={<AlertCircle className="h-5 w-5" />}
               onClick={() => navigate('/admin/members')}
             />
-          )}
-          {dashboard.billing.pendingInvoices > 0 && (
-            <AlertCard
-              title="Unpaid invoices overdue"
-              subtitle={`${dashboard.billing.pendingInvoices} invoices pending`}
-              variant="danger"
-              icon={<AlertCircle className="h-5 w-5" />}
-              onClick={() => navigate('/admin/billing')}
-            />
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      <PendingPaymentsTable />
+
+      <AdminAnalyticsDashboard />
 
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
