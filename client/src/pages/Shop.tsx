@@ -127,15 +127,6 @@ export default function Shop() {
     statusFilter === "all" ? true : order.status === statusFilter,
   );
 
-  // Mobile store filtered products (active only, with search and category)
-  const mobileStoreProducts = products
-    .filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(mobileSearchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "all" || product.categoryId === selectedCategory;
-      const isAvailable = storeSettings?.showOutOfStock ? true : product.stock > 0;
-      return matchesSearch && matchesCategory && isAvailable && product.isActive;
-    });
-
   // Cart functions
   const addToCart = (product: any) => {
     const existingItem = cart.find((item) => item.productId === product.id);
@@ -222,8 +213,16 @@ export default function Shop() {
 
   const { data: storeSettings } = useQuery<any>({
     queryKey: ["/api/store-settings"],
-    enabled: canManageProducts,
   });
+
+  // Mobile store filtered products (active only, with search and category)
+  const mobileStoreProducts = products
+    .filter((product) => {
+      const matchesSearch = product.name.toLowerCase().includes(mobileSearchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || product.categoryId === selectedCategory;
+      const isAvailable = storeSettings?.showOutOfStock ? true : product.stock > 0;
+      return matchesSearch && matchesCategory && isAvailable && product.isActive;
+    });
 
   const updateSettingsMutation = useMutation({
     mutationFn: (data: any) => apiRequest("PATCH", "/api/store-settings", data),
