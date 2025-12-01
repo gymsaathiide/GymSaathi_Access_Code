@@ -114,14 +114,13 @@ export default function MemberStore() {
         });
       }
     } else {
-      const imageUrl = product.images ? JSON.parse(product.images)[0] : null;
       setCart([...cart, {
         productId: product.id,
         productName: product.name,
         price: product.discountPrice || product.price,
         quantity: 1,
         stock: product.stock,
-        image: imageUrl,
+        image: product.imageUrl,
       }]);
       toast({
         title: "Added to Cart",
@@ -259,7 +258,6 @@ export default function MemberStore() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {filteredProducts.map((product) => {
-                const productImage = product.images ? JSON.parse(product.images)[0] : null;
                 const cartItem = cart.find(item => item.productId === product.id);
                 
                 return (
@@ -269,8 +267,8 @@ export default function MemberStore() {
                       className="aspect-square bg-muted relative cursor-pointer"
                       onClick={() => setSelectedProduct(product)}
                     >
-                      {productImage ? (
-                        <img src={productImage} alt={product.name} className="object-cover w-full h-full" />
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
                       ) : (
                         <div className="flex items-center justify-center h-full">
                           <ShoppingBag className="h-10 w-10 sm:h-16 sm:w-16 text-muted-foreground" />
@@ -591,9 +589,9 @@ export default function MemberStore() {
           {selectedProduct && (
             <>
               <div className="aspect-square bg-muted rounded-lg overflow-hidden mb-4 -mx-6 -mt-6 sm:mx-0 sm:mt-0 sm:rounded-t-lg">
-                {selectedProduct.images && JSON.parse(selectedProduct.images)[0] ? (
+                {selectedProduct.imageUrl ? (
                   <img 
-                    src={JSON.parse(selectedProduct.images)[0]} 
+                    src={selectedProduct.imageUrl} 
                     alt={selectedProduct.name} 
                     className="w-full h-full object-cover" 
                   />

@@ -1422,7 +1422,21 @@ class Storage {
       );
     }
 
-    return data.map((row: any) => ({
+    return data.map((row: any) => {
+      // Parse images JSON and get first image as imageUrl
+      let imageUrl = null;
+      if (row.images) {
+        try {
+          const imagesArray = JSON.parse(row.images);
+          if (Array.isArray(imagesArray) && imagesArray.length > 0) {
+            imageUrl = imagesArray[0];
+          }
+        } catch (e) {
+          // If not JSON, use as direct URL
+          imageUrl = row.images;
+        }
+      }
+      return {
       id: row.id,
       gymId: row.gymId,
       categoryId: row.categoryId,
@@ -1436,17 +1450,34 @@ class Storage {
       stock: row.stock,
       lowStockAlert: row.lowStockAlert,
       images: row.images,
+      imageUrl: imageUrl,
       variants: row.variants,
       isFeatured: row.isFeatured === 1,
       isActive: row.isActive === 1,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    }));
+    };
+    });
   }
 
   async getProductById(productId: string) {
     const row = await getDb().select().from(schema.products).where(eq(schema.products.id, productId)).limit(1).then(rows => rows[0]);
     if (!row) return null;
+    
+    // Parse images JSON and get first image as imageUrl
+    let imageUrl = null;
+    if (row.images) {
+      try {
+        const imagesArray = JSON.parse(row.images);
+        if (Array.isArray(imagesArray) && imagesArray.length > 0) {
+          imageUrl = imagesArray[0];
+        }
+      } catch (e) {
+        // If not JSON, use as direct URL
+        imageUrl = row.images;
+      }
+    }
+    
     return {
       id: row.id,
       gymId: row.gymId,
@@ -1461,6 +1492,7 @@ class Storage {
       stock: row.stock,
       lowStockAlert: row.lowStockAlert,
       images: row.images,
+      imageUrl: imageUrl,
       variants: row.variants,
       isFeatured: row.isFeatured === 1,
       isActive: row.isActive === 1,

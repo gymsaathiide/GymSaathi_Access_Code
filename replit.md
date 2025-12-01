@@ -88,3 +88,10 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 - **Admin Toggle**: Admins can switch between "Store" and "Admin" views using toggle buttons
 - **Cart Functionality**: Add to cart, quantity adjustment, checkout with payment method selection
 - **Order Creation**: Places orders directly from cart with selected payment method
+
+## Product Image Display Fix (December 2025)
+- **Backend Fix**: Added `imageUrl` property to product API responses in `storage.ts`
+- **Database**: Products store images in `images` column as JSON array of URLs
+- **Transformation**: Backend now parses JSON array and extracts first image as `imageUrl`
+- **Frontend**: Shop.tsx and MemberStore.tsx now use `product.imageUrl` for consistent image display
+- **Fallback**: Shows placeholder icon when no image is available
