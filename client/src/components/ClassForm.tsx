@@ -34,11 +34,11 @@ export function ClassForm({ classData, onSuccess, onCancel }: ClassFormProps) {
   const isEditing = !!classData;
   const canFetchTrainers = user?.role === 'admin' || user?.role === 'trainer';
 
-  const { data: classTypes = [] } = useQuery({
+  const { data: classTypes = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['/api/class-types'],
   });
 
-  const { data: trainers = [] } = useQuery({
+  const { data: trainers = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['/api/trainers'],
     enabled: canFetchTrainers,
   });
@@ -124,14 +124,17 @@ export function ClassForm({ classData, onSuccess, onCancel }: ClassFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Trainer (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select 
+                onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
+                defaultValue={field.value || 'none'}
+              >
                 <FormControl>
                   <SelectTrigger data-testid="select-trainer">
                     <SelectValue placeholder="Select trainer" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">No trainer assigned</SelectItem>
+                  <SelectItem value="none">No trainer assigned</SelectItem>
                   {trainers.map((trainer: any) => (
                     <SelectItem key={trainer.id} value={trainer.id}>
                       {trainer.name}

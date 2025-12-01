@@ -30,22 +30,26 @@ export default function Classes() {
   const isMember = user?.role === 'member';
   const canFetchTrainers = user?.role === 'admin' || user?.role === 'trainer';
 
-  const { data: classes = [], isLoading: classesLoading } = useQuery({
+  const { data: classes = [], isLoading: classesLoading } = useQuery<any[]>({
     queryKey: ['/api/classes'],
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   });
 
-  const { data: classTypes = [] } = useQuery({
+  const { data: classTypes = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['/api/class-types'],
+    refetchInterval: 10000,
   });
 
-  const { data: trainers = [] } = useQuery({
+  const { data: trainers = [] } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['/api/trainers'],
     enabled: canFetchTrainers,
+    refetchInterval: 10000,
   });
 
-  const { data: myBookings = [] } = useQuery({
-    queryKey: isMember && user ? ['/api/members', user.id, 'bookings'] : null,
-    enabled: isMember && !!user,
+  const { data: myBookings = [] } = useQuery<any[]>({
+    queryKey: ['/api/members', user?.id || '', 'bookings'],
+    enabled: isMember && !!user?.id,
   });
 
   const deleteMutation = useMutation({
