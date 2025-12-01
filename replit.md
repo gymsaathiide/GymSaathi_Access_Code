@@ -44,5 +44,16 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 - **Build & Dev Tools**: Vite, TypeScript, PostCSS, Tailwind CSS, Autoprefixer.
 - **Charting**: Recharts.
 - **Carousel Components**: Embla Carousel React.
-- **Notifications**: Resend API (email), WatX API (WhatsApp).
+- **Notifications**: Resend API (email), UPMtech/WatX API (WhatsApp with image+text support).
 - **QR Code**: qrcode.react (generation), html5-qrcode (scanning).
+
+# Recent Changes
+
+## WhatsApp QR Code + UPI Details Feature (December 2025)
+- Updated `sendPaymentDetailsWhatsApp` to send QR code image with UPI/bank details as caption
+- Uses UPMtech API's media message capability (`type=media`, `media_type=image`)
+- When admin sends payment details via WhatsApp and QR URL exists, recipient receives:
+  - QR code image displayed in WhatsApp
+  - Caption with UPI ID, account holder, bank account number, IFSC code
+- Falls back to text-only message if no QR code is uploaded
+- API field fix: Uses `message` field for caption per UPMtech API documentation

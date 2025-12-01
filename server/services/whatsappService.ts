@@ -396,7 +396,7 @@ async function sendWhatsAppMediaMessage(phoneNumber: string, imageUrl: string, c
   const accountId = process.env.WATX_INSTANCE_ID;
 
   if (!apiSecret || !baseUrl || !accountId) {
-    console.log('[whatsapp] WatX credentials not fully configured for media message');
+    console.log('[whatsapp] UPMtech API credentials not fully configured for media message (need WATX_API_KEY, WATX_BASE_URL, WATX_INSTANCE_ID)');
     return false;
   }
 
@@ -416,10 +416,11 @@ async function sendWhatsAppMediaMessage(phoneNumber: string, imageUrl: string, c
     form.append('media_url', imageUrl);
     form.append('media_type', 'image');
     if (caption) {
-      form.append('caption', caption);
+      form.append('message', caption);
     }
 
-    console.log(`[whatsapp] Sending media message to ${formattedPhone} via WatX API...`);
+    console.log(`[whatsapp] Sending media message (image + caption) to ${formattedPhone} via UPMtech API...`);
+    console.log(`[whatsapp] Image URL: ${imageUrl}`);
 
     const response = await axios.post(`${baseUrl}/send/whatsapp`, form, {
       headers: {
@@ -460,7 +461,7 @@ export async function sendPaymentDetailsWhatsApp(
     return false;
   }
 
-  let message = `💳 *Payment Details from ${gymName}*
+  let caption = `💳 *Payment Details from ${gymName}*
 
 Hi ${recipientName},
 
@@ -468,40 +469,39 @@ Here are the payment details you requested:
 `;
 
   if (paymentDetails.upiId) {
-    message += `
+    caption += `
 📲 *UPI ID:* ${paymentDetails.upiId}`;
   }
 
   if (paymentDetails.holderName) {
-    message += `
+    caption += `
 
 🏦 *Bank Details:*
 👤 Account Holder: ${paymentDetails.holderName}`;
   }
 
   if (paymentDetails.bankAccountNumber) {
-    message += `
+    caption += `
 🔢 Account No: ${paymentDetails.bankAccountNumber}`;
   }
 
   if (paymentDetails.ifscCode) {
-    message += `
+    caption += `
 🏛️ IFSC: ${paymentDetails.ifscCode}`;
   }
 
-  if (paymentDetails.qrUrl) {
-    message += `
-
-📸 *QR Code:* Please check your email for the payment QR code, or ask your gym admin for the QR code image.`;
-  }
-
-  message += `
+  caption += `
 
 For any queries, please contact your gym.
 
 - Team ${gymName}`;
 
-  return sendWhatsAppMessage(recipientPhone, message);
+  if (paymentDetails.qrUrl) {
+    console.log(`[whatsapp] Sending payment QR code with UPI details to ${recipientPhone}`);
+    return sendWhatsAppMediaMessage(recipientPhone, paymentDetails.qrUrl, caption);
+  }
+
+  return sendWhatsAppMessage(recipientPhone, caption);
 }
 
 export async function sendPaymentReminderWhatsApp(
