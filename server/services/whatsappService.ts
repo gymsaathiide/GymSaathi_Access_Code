@@ -425,3 +425,57 @@ Follow up quickly to convert this lead!
 
   return sendWhatsAppMessage(payload.adminPhone, message);
 }
+
+export async function sendPaymentDetailsWhatsApp(
+  recipientPhone: string,
+  recipientName: string,
+  paymentDetails: any,
+  gymName: string
+): Promise<boolean> {
+  if (process.env.ENABLE_WHATSAPP_NOTIFICATIONS === 'false') {
+    console.log('[whatsapp] WhatsApp notifications disabled, skipping payment details');
+    return true;
+  }
+
+  if (!recipientPhone) {
+    console.log('[whatsapp] No phone number provided, skipping payment details WhatsApp');
+    return false;
+  }
+
+  let message = `💳 *Payment Details from ${gymName}*
+
+Hi ${recipientName},
+
+Here are the payment details you requested:
+`;
+
+  if (paymentDetails.upiId) {
+    message += `
+📲 *UPI ID:* ${paymentDetails.upiId}`;
+  }
+
+  if (paymentDetails.holderName) {
+    message += `
+
+🏦 *Bank Details:*
+👤 Account Holder: ${paymentDetails.holderName}`;
+  }
+
+  if (paymentDetails.bankAccountNumber) {
+    message += `
+🔢 Account No: ${paymentDetails.bankAccountNumber}`;
+  }
+
+  if (paymentDetails.ifscCode) {
+    message += `
+🏛️ IFSC: ${paymentDetails.ifscCode}`;
+  }
+
+  message += `
+
+For any queries, please contact your gym.
+
+- Team ${gymName}`;
+
+  return sendWhatsAppMessage(recipientPhone, message);
+}

@@ -952,3 +952,125 @@ export async function sendPasswordResetEmail(payload: PasswordResetEmailPayload)
     return false;
   }
 }
+
+export interface PaymentDetailsEmailPayload {
+  recipientEmail: string;
+  recipientName: string;
+  gymName: string;
+  upiId?: string;
+  qrUrl?: string;
+  holderName?: string;
+  bankAccountNumber?: string;
+  ifscCode?: string;
+}
+
+function getPaymentDetailsEmailHtml(payload: PaymentDetailsEmailPayload): string {
+  const bankDetailsHtml = payload.bankAccountNumber ? `
+    <div style="margin-top: 20px; padding: 15px; background-color: #f8fafc; border-radius: 8px;">
+      <h3 style="color: #1f2937; margin: 0 0 12px 0; font-size: 16px;">Bank Account Details</h3>
+      ${payload.holderName ? `<p style="margin: 5px 0; color: #4b5563;"><strong>Account Holder:</strong> ${payload.holderName}</p>` : ''}
+      <p style="margin: 5px 0; color: #4b5563;"><strong>Account Number:</strong> ${payload.bankAccountNumber}</p>
+      ${payload.ifscCode ? `<p style="margin: 5px 0; color: #4b5563;"><strong>IFSC Code:</strong> ${payload.ifscCode}</p>` : ''}
+    </div>
+  ` : '';
+
+  const upiHtml = payload.upiId ? `
+    <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 8px;">
+      <h3 style="color: #1f2937; margin: 0 0 12px 0; font-size: 16px;">UPI Payment</h3>
+      <p style="margin: 5px 0; color: #4b5563;"><strong>UPI ID:</strong> ${payload.upiId}</p>
+      ${payload.qrUrl ? `
+        <div style="margin-top: 15px; text-align: center;">
+          <p style="color: #4b5563; margin-bottom: 10px;">Scan QR Code to Pay:</p>
+          <img src="${payload.qrUrl}" alt="UPI QR Code" style="max-width: 200px; border: 1px solid #e5e7eb; border-radius: 8px;" />
+        </div>
+      ` : ''}
+    </div>
+  ` : '';
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Details from ${payload.gymName}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 30px 20px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">💳 Payment Details</h1>
+        <p style="color: #ffffff; margin: 10px 0 0; opacity: 0.9;">from ${payload.gymName}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 30px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Hi ${payload.recipientName},
+        </p>
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Here are the payment details from <strong>${payload.gymName}</strong>. You can use any of the methods below to make your payment.
+        </p>
+        ${upiHtml}
+        ${bankDetailsHtml}
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 25px 0 0;">
+          If you have any questions, please contact your gym directly.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 30px; background-color: #1f2937; text-align: center;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+          © ${new Date().getFullYear()} GYMSAATHI. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+export async function sendPaymentDetailsEmail(
+  recipientEmail: string,
+  recipientName: string,
+  paymentDetails: any,
+  gymName: string
+): Promise<boolean> {
+  if (!resend) {
+    console.log('[email] RESEND_API_KEY not configured, skipping payment details email');
+    return false;
+  }
+
+  try {
+    const payload: PaymentDetailsEmailPayload = {
+      recipientEmail,
+      recipientName,
+      gymName,
+      upiId: paymentDetails.upiId,
+      qrUrl: paymentDetails.qrUrl,
+      holderName: paymentDetails.holderName,
+      bankAccountNumber: paymentDetails.bankAccountNumber,
+      ifscCode: paymentDetails.ifscCode,
+    };
+
+    const { data, error } = await resend.emails.send({
+      from: `${gymName} via GYMSAATHI <${fromEmail}>`,
+      to: recipientEmail,
+      subject: `Payment Details from ${gymName}`,
+      html: getPaymentDetailsEmailHtml(payload),
+      text: `Hi ${recipientName}, Here are the payment details from ${gymName}. UPI ID: ${paymentDetails.upiId || 'N/A'}. Bank Account: ${paymentDetails.bankAccountNumber || 'N/A'}. IFSC: ${paymentDetails.ifscCode || 'N/A'}.`,
+    });
+
+    if (error) {
+      console.error('[email] ERROR sending payment details email:', error);
+      return false;
+    }
+
+    console.log(`[email] Sent payment details email to ${recipientEmail} (ID: ${data?.id})`);
+    return true;
+  } catch (error) {
+    console.error('[email] ERROR sending payment details email:', error);
+    return false;
+  }
+}

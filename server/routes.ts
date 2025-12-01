@@ -8,9 +8,9 @@ import { storage } from "./storage";
 import { insertMemberSchema, insertPaymentSchema, insertInvoiceSchema, insertLeadSchema, insertProductSchema, insertOrderSchema, insertClassSchema, insertClassTypeSchema, insertClassBookingSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { db } from "./db";
-import { eq, and, desc, asc, sql, gte, lte, lt, or, like, isNull } from "drizzle-orm";
+import { eq, and, desc, asc, sql, gte, lte, lt, or, like, isNull, inArray } from "drizzle-orm";
 import * as schema from "@shared/schema";
-import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendNewPaymentDetailsEmail } from "./services/emailService";
+import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendPaymentDetailsEmail } from "./services/emailService";
 import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber, sendPaymentDetailsWhatsApp } from "./services/whatsappService";
 import { generateInvoicePdf, type InvoiceData } from "./services/invoicePdfService";
 import * as auditService from "./services/auditService";
@@ -6846,14 +6846,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: 'Database not available' });
       }
 
-      const { memberIds, sendVia } = req.body;
-
-      if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
-        return res.status(400).json({ error: 'Please select at least one member' });
+      const { memberIds, channels, customContact, customContactType } = req.body;
+      
+      // Validate: either memberIds or customContact must be provided
+      const hasMembers = memberIds && Array.isArray(memberIds) && memberIds.length > 0;
+      const hasCustomContact = customContact && typeof customContact === 'string' && customContact.trim();
+      
+      if (!hasMembers && !hasCustomContact) {
+        return res.status(400).json({ error: 'Please select members or enter a contact to send payment details' });
       }
-
-      if (!sendVia || !['email', 'whatsapp', 'both'].includes(sendVia)) {
-        return res.status(400).json({ error: 'Invalid send method' });
+      if (!channels || (!channels.whatsapp && !channels.email)) {
+        return res.status(400).json({ error: 'At least one channel (whatsapp or email) must be selected' });
       }
 
       // Get payment details
@@ -6864,61 +6867,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .then(rows => rows[0]);
 
       if (!paymentDetails) {
-        return res.status(404).json({ error: 'Payment details not configured' });
+        return res.status(404).json({ error: 'Payment details not configured. Please add your payment details first.' });
       }
 
       // Get gym info
       const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
-
-      // Get selected members - use IN clause instead of ANY
-      const members = await db!.select()
-        .from(schema.members)
-        .where(and(
-          eq(schema.members.gymId, user.gymId),
-          sql`${schema.members.id} IN (${sql.join(memberIds.map((id: string) => sql`${id}`), sql`, `)})` 
-        ));
 
       const results = {
         success: [] as string[],
         failed: [] as { contact: string; error: string }[]
       };
 
-      for (const member of members) {
+      // Handle sending to custom contact (any phone/email)
+      if (hasCustomContact) {
         try {
-          if (sendVia === 'whatsapp' || sendVia === 'both') {
-            if (member.phone) {
+          const contact = customContact.trim();
+          const isEmail = contact.includes('@');
+          const recipientName = 'Customer';
+          
+          if (isEmail && channels.email) {
+            await sendPaymentDetailsEmail(contact, recipientName, paymentDetails, gym?.name || 'Our Gym');
+            results.success.push(contact);
+          } else if (!isEmail && channels.whatsapp) {
+            const phoneValidation = validateAndFormatPhoneNumber(contact);
+            if (phoneValidation.isValid) {
+              try {
+                await sendPaymentDetailsWhatsApp(contact, recipientName, paymentDetails, gym?.name || 'Our Gym');
+                results.success.push(contact);
+              } catch (whatsappError) {
+                console.log('WhatsApp API not available for custom contact');
+                results.failed.push({ contact, error: 'WhatsApp sending failed' });
+              }
+            } else {
+              results.failed.push({ contact, error: 'Invalid phone number format' });
+            }
+          } else {
+            results.failed.push({ contact, error: 'Channel not available for this contact type' });
+          }
+        } catch (customError: any) {
+          results.failed.push({ contact: customContact, error: customError.message });
+        }
+      }
+
+      // Handle sending to selected members
+      if (hasMembers) {
+        // Use inArray for proper query
+        const members = await db!.select()
+          .from(schema.members)
+          .where(and(
+            eq(schema.members.gymId, user.gymId),
+            inArray(schema.members.id, memberIds)
+          ));
+
+        for (const member of members) {
+          try {
+            if (channels.whatsapp && member.phone) {
               const phoneValidation = validateAndFormatPhoneNumber(member.phone);
               if (phoneValidation.isValid) {
                 try {
                   await sendPaymentDetailsWhatsApp(member.phone, member.name, paymentDetails, gym?.name || 'Our Gym');
                 } catch (whatsappError) {
                   console.log('WhatsApp API not available, using fallback');
-                  // Optionally log this error or add to failed list if preferred
                 }
-              } else {
-                results.failed.push({ contact: member.name || member.id, error: 'Invalid phone number' });
               }
-            } else {
-              results.failed.push({ contact: member.name || member.id, error: 'Member has no phone number' });
             }
-          }
 
-          if (sendVia === 'email' || sendVia === 'both') {
-            if (member.email) {
+            if (channels.email && member.email) {
               await sendPaymentDetailsEmail(member.email, member.name, paymentDetails, gym?.name || 'Our Gym');
-            } else {
-              results.failed.push({ contact: member.name || member.id, error: 'Member has no email address' });
             }
-          }
 
-          results.success.push(member.name || member.id);
-        } catch (memberError: any) {
-          results.failed.push({ contact: member.name || member.id, error: memberError.message });
+            results.success.push(member.name || member.id);
+          } catch (memberError: any) {
+            results.failed.push({ contact: member.name || member.id, error: memberError.message });
+          }
         }
       }
 
       const successCount = results.success.length;
-      const message = `Payment details sent to ${successCount} recipient(s)`;
+      const message = hasCustomContact && !hasMembers
+        ? `Payment details sent to ${customContact}`
+        : `Payment details sent to ${successCount} recipient(s)`;
 
       res.json({ message, results });
     } catch (error: any) {
@@ -6960,84 +6988,3 @@ function buildPaymentMessage(paymentDetails: any, gymName: string): string {
   return message;
 }
 
-// Email function for payment details
-async function sendPaymentDetailsEmail(
-  email: string,
-  memberName: string,
-  paymentDetails: any,
-  gymName: string
-): Promise<void> {
-  const { Resend } = await import('resend');
-  const resend = new Resend(process.env.RESEND_API_KEY);
-
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #f97316;">Payment Details from ${gymName}</h2>
-      <p>Dear ${memberName},</p>
-      <p>Here are the payment details for your convenience:</p>
-
-      <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        ${paymentDetails.upiId ? `<p><strong>UPI ID:</strong> ${paymentDetails.upiId}</p>` : ''}
-        ${paymentDetails.holderName ? `<p><strong>Account Holder:</strong> ${paymentDetails.holderName}</p>` : ''}
-        ${paymentDetails.bankAccountNumber ? `<p><strong>Bank Account:</strong> ${paymentDetails.bankAccountNumber}</p>` : ''}
-        ${paymentDetails.ifscCode ? `<p><strong>IFSC Code:</strong> ${paymentDetails.ifscCode}</p>` : ''}
-      </div>
-
-      ${paymentDetails.qrUrl ? `
-        <div style="text-align: center; margin: 20px 0;">
-          <p><strong>Scan QR Code to Pay:</strong></p>
-          <img src="${paymentDetails.qrUrl}" alt="Payment QR Code" style="max-width: 200px; border: 1px solid #e2e8f0; border-radius: 8px;" />
-        </div>
-      ` : ''}
-
-      <p>Please use these details to make your payment. Thank you!</p>
-      <p style="color: #64748b; font-size: 12px;">This is an automated message from ${gymName}.</p>
-    </div>
-  `;
-
-  await resend.emails.send({
-    from: 'GymSaathi <noreply@gymsaathi.com>',
-    to: email,
-    subject: `Payment Details - ${gymName}`,
-    html: htmlContent,
-  });
-}
-
-// WhatsApp function for payment details
-async function sendPaymentDetailsWhatsApp(
-  phone: string,
-  memberName: string,
-  paymentDetails: any,
-  gymName: string
-): Promise<void> {
-  const apiKey = process.env.WATX_API_KEY;
-  const apiUrl = process.env.WATX_API_URL || 'https://api.watx.in/v1/messages';
-
-  if (!apiKey) {
-    throw new Error('WATX_API_KEY not configured');
-  }
-
-  const phoneValidation = validateAndFormatPhoneNumber(phone);
-  if (!phoneValidation.isValid) {
-    throw new Error('Invalid phone number');
-  }
-
-  const message = buildPaymentMessage(paymentDetails, gymName);
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      to: phoneValidation.formattedNumber,
-      type: 'text',
-      text: { body: message }
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`WhatsApp API error: ${response.statusText}`);
-  }
-}
