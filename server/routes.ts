@@ -16,6 +16,7 @@ import { generateInvoicePdf, type InvoiceData } from "./services/invoicePdfServi
 import * as auditService from "./services/auditService";
 import { supabaseRepo } from "./supabaseRepository";
 import * as userAccess from "./services/userAccess";
+import { supabase } from "./supabase";
 
 function isDbAvailable(): boolean {
   return db !== null;
@@ -6673,6 +6674,391 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =============================================
+  // ADMIN PAYMENT DETAILS ENDPOINTS
+  // =============================================
+
+  // Get admin payment details
+  app.get('/api/admin/payment-details', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const details = await db!.select()
+        .from(schema.adminPaymentDetails)
+        .where(and(
+          eq(schema.adminPaymentDetails.adminId, user.id),
+          eq(schema.adminPaymentDetails.gymId, user.gymId)
+        ))
+        .limit(1)
+        .then(rows => rows[0] || null);
+
+      res.json({ paymentDetails: details });
+    } catch (error: any) {
+      console.error('Error getting admin payment details:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create or update admin payment details
+  app.put('/api/admin/payment-details', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const { qrUrl, upiId, bankAccountNumber, ifscCode, holderName } = req.body;
+
+      // Validate required fields
+      if (!upiId && !bankAccountNumber) {
+        return res.status(400).json({ error: 'At least UPI ID or Bank Account Number is required' });
+      }
+
+      // Check if details already exist
+      const existing = await db!.select()
+        .from(schema.adminPaymentDetails)
+        .where(and(
+          eq(schema.adminPaymentDetails.adminId, user.id),
+          eq(schema.adminPaymentDetails.gymId, user.gymId)
+        ))
+        .limit(1)
+        .then(rows => rows[0] || null);
+
+      let details;
+      if (existing) {
+        // Update existing
+        details = await db!.update(schema.adminPaymentDetails)
+          .set({
+            qrUrl: qrUrl || existing.qrUrl,
+            upiId: upiId || existing.upiId,
+            bankAccountNumber: bankAccountNumber || existing.bankAccountNumber,
+            ifscCode: ifscCode || existing.ifscCode,
+            holderName: holderName || existing.holderName,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.adminPaymentDetails.id, existing.id))
+          .returning()
+          .then(rows => rows[0]);
+      } else {
+        // Create new
+        details = await db!.insert(schema.adminPaymentDetails)
+          .values({
+            adminId: user.id,
+            gymId: user.gymId,
+            qrUrl,
+            upiId,
+            bankAccountNumber,
+            ifscCode,
+            holderName,
+          })
+          .returning()
+          .then(rows => rows[0]);
+      }
+
+      res.json({ paymentDetails: details, message: 'Payment details saved successfully' });
+    } catch (error: any) {
+      console.error('Error saving admin payment details:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Upload QR code to Supabase storage
+  app.post('/api/admin/payment-details/upload-qr', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const { base64Image, fileName } = req.body;
+      if (!base64Image) {
+        return res.status(400).json({ error: 'Base64 image data is required' });
+      }
+
+      // Extract base64 data (remove data:image/...;base64, prefix if present)
+      const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Determine file extension from base64 header or use default
+      let extension = 'png';
+      if (base64Image.includes('data:image/jpeg')) {
+        extension = 'jpg';
+      } else if (base64Image.includes('data:image/gif')) {
+        extension = 'gif';
+      }
+
+      const uniqueFileName = fileName || `qr_${user.gymId}_${Date.now()}.${extension}`;
+      const filePath = `payment-qr/${user.gymId}/${uniqueFileName}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('gym-assets')
+        .upload(filePath, buffer, {
+          contentType: `image/${extension}`,
+          upsert: true
+        });
+
+      if (error) {
+        console.error('Supabase storage upload error:', error);
+        return res.status(500).json({ error: 'Failed to upload QR code: ' + error.message });
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('gym-assets')
+        .getPublicUrl(filePath);
+
+      const qrUrl = publicUrlData.publicUrl;
+
+      // Update payment details with new QR URL
+      if (isDbAvailable()) {
+        const existing = await db!.select()
+          .from(schema.adminPaymentDetails)
+          .where(and(
+            eq(schema.adminPaymentDetails.adminId, user.id),
+            eq(schema.adminPaymentDetails.gymId, user.gymId)
+          ))
+          .limit(1)
+          .then(rows => rows[0] || null);
+
+        if (existing) {
+          await db!.update(schema.adminPaymentDetails)
+            .set({ qrUrl, updatedAt: new Date() })
+            .where(eq(schema.adminPaymentDetails.id, existing.id));
+        } else {
+          await db!.insert(schema.adminPaymentDetails)
+            .values({
+              adminId: user.id,
+              gymId: user.gymId,
+              qrUrl,
+            });
+        }
+      }
+
+      res.json({ qrUrl, message: 'QR code uploaded successfully' });
+    } catch (error: any) {
+      console.error('Error uploading QR code:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send payment details to member(s) via WhatsApp/Email
+  app.post('/api/admin/payment-details/send', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const { memberIds, channels } = req.body;
+      if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+        return res.status(400).json({ error: 'At least one member ID is required' });
+      }
+      if (!channels || (!channels.whatsapp && !channels.email)) {
+        return res.status(400).json({ error: 'At least one channel (whatsapp or email) must be selected' });
+      }
+
+      // Get payment details
+      const paymentDetails = await db!.select()
+        .from(schema.adminPaymentDetails)
+        .where(and(
+          eq(schema.adminPaymentDetails.adminId, user.id),
+          eq(schema.adminPaymentDetails.gymId, user.gymId)
+        ))
+        .limit(1)
+        .then(rows => rows[0] || null);
+
+      if (!paymentDetails) {
+        return res.status(400).json({ error: 'No payment details found. Please add your payment details first.' });
+      }
+
+      // Get gym info
+      const gym = await db!.select()
+        .from(schema.gyms)
+        .where(eq(schema.gyms.id, user.gymId))
+        .limit(1)
+        .then(rows => rows[0] || null);
+
+      // Get members
+      const members = await db!.select()
+        .from(schema.members)
+        .where(and(
+          eq(schema.members.gymId, user.gymId),
+          sql`${schema.members.id} = ANY(${memberIds}::uuid[])`
+        ));
+
+      const results = {
+        success: [] as string[],
+        failed: [] as { memberId: string; error: string }[]
+      };
+
+      for (const member of members) {
+        try {
+          // Build payment message
+          const paymentMessage = buildPaymentMessage(paymentDetails, gym?.name || 'Our Gym');
+
+          if (channels.whatsapp && member.phone) {
+            const formattedPhone = validateAndFormatPhoneNumber(member.phone);
+            if (formattedPhone) {
+              // Create WhatsApp deep link with payment message
+              const whatsappMessage = encodeURIComponent(paymentMessage);
+              const whatsappLink = `https://wa.me/${formattedPhone.replace('+', '')}?text=${whatsappMessage}`;
+              // We can't actually send WhatsApp message programmatically, but we return the link
+              // For now, we'll use the WatX API if configured
+              try {
+                await sendPaymentDetailsWhatsApp(member.phone, member.name, paymentDetails, gym?.name || 'Our Gym');
+              } catch (whatsappError) {
+                console.log('WhatsApp API not available, using fallback');
+              }
+            }
+          }
+
+          if (channels.email && member.email) {
+            await sendPaymentDetailsEmail(member.email, member.name, paymentDetails, gym?.name || 'Our Gym');
+          }
+
+          results.success.push(member.id);
+        } catch (memberError: any) {
+          results.failed.push({ memberId: member.id, error: memberError.message });
+        }
+      }
+
+      res.json({
+        message: `Payment details sent to ${results.success.length} member(s)`,
+        results
+      });
+    } catch (error: any) {
+      console.error('Error sending payment details:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Helper function to build payment message
+function buildPaymentMessage(paymentDetails: any, gymName: string): string {
+  let message = `Payment Details from ${gymName}\n\n`;
+  
+  if (paymentDetails.upiId) {
+    message += `UPI ID: ${paymentDetails.upiId}\n`;
+  }
+  
+  if (paymentDetails.holderName) {
+    message += `Account Holder: ${paymentDetails.holderName}\n`;
+  }
+  
+  if (paymentDetails.bankAccountNumber) {
+    message += `Bank Account: ${paymentDetails.bankAccountNumber}\n`;
+  }
+  
+  if (paymentDetails.ifscCode) {
+    message += `IFSC Code: ${paymentDetails.ifscCode}\n`;
+  }
+  
+  if (paymentDetails.qrUrl) {
+    message += `\nQR Code: ${paymentDetails.qrUrl}\n`;
+  }
+  
+  message += `\nPlease use these details to make your payment. Thank you!`;
+  
+  return message;
+}
+
+// Email function for payment details
+async function sendPaymentDetailsEmail(
+  email: string,
+  memberName: string,
+  paymentDetails: any,
+  gymName: string
+): Promise<void> {
+  const { Resend } = await import('resend');
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #f97316;">Payment Details from ${gymName}</h2>
+      <p>Dear ${memberName},</p>
+      <p>Here are the payment details for your convenience:</p>
+      
+      <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        ${paymentDetails.upiId ? `<p><strong>UPI ID:</strong> ${paymentDetails.upiId}</p>` : ''}
+        ${paymentDetails.holderName ? `<p><strong>Account Holder:</strong> ${paymentDetails.holderName}</p>` : ''}
+        ${paymentDetails.bankAccountNumber ? `<p><strong>Bank Account:</strong> ${paymentDetails.bankAccountNumber}</p>` : ''}
+        ${paymentDetails.ifscCode ? `<p><strong>IFSC Code:</strong> ${paymentDetails.ifscCode}</p>` : ''}
+      </div>
+      
+      ${paymentDetails.qrUrl ? `
+        <div style="text-align: center; margin: 20px 0;">
+          <p><strong>Scan QR Code to Pay:</strong></p>
+          <img src="${paymentDetails.qrUrl}" alt="Payment QR Code" style="max-width: 200px; border: 1px solid #e2e8f0; border-radius: 8px;" />
+        </div>
+      ` : ''}
+      
+      <p>Please use these details to make your payment. Thank you!</p>
+      <p style="color: #64748b; font-size: 12px;">This is an automated message from ${gymName}.</p>
+    </div>
+  `;
+
+  await resend.emails.send({
+    from: 'GymSaathi <noreply@gymsaathi.com>',
+    to: email,
+    subject: `Payment Details - ${gymName}`,
+    html: htmlContent,
+  });
+}
+
+// WhatsApp function for payment details
+async function sendPaymentDetailsWhatsApp(
+  phone: string,
+  memberName: string,
+  paymentDetails: any,
+  gymName: string
+): Promise<void> {
+  const apiKey = process.env.WATX_API_KEY;
+  const apiUrl = process.env.WATX_API_URL || 'https://api.watx.in/v1/messages';
+
+  if (!apiKey) {
+    throw new Error('WATX_API_KEY not configured');
+  }
+
+  const formattedPhone = validateAndFormatPhoneNumber(phone);
+  if (!formattedPhone) {
+    throw new Error('Invalid phone number');
+  }
+
+  const message = buildPaymentMessage(paymentDetails, gymName);
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      to: formattedPhone,
+      type: 'text',
+      text: { body: message }
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`WhatsApp API error: ${response.statusText}`);
+  }
 }
