@@ -38,7 +38,7 @@ export function ClassForm({ classData, onSuccess, onCancel }: ClassFormProps) {
     queryKey: ['/api/class-types'],
   });
 
-  const { data: trainers = [] } = useQuery<Array<{ id: string; name: string }>>({
+  const { data: trainers = [] } = useQuery<Array<{ id: string; userId: string; name: string }>>({
     queryKey: ['/api/trainers'],
     enabled: canFetchTrainers,
   });
@@ -135,8 +135,8 @@ export function ClassForm({ classData, onSuccess, onCancel }: ClassFormProps) {
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="none">No trainer assigned</SelectItem>
-                  {trainers.map((trainer: any) => (
-                    <SelectItem key={trainer.id} value={trainer.id}>
+                  {trainers.map((trainer) => (
+                    <SelectItem key={trainer.id} value={trainer.userId}>
                       {trainer.name}
                     </SelectItem>
                   ))}

@@ -41,7 +41,7 @@ export default function Classes() {
     refetchInterval: 10000,
   });
 
-  const { data: trainers = [] } = useQuery<Array<{ id: string; name: string }>>({
+  const { data: trainers = [] } = useQuery<Array<{ id: string; userId: string; name: string }>>({
     queryKey: ['/api/trainers'],
     enabled: canFetchTrainers,
     refetchInterval: 10000,
