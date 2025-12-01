@@ -1,0 +1,183 @@
+You are helping me work on a Replit project that integrates the WhatsApp APIs from https://sms.upmtech.in/api.
+
+Below is the SPEC I want you to follow strictly. Use this information whenever you generate or modify code related to sending WhatsApp messages, especially when sending images WITH text (caption).
+
+========================
+CONTEXT: UPMTECH WHATSAPP API
+========================
+
+BASE URL:
+  https://sms.upmtech.in/api
+
+AUTH:
+  - Most endpoints require a secret parameter (API key).
+  - I will usually store this in an environment variable like:
+      UPM_API_SECRET
+
+WHATSAPP ACCOUNT:
+  - For sending messages, I need a valid WhatsApp account unique ID.
+  - This comes from the /get/wa.accounts endpoint or the dashboard.
+  - We’ll refer to it as: WHATSAPP_ACCOUNT_UNIQUE_ID
+
+========================
+GOAL: SEND IMAGE + TEXT (CAPTION) VIA WHATSAPP
+========================
+
+IMPORTANT:
+- YES, the API supports sending an image with text in a single message.
+- This is done using type=media.
+- The message field becomes the *caption* displayed under the image.
+
+There are TWO main ways to send image + text:
+
+1) Single message: /send/whatsapp
+2) Bulk campaign: /send/whatsapp.bulk
+
+-----------------------------------
+1) SINGLE MESSAGE WITH IMAGE + CAPTION
+-----------------------------------
+
+ENDPOINT:
+  POST /send/whatsapp
+CONTENT-TYPE:
+  multipart/form-data
+
+Required fields:
+  - secret        : string  (API key)
+  - account       : string  (WhatsApp account unique ID)
+  - recipient     : string  (phone number or group address)
+  - type          : string  ("media" for image + caption)
+  - message       : string  (this is the text CAPTION)
+  - EITHER media_file OR media_url
+  - media_type    : string  ("image" when sending an image)
+
+Notes:
+  - media_file is a binary upload (jpg, png, gif, mp4, mp3, ogg).
+  - media_url is a DIRECT URL to the file.
+  - media_type must describe what’s in media_file/media_url:
+      - "image"
+      - "audio"
+      - "video"
+  - For images, we use: media_type = "image".
+
+Example cURL using local image file:
+  curl -X POST "https://sms.upmtech.in/api/send/whatsapp" \
+    -H "Content-Type: multipart/form-data" \
+    -F "secret=YOUR_API_SECRET" \
+    -F "account=WHATSAPP_ACCOUNT_UNIQUE_ID" \
+    -F "recipient=+918123456789" \
+    -F "type=media" \
+    -F "media_type=image" \
+    -F "message=Hello! Here is your image 😊" \
+    -F "media_file=@/path/to/image.jpg"
+
+Example cURL using image URL:
+  curl -X POST "https://sms.upmtech.in/api/send/whatsapp" \
+    -H "Content-Type: multipart/form-data" \
+    -F "secret=YOUR_API_SECRET" \
+    -F "account=WHATSAPP_ACCOUNT_UNIQUE_ID" \
+    -F "recipient=+918123456789" \
+    -F "type=media" \
+    -F "media_type=image" \
+    -F "message=Check this out!" \
+    -F "media_url=https://example.com/image.jpg"
+
+Expected JSON response (example):
+  {
+    "status": 200,
+    "message": "WhatsApp chat has been sent!",
+    "data": {
+      "messageId": 123
+    }
+  }
+
+-----------------------------------
+2) BULK IMAGE + TEXT (CAPTION)
+-----------------------------------
+
+ENDPOINT:
+  POST /send/whatsapp.bulk
+CONTENT-TYPE:
+  application/x-www-form-urlencoded
+
+Required fields:
+  - secret        : string  (API key)
+  - account       : string  (WhatsApp account unique ID)
+  - campaign      : string  (campaign name)
+  - type          : string  ("media" for image + caption)
+  - message       : string  (caption text)
+  - At least one of:
+      - recipients : string  (comma-separated phone numbers / group addresses)
+      - groups     : string  (comma-separated contact group IDs)
+
+Additional media fields (for type=media):
+  - media_file OR media_url
+  - media_type = "image" | "audio" | "video"
+
+Example cURL for bulk send with image URL:
+  curl -X POST "https://sms.upmtech.in/api/send/whatsapp.bulk" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "secret=YOUR_API_SECRET" \
+    -d "account=WHATSAPP_ACCOUNT_UNIQUE_ID" \
+    -d "campaign=My Image Campaign" \
+    -d "type=media" \
+    -d "media_type=image" \
+    -d "message=This is the caption for all recipients" \
+    -d "media_url=https://example.com/banner.jpg" \
+    -d "recipients=+911234567890,+919876543210"
+
+Expected JSON response (example):
+  {
+    "status": 200,
+    "message": "5 chats has been queued for sending!",
+    "data": {
+      "campaignId": 123,
+      "messageIds": []
+    }
+  }
+
+========================
+WHAT I WANT FROM YOU IN REPLIT
+========================
+
+When I ask you to:
+  - "send an image with text via WhatsApp",
+  - "add image + caption sending",
+  - "implement WhatsApp media message",
+  - or anything similar,
+
+you should:
+
+1. Use the base URL:
+   https://sms.upmtech.in/api
+
+2. Use the correct endpoint:
+   - Single message: POST /send/whatsapp (multipart/form-data)
+   - Bulk messages:  POST /send/whatsapp.bulk (x-www-form-urlencoded)
+
+3. For image + caption:
+   - type = "media"
+   - media_type = "image"
+   - Include either media_file (binary) OR media_url (string)
+   - message = caption text
+
+4. Assume:
+   - API secret is available as an environment variable like:
+       process.env.UPM_API_SECRET   (for Node.js)
+   - Account ID is stored somewhere in config / env, for example:
+       process.env.WHATSAPP_ACCOUNT_ID
+
+5. Generate idiomatic code for the language/framework I specify in Replit
+   (e.g., Node.js with axios/fetch, Python with requests, etc.).
+
+6. Always handle:
+   - HTTP errors (non-200)
+   - JSON parsing
+   - Returning/logging status, message, and IDs from data.
+
+IMPORTANT:
+- Never “invent” new parameters or endpoints.
+- Always respect the exact field names: secret, account, recipient, type, message, media_file, media_url, media_type, etc.
+- Remember: the text is sent in the message field as a caption when type="media".
+
+Use this spec as the source of truth whenever working with WhatsApp image + text sending in this project.
