@@ -3264,7 +3264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? ((revenueThisMonthValue - revenueLastMonthValue) / revenueLastMonthValue) * 100 
         : (revenueThisMonthValue > 0 ? 100 : 0);
 
-      // Pending dues
+      // Pending dues - only count pending or partially_paid payments, not paid ones
       const pendingDues = await db!.select({
         total: sql<number>`COALESCE(SUM(CAST(${schema.payments.amountDue} AS DECIMAL)), 0)`,
         count: sql<number>`count(DISTINCT ${schema.payments.memberId})`
@@ -3272,7 +3272,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(schema.payments)
         .where(and(
           eq(schema.payments.gymId, gymId),
-          sql`CAST(${schema.payments.amountDue} AS DECIMAL) > 0`
+          sql`CAST(${schema.payments.amountDue} AS DECIMAL) > 0`,
+          sql`${schema.payments.status} IN ('pending', 'partially_paid')`
         ));
       const pendingDuesAmount = parseFloat(String(pendingDues[0]?.total || 0));
       const pendingDuesMembers = Number(pendingDues[0]?.count || 0);
