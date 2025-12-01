@@ -60,8 +60,6 @@ export default function Gyms() {
     status: 'active',
     address: '',
     logoUrl: '',
-    adminEmail: '',
-    adminPassword: '',
   });
 
   const { toast } = useToast();
@@ -130,8 +128,6 @@ export default function Gyms() {
       status: 'active',
       address: '',
       logoUrl: '',
-      adminEmail: '',
-      adminPassword: '',
     });
     setEditingGym(null);
   };
@@ -380,42 +376,6 @@ export default function Gyms() {
                   </div>
                 </div>
               </div>
-
-              {!editingGym && (
-                <div className="space-y-4 pt-4 border-t">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-medium">Admin Login Credentials</h4>
-                    <p className="text-sm text-muted-foreground">Create admin account for this gym</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="adminEmail">Admin Email</Label>
-                      <Input
-                        id="adminEmail"
-                        type="email"
-                        value={formData.adminEmail}
-                        onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
-                        placeholder="admin@example.com"
-                        required
-                        data-testid="input-admin-email"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="adminPassword">Admin Password</Label>
-                      <Input
-                        id="adminPassword"
-                        type="password"
-                        value={formData.adminPassword}
-                        onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                        placeholder="Minimum 8 characters"
-                        required
-                        minLength={8}
-                        data-testid="input-admin-password"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
