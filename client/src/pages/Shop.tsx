@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,11 +34,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ProductForm } from "@/components/ProductForm";
 import { OrderForm } from "@/components/OrderForm";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
+  Minus,
   Package,
   AlertTriangle,
   XCircle,
@@ -51,12 +56,25 @@ import {
   Check,
   FolderOpen,
   Settings,
+  ShoppingCart,
+  ShoppingBag,
+  Wrench,
 } from "lucide-react";
 import { format } from "date-fns";
+
+interface CartItem {
+  productId: string;
+  productName: string;
+  price: number;
+  quantity: number;
+  stock: number;
+  image?: string;
+}
 
 export default function Shop() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const canManageProducts = user?.role === "admin";
   const [activeTab, setActiveTab] = useState("products");
   const [productFormOpen, setProductFormOpen] = useState(false);
@@ -66,6 +84,15 @@ export default function Shop() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [productStatusFilter, setProductStatusFilter] = useState<string>("all");
+  
+  // Mobile Store State
+  const [mobileViewMode, setMobileViewMode] = useState<"store" | "admin">("store");
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("cash");
+  const [mobileProductDetail, setMobileProductDetail] = useState<any>(null);
+  const [mobileSearchQuery, setMobileSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const { data: products = [], isLoading: productsLoading } = useQuery<any[]>({
     queryKey: ["/api/products"],
@@ -99,6 +126,94 @@ export default function Shop() {
   const filteredOrders = orders.filter((order) =>
     statusFilter === "all" ? true : order.status === statusFilter,
   );
+
+  // Mobile store filtered products (active only, with search and category)
+  const mobileStoreProducts = products
+    .filter((product) => {
+      const matchesSearch = product.name.toLowerCase().includes(mobileSearchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || product.categoryId === selectedCategory;
+      const isAvailable = storeSettings?.showOutOfStock ? true : product.stock > 0;
+      return matchesSearch && matchesCategory && isAvailable && product.isActive;
+    });
+
+  // Cart functions
+  const addToCart = (product: any) => {
+    const existingItem = cart.find((item) => item.productId === product.id);
+    if (existingItem) {
+      if (existingItem.quantity < product.stock) {
+        setCart(cart.map((item) =>
+          item.productId === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        ));
+        toast({ title: "Added to cart", description: `${product.name} quantity updated` });
+      } else {
+        toast({ title: "Stock limit", description: "Maximum available quantity reached", variant: "destructive" });
+      }
+    } else {
+      setCart([...cart, {
+        productId: product.id,
+        productName: product.name,
+        price: parseFloat(product.discountPrice || product.price),
+        quantity: 1,
+        stock: product.stock,
+        image: product.imageUrl,
+      }]);
+      toast({ title: "Added to cart", description: `${product.name} added to your cart` });
+    }
+  };
+
+  const updateCartQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      setCart(cart.filter((item) => item.productId !== productId));
+    } else {
+      const item = cart.find((i) => i.productId === productId);
+      if (item && newQuantity <= item.stock) {
+        setCart(cart.map((i) =>
+          i.productId === productId ? { ...i, quantity: newQuantity } : i
+        ));
+      }
+    }
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCart(cart.filter((item) => item.productId !== productId));
+  };
+
+  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const createOrderFromCartMutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", "/api/orders", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      setCart([]);
+      setIsCartOpen(false);
+      toast({
+        title: "Order Placed Successfully!",
+        description: "Your order has been submitted for processing.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to place order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    createOrderFromCartMutation.mutate({
+      items: cart.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.price,
+      })),
+      paymentMethod: selectedPaymentMethod,
+    });
+  };
 
   const { data: analytics } = useQuery<any>({
     queryKey: ["/api/store/analytics"],
@@ -422,13 +537,251 @@ export default function Shop() {
     return "In Stock";
   };
 
+  // Mobile Store View
+  if (isMobile && mobileViewMode === "store") {
+    return (
+      <div className="space-y-4 pb-20">
+        {/* Mobile Store Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold">Store</h1>
+          <div className="flex items-center gap-2">
+            {canManageProducts && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileViewMode("admin")}
+                className="text-xs"
+              >
+                <Wrench className="h-3 w-3 mr-1" />
+                Admin
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsCartOpen(true)}
+              className="relative"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Search & Filters */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              value={mobileSearchQuery}
+              onChange={(e) => setMobileSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat: any) => (
+                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Mobile Product Grid */}
+        {productsLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading products...</div>
+        ) : mobileStoreProducts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">No products available</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {mobileStoreProducts.map((product) => (
+              <Card key={product.id} className="overflow-hidden">
+                <div 
+                  className="aspect-square bg-muted relative cursor-pointer"
+                  onClick={() => setMobileProductDetail(product)}
+                >
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-12 w-12 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  {product.stock === 0 && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">Out of Stock</span>
+                    </div>
+                  )}
+                </div>
+                <CardContent className="p-3">
+                  <h3 className="font-medium text-sm truncate">{product.name}</h3>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-base font-bold">₹{parseFloat(product.discountPrice || product.price).toFixed(0)}</span>
+                    {product.discountPrice && (
+                      <span className="text-xs text-muted-foreground line-through">₹{parseFloat(product.price).toFixed(0)}</span>
+                    )}
+                  </div>
+                  <Button
+                    className="w-full mt-2 h-8 text-xs"
+                    disabled={product.stock === 0}
+                    onClick={() => addToCart(product)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add to Cart
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Mobile Cart Sheet */}
+        <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
+          <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
+            <SheetHeader className="pb-4">
+              <SheetTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Cart ({cartItemCount} items)
+              </SheetTitle>
+            </SheetHeader>
+            
+            {cart.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+                <ShoppingBag className="h-12 w-12 mb-2" />
+                <p>Your cart is empty</p>
+              </div>
+            ) : (
+              <div className="flex flex-col h-full">
+                <ScrollArea className="flex-1 -mx-6 px-6">
+                  <div className="space-y-3 pb-4">
+                    {cart.map((item) => (
+                      <div key={item.productId} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <div className="h-16 w-16 bg-muted rounded-md overflow-hidden flex-shrink-0">
+                          {item.image ? (
+                            <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="h-6 w-6 text-muted-foreground/30" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{item.productName}</p>
+                          <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}>
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="w-6 text-center text-sm">{item.quantity}</span>
+                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}>
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeFromCart(item.productId)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+                
+                <div className="border-t pt-4 space-y-4 -mx-6 px-6 pb-4">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span>₹{cartTotal.toFixed(2)}</span>
+                  </div>
+                  <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Payment Method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button className="w-full" size="lg" onClick={handleCheckout} disabled={createOrderFromCartMutation.isPending}>
+                    {createOrderFromCartMutation.isPending ? "Placing Order..." : "Place Order"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
+
+        {/* Mobile Product Detail Dialog */}
+        <Dialog open={!!mobileProductDetail} onOpenChange={(open) => !open && setMobileProductDetail(null)}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            {mobileProductDetail && (
+              <>
+                <div className="aspect-square bg-muted rounded-lg overflow-hidden -mx-6 -mt-6">
+                  {mobileProductDetail.imageUrl ? (
+                    <img src={mobileProductDetail.imageUrl} alt={mobileProductDetail.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-16 w-16 text-muted-foreground/30" />
+                    </div>
+                  )}
+                </div>
+                <DialogHeader className="pt-4">
+                  <DialogTitle>{mobileProductDetail.name}</DialogTitle>
+                  {mobileProductDetail.description && (
+                    <DialogDescription>{mobileProductDetail.description}</DialogDescription>
+                  )}
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-2xl font-bold">₹{parseFloat(mobileProductDetail.discountPrice || mobileProductDetail.price).toFixed(2)}</span>
+                    {mobileProductDetail.discountPrice && (
+                      <span className="text-muted-foreground line-through">₹{parseFloat(mobileProductDetail.price).toFixed(2)}</span>
+                    )}
+                  </div>
+                  <Badge variant={mobileProductDetail.stock > 0 ? "default" : "destructive"}>
+                    {mobileProductDetail.stock > 0 ? `${mobileProductDetail.stock} in stock` : "Out of Stock"}
+                  </Badge>
+                  <Button className="w-full" size="lg" disabled={mobileProductDetail.stock === 0} onClick={() => { addToCart(mobileProductDetail); setMobileProductDetail(null); }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add to Cart
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-semibold" data-testid="text-page-title">
-          Shop Management
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-semibold" data-testid="text-page-title">
+            Shop Management
+          </h1>
+          {isMobile && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileViewMode("store")}
+              className="text-xs"
+            >
+              <ShoppingBag className="h-3 w-3 mr-1" />
+              Store
+            </Button>
+          )}
+        </div>
         <div className="flex gap-2">
           {canManageProducts && activeTab === "products" && (
             <Button onClick={handleAddProduct} data-testid="button-add-product" className="flex-1 sm:flex-none">

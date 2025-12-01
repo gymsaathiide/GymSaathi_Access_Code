@@ -81,3 +81,10 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 - **Members.tsx**: Mobile card layout with avatar, contact info, status badge, and action buttons; table layout for desktop
 - **Leads.tsx**: Compact stats grid (2 cols mobile, 3 cols tablet, 5 cols desktop), stacked filters on mobile, card-based lead list with desktop table fallback
 - **Mobile Design Pattern**: Uses `sm:hidden` for mobile-only views, `hidden sm:block` for desktop-only views, consistent with Tailwind responsive utilities
+
+## Shop Mobile Store View (December 2025)
+- **Mobile-First Shopping Experience**: Shop page now shows a customer-facing store view on mobile by default
+- **Features**: 2-column product grid, cart with Sheet component, product detail dialog, search & category filters
+- **Admin Toggle**: Admins can switch between "Store" and "Admin" views using toggle buttons
+- **Cart Functionality**: Add to cart, quantity adjustment, checkout with payment method selection
+- **Order Creation**: Places orders directly from cart with selected payment method
