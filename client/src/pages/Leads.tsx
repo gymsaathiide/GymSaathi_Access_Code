@@ -220,119 +220,111 @@ export default function Leads() {
         )}
       </PageHeader>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <Card className="cursor-pointer bg-card-dark border-white/5 hover:bg-white/5 transition-colors" onClick={() => setStatusFilter('all')}>
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Total Leads</CardTitle>
-            <Users className="h-4 w-4 text-orange-400" />
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-white/80">Total</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-orange-400 hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white" data-testid="stat-total-leads">{stats.total}</div>
-            <p className="text-xs text-white/50">
-              {stats.newLeads} new
-            </p>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-white" data-testid="stat-total-leads">{stats.total}</div>
+            <p className="text-xs text-white/50 hidden sm:block">{stats.newLeads} new</p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer bg-card-dark border-white/5 hover:bg-white/5 transition-colors" onClick={() => setStatusFilter('contacted')}>
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Contacted</CardTitle>
-            <Phone className="h-4 w-4 text-blue-400" />
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-white/80">Contacted</CardTitle>
+            <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400 hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white" data-testid="stat-contacted">{stats.contacted}</div>
-            <p className="text-xs text-white/50">
-              Initial contact made
-            </p>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-white" data-testid="stat-contacted">{stats.contacted}</div>
+            <p className="text-xs text-white/50 hidden sm:block">Initial contact</p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer bg-card-dark border-white/5 hover:bg-white/5 transition-colors" onClick={() => setStatusFilter('interested')}>
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Interested</CardTitle>
-            <ThumbsUp className="h-4 w-4 text-yellow-400" />
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-white/80">Interested</CardTitle>
+            <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white" data-testid="stat-interested">{stats.interested}</div>
-            <p className="text-xs text-white/50">
-              Showed interest
-            </p>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-white" data-testid="stat-interested">{stats.interested}</div>
+            <p className="text-xs text-white/50 hidden sm:block">Showed interest</p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer bg-card-dark border-white/5 hover:bg-white/5 transition-colors" onClick={() => setStatusFilter('converted')}>
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Converted</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-400" />
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-white/80">Converted</CardTitle>
+            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-400" data-testid="stat-converted">{stats.converted}</div>
-            <p className="text-xs text-white/50">
-              Became members
-            </p>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-green-400" data-testid="stat-converted">{stats.converted}</div>
+            <p className="text-xs text-white/50 hidden sm:block">Became members</p>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer bg-card-dark border-white/5 hover:bg-white/5 transition-colors" onClick={() => setStatusFilter('lost')}>
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white/80">Lost</CardTitle>
-            <XCircle className="h-4 w-4 text-red-400" />
+        <Card className="cursor-pointer bg-card-dark border-white/5 hover:bg-white/5 transition-colors col-span-2 sm:col-span-1" onClick={() => setStatusFilter('lost')}>
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-white/80">Lost</CardTitle>
+            <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-400" data-testid="stat-lost">{stats.lost}</div>
-            <p className="text-xs text-white/50">
-              Not interested
-            </p>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-red-400" data-testid="stat-lost">{stats.lost}</div>
+            <p className="text-xs text-white/50 hidden sm:block">Not interested</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className="bg-card-dark border-white/5">
-        <CardHeader className="border-b border-white/5">
-          <CardTitle className="text-white">Lead Directory</CardTitle>
-          <CardDescription className="text-white/50">View and manage all potential gym members</CardDescription>
+        <CardHeader className="border-b border-white/5 p-4 sm:p-6">
+          <CardTitle className="text-white text-lg sm:text-xl">Lead Directory</CardTitle>
+          <CardDescription className="text-white/50 text-xs sm:text-sm">Manage potential gym members</CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="mb-4 flex flex-wrap gap-4">
-            <div className="relative flex-1 min-w-[200px]">
+        <CardContent className="p-4 sm:pt-6">
+          <div className="mb-4 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
               <Input
-                placeholder="Search leads by name, email, or phone..."
+                placeholder="Search leads..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-orange-500/50"
+                className="pl-10 w-full bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-orange-500/50"
                 data-testid="input-search-leads"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white" data-testid="select-status-filter">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent className="bg-[hsl(220,26%,16%)] border-white/10">
-                <SelectItem value="all" className="text-white/80 focus:bg-white/10 focus:text-white">All Statuses</SelectItem>
-                <SelectItem value="new" className="text-white/80 focus:bg-white/10 focus:text-white">New</SelectItem>
-                <SelectItem value="contacted" className="text-white/80 focus:bg-white/10 focus:text-white">Contacted</SelectItem>
-                <SelectItem value="interested" className="text-white/80 focus:bg-white/10 focus:text-white">Interested</SelectItem>
-                <SelectItem value="converted" className="text-white/80 focus:bg-white/10 focus:text-white">Converted</SelectItem>
-                <SelectItem value="lost" className="text-white/80 focus:bg-white/10 focus:text-white">Lost</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white" data-testid="select-source-filter">
-                <SelectValue placeholder="Filter by source" />
-              </SelectTrigger>
-              <SelectContent className="bg-[hsl(220,26%,16%)] border-white/10">
-                <SelectItem value="all" className="text-white/80 focus:bg-white/10 focus:text-white">All Sources</SelectItem>
-                <SelectItem value="walk_in" className="text-white/80 focus:bg-white/10 focus:text-white">Walk-in</SelectItem>
-                <SelectItem value="referral" className="text-white/80 focus:bg-white/10 focus:text-white">Referral</SelectItem>
-                <SelectItem value="online" className="text-white/80 focus:bg-white/10 focus:text-white">Online</SelectItem>
-                <SelectItem value="Website form" className="text-white/80 focus:bg-white/10 focus:text-white">Website Form</SelectItem>
-                <SelectItem value="Instagram" className="text-white/80 focus:bg-white/10 focus:text-white">Instagram</SelectItem>
-                <SelectItem value="Facebook" className="text-white/80 focus:bg-white/10 focus:text-white">Facebook</SelectItem>
-                <SelectItem value="social_media" className="text-white/80 focus:bg-white/10 focus:text-white">Social Media</SelectItem>
-                <SelectItem value="other" className="text-white/80 focus:bg-white/10 focus:text-white">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[140px] bg-white/5 border-white/10 text-white text-sm" data-testid="select-status-filter">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-[hsl(220,26%,16%)] border-white/10">
+                  <SelectItem value="all" className="text-white/80 focus:bg-white/10 focus:text-white">All</SelectItem>
+                  <SelectItem value="new" className="text-white/80 focus:bg-white/10 focus:text-white">New</SelectItem>
+                  <SelectItem value="contacted" className="text-white/80 focus:bg-white/10 focus:text-white">Contacted</SelectItem>
+                  <SelectItem value="interested" className="text-white/80 focus:bg-white/10 focus:text-white">Interested</SelectItem>
+                  <SelectItem value="converted" className="text-white/80 focus:bg-white/10 focus:text-white">Converted</SelectItem>
+                  <SelectItem value="lost" className="text-white/80 focus:bg-white/10 focus:text-white">Lost</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-full sm:w-[140px] bg-white/5 border-white/10 text-white text-sm" data-testid="select-source-filter">
+                  <SelectValue placeholder="Source" />
+                </SelectTrigger>
+                <SelectContent className="bg-[hsl(220,26%,16%)] border-white/10">
+                  <SelectItem value="all" className="text-white/80 focus:bg-white/10 focus:text-white">All Sources</SelectItem>
+                  <SelectItem value="walk_in" className="text-white/80 focus:bg-white/10 focus:text-white">Walk-in</SelectItem>
+                  <SelectItem value="referral" className="text-white/80 focus:bg-white/10 focus:text-white">Referral</SelectItem>
+                  <SelectItem value="online" className="text-white/80 focus:bg-white/10 focus:text-white">Online</SelectItem>
+                  <SelectItem value="Website form" className="text-white/80 focus:bg-white/10 focus:text-white">Website</SelectItem>
+                  <SelectItem value="Instagram" className="text-white/80 focus:bg-white/10 focus:text-white">Instagram</SelectItem>
+                  <SelectItem value="Facebook" className="text-white/80 focus:bg-white/10 focus:text-white">Facebook</SelectItem>
+                  <SelectItem value="social_media" className="text-white/80 focus:bg-white/10 focus:text-white">Social</SelectItem>
+                  <SelectItem value="other" className="text-white/80 focus:bg-white/10 focus:text-white">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {isLoading ? (
@@ -351,107 +343,120 @@ export default function Leads() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/5 hover:bg-white/5">
-                    <TableHead className="text-white/60">Name</TableHead>
-                    <TableHead className="hidden md:table-cell text-white/60">Email</TableHead>
-                    <TableHead className="text-white/60">Phone</TableHead>
-                    <TableHead className="hidden sm:table-cell text-white/60">Source</TableHead>
-                    <TableHead className="text-white/60">Status</TableHead>
-                    <TableHead className="hidden lg:table-cell text-white/60">Follow-up Date</TableHead>
-                    <TableHead className="text-right text-white/60">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead) => (
-                    <TableRow 
-                      key={lead.id} 
-                      data-testid={`row-lead-${lead.id}`}
-                      className="cursor-pointer border-white/5 hover:bg-white/5"
-                      onClick={() => setSelectedLead(lead)}
-                    >
-                      <TableCell className="font-medium text-white">{lead.name}</TableCell>
-                      <TableCell className="hidden md:table-cell text-white/70">{lead.email || '-'}</TableCell>
-                      <TableCell className="text-white/70">{lead.phone}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-white/70">{getSourceLabel(lead.source)}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          className={getStatusBadgeClass(lead.status)}
-                          data-testid={`badge-status-${lead.id}`}
-                        >
-                          {lead.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {lead.followUpDate ? (
-                          <span
-                            className={isFollowUpOverdue(lead.followUpDate) ? 'text-red-400 font-medium' : 'text-white/70'}
-                            data-testid={`text-follow-up-${lead.id}`}
-                          >
-                            {format(new Date(lead.followUpDate), 'MMM dd, yyyy')}
-                            {isFollowUpOverdue(lead.followUpDate) && ' (Overdue)'}
-                          </span>
-                        ) : (
-                          <span className="text-white/40">-</span>
+            <>
+              {/* Mobile Card View */}
+              <div className="sm:hidden space-y-3">
+                {leads.map((lead) => (
+                  <div 
+                    key={lead.id}
+                    className="p-3 rounded-lg bg-white/5 border border-white/10 cursor-pointer"
+                    onClick={() => setSelectedLead(lead)}
+                    data-testid={`row-lead-${lead.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-white truncate">{lead.name}</p>
+                        <p className="text-xs text-white/50">{lead.phone}</p>
+                        {lead.email && (
+                          <p className="text-xs text-white/50 truncate">{lead.email}</p>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1">
-                          {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="hover:bg-white/10 text-white/60 hover:text-white"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingLead(lead);
-                              }}
-                              data-testid={`button-edit-lead-${lead.id}`}
-                              title="Edit lead"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canConvert && lead.status !== 'converted' && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="hover:bg-green-500/10 text-white/60 hover:text-green-400"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setConvertingLead(lead);
-                              }}
-                              data-testid={`button-convert-lead-${lead.id}`}
-                              title="Convert to member"
-                            >
-                              <UserCheck className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="hover:bg-red-500/10 text-white/60 hover:text-red-400"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(lead.id);
-                              }}
-                              disabled={deleteMutation.isPending}
-                              data-testid={`button-delete-lead-${lead.id}`}
-                              title="Delete lead"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                      </div>
+                      <Badge className={`${getStatusBadgeClass(lead.status)} text-xs`} data-testid={`badge-status-${lead.id}`}>
+                        {lead.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                      <div className="flex items-center gap-2 text-xs text-white/50">
+                        <span>{getSourceLabel(lead.source)}</span>
+                        {lead.followUpDate && (
+                          <span className={isFollowUpOverdue(lead.followUpDate) ? 'text-red-400' : ''}>
+                            {format(new Date(lead.followUpDate), 'MMM dd')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        {canEdit && (
+                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-white/10 text-white/60" onClick={() => setEditingLead(lead)}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {canConvert && lead.status !== 'converted' && (
+                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-green-500/10 text-white/60 hover:text-green-400" onClick={() => setConvertingLead(lead)}>
+                            <UserCheck className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/5 hover:bg-white/5">
+                      <TableHead className="text-white/60">Name</TableHead>
+                      <TableHead className="hidden md:table-cell text-white/60">Email</TableHead>
+                      <TableHead className="text-white/60">Phone</TableHead>
+                      <TableHead className="hidden sm:table-cell text-white/60">Source</TableHead>
+                      <TableHead className="text-white/60">Status</TableHead>
+                      <TableHead className="hidden lg:table-cell text-white/60">Follow-up</TableHead>
+                      <TableHead className="text-right text-white/60">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {leads.map((lead) => (
+                      <TableRow 
+                        key={lead.id} 
+                        data-testid={`row-lead-${lead.id}`}
+                        className="cursor-pointer border-white/5 hover:bg-white/5"
+                        onClick={() => setSelectedLead(lead)}
+                      >
+                        <TableCell className="font-medium text-white">{lead.name}</TableCell>
+                        <TableCell className="hidden md:table-cell text-white/70">{lead.email || '-'}</TableCell>
+                        <TableCell className="text-white/70">{lead.phone}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-white/70">{getSourceLabel(lead.source)}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadgeClass(lead.status)} data-testid={`badge-status-${lead.id}`}>
+                            {lead.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {lead.followUpDate ? (
+                            <span className={isFollowUpOverdue(lead.followUpDate) ? 'text-red-400 font-medium' : 'text-white/70'} data-testid={`text-follow-up-${lead.id}`}>
+                              {format(new Date(lead.followUpDate), 'MMM dd, yyyy')}
+                              {isFollowUpOverdue(lead.followUpDate) && ' (Overdue)'}
+                            </span>
+                          ) : (
+                            <span className="text-white/40">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            {canEdit && (
+                              <Button variant="ghost" size="icon" className="hover:bg-white/10 text-white/60 hover:text-white" onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }} data-testid={`button-edit-lead-${lead.id}`} title="Edit lead">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canConvert && lead.status !== 'converted' && (
+                              <Button variant="ghost" size="icon" className="hover:bg-green-500/10 text-white/60 hover:text-green-400" onClick={(e) => { e.stopPropagation(); setConvertingLead(lead); }} data-testid={`button-convert-lead-${lead.id}`} title="Convert to member">
+                                <UserCheck className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canEdit && (
+                              <Button variant="ghost" size="icon" className="hover:bg-red-500/10 text-white/60 hover:text-red-400" onClick={(e) => { e.stopPropagation(); handleDelete(lead.id); }} disabled={deleteMutation.isPending} data-testid={`button-delete-lead-${lead.id}`} title="Delete lead">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -210,119 +210,164 @@ export default function Members() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/5 hover:bg-white/5">
-                  <TableHead className="text-gray-600 dark:text-white/60">
-                    Avatar
-                  </TableHead>
-                  <TableHead className="text-gray-600 dark:text-white/60">
-                    Name
-                  </TableHead>
-                  <TableHead className="text-gray-600 dark:text-white/60">
-                    Email
-                  </TableHead>
-                  <TableHead className="text-gray-600 dark:text-white/60">
-                    Phone
-                  </TableHead>
-                  <TableHead className="text-gray-600 dark:text-white/60">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-gray-600 dark:text-white/60">
-                    Join Date
-                  </TableHead>
-                  <TableHead className="text-right text-gray-600 dark:text-white/60">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile Card View */}
+              <div className="sm:hidden space-y-3">
                 {members.map((member) => (
-                  <TableRow
+                  <div
                     key={member.id}
-                    className="border-white/5 hover:bg-black/5 dark:hover:bg-white/5"
+                    className="p-3 rounded-lg bg-muted/30 border border-white/5"
                     data-testid={`row-member-${member.id}`}
                   >
-                    <TableCell>
-                      <Avatar className="h-10 w-10">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-12 w-12 flex-shrink-0">
                         {member.photoUrl ? (
-                          <AvatarImage
-                            src={member.photoUrl}
-                            alt={member.name}
-                            className="object-cover"
-                          />
+                          <AvatarImage src={member.photoUrl} alt={member.name} className="object-cover" />
                         ) : null}
                         <AvatarFallback className="text-sm bg-orange-500/20 text-orange-500 dark:text-orange-400">
                           {getInitials(member.name)}
                         </AvatarFallback>
                       </Avatar>
-                    </TableCell>
-                    <TableCell className="font-medium text-gray-900 dark:text-white">
-                      {member.name}
-                    </TableCell>
-                    <TableCell className="text-gray-700 dark:text-white/70">
-                      {member.email}
-                    </TableCell>
-                    <TableCell className="text-gray-700 dark:text-white/70">
-                      {member.phone}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={getStatusBadgeClass(member.status)}
-                        data-testid={`badge-status-${member.id}`}
-                      >
-                        {member.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-700 dark:text-white/70">
-                      {member.joinDate
-                        ? format(new Date(member.joinDate), "MMM dd, yyyy")
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white"
-                          onClick={() => setViewingMember(member)}
-                          data-testid={`button-view-profile-${member.id}`}
-                          title="View Profile"
-                        >
-                          <User className="h-4 w-4" />
-                        </Button>
-                        {canEdit && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white"
-                            onClick={() => setEditingMember(member)}
-                            data-testid={`button-edit-member-${member.id}`}
-                            title="Edit member"
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white truncate">
+                              {member.name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-white/50 truncate">
+                              {member.email}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-white/50">
+                              {member.phone}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`${getStatusBadgeClass(member.status)} text-xs flex-shrink-0`}
+                            data-testid={`badge-status-${member.id}`}
                           >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canEdit && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-600 dark:text-white/60 hover:text-red-600 dark:hover:text-red-400"
-                            onClick={() => handleDeactivate(member.id)}
-                            disabled={deleteMutation.isPending}
-                            data-testid={`button-deactivate-member-${member.id}`}
-                            title="Deactivate"
-                          >
-                            <UserX className="h-4 w-4" />
-                          </Button>
-                        )}
+                            {member.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                          <p className="text-xs text-gray-500 dark:text-white/50">
+                            <Calendar className="h-3 w-3 inline mr-1" />
+                            {member.joinDate ? format(new Date(member.joinDate), "MMM dd, yyyy") : "N/A"}
+                          </p>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 hover:bg-gray-100 dark:hover:bg-white/10"
+                              onClick={() => setViewingMember(member)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 hover:bg-gray-100 dark:hover:bg-white/10"
+                                onClick={() => setEditingMember(member)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/5 hover:bg-white/5">
+                      <TableHead className="text-gray-600 dark:text-white/60">Avatar</TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">Name</TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">Email</TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">Phone</TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">Status</TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">Join Date</TableHead>
+                      <TableHead className="text-right text-gray-600 dark:text-white/60">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {members.map((member) => (
+                      <TableRow
+                        key={member.id}
+                        className="border-white/5 hover:bg-black/5 dark:hover:bg-white/5"
+                        data-testid={`row-member-${member.id}`}
+                      >
+                        <TableCell>
+                          <Avatar className="h-10 w-10">
+                            {member.photoUrl ? (
+                              <AvatarImage src={member.photoUrl} alt={member.name} className="object-cover" />
+                            ) : null}
+                            <AvatarFallback className="text-sm bg-orange-500/20 text-orange-500 dark:text-orange-400">
+                              {getInitials(member.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                        <TableCell className="font-medium text-gray-900 dark:text-white">{member.name}</TableCell>
+                        <TableCell className="text-gray-700 dark:text-white/70">{member.email}</TableCell>
+                        <TableCell className="text-gray-700 dark:text-white/70">{member.phone}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={getStatusBadgeClass(member.status)} data-testid={`badge-status-${member.id}`}>
+                            {member.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-700 dark:text-white/70">
+                          {member.joinDate ? format(new Date(member.joinDate), "MMM dd, yyyy") : "N/A"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white"
+                              onClick={() => setViewingMember(member)}
+                              data-testid={`button-view-profile-${member.id}`}
+                              title="View Profile"
+                            >
+                              <User className="h-4 w-4" />
+                            </Button>
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white"
+                                onClick={() => setEditingMember(member)}
+                                data-testid={`button-edit-member-${member.id}`}
+                                title="Edit member"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-600 dark:text-white/60 hover:text-red-600 dark:hover:text-red-400"
+                                onClick={() => handleDeactivate(member.id)}
+                                disabled={deleteMutation.isPending}
+                                data-testid={`button-deactivate-member-${member.id}`}
+                                title="Deactivate"
+                              >
+                                <UserX className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

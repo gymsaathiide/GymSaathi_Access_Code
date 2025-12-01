@@ -74,3 +74,10 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 
 ## Feature Removals (December 2025)
 - Removed "Create New Branch" feature from admin dashboard branch dropdown
+
+## Mobile Responsiveness Enhancements (December 2025)
+- **Shop.tsx (Admin)**: Mobile-responsive product grid, compact stats cards, full-width filters on mobile, card-based order display for mobile with table fallback for desktop
+- **MemberStore.tsx**: Responsive product grid (1 col mobile, 2 cols tablet, 3 cols desktop), Sheet-based mobile cart, touch-optimized controls
+- **Members.tsx**: Mobile card layout with avatar, contact info, status badge, and action buttons; table layout for desktop
+- **Leads.tsx**: Compact stats grid (2 cols mobile, 3 cols tablet, 5 cols desktop), stacked filters on mobile, card-based lead list with desktop table fallback
+- **Mobile Design Pattern**: Uses `sm:hidden` for mobile-only views, `hidden sm:block` for desktop-only views, consistent with Tailwind responsive utilities

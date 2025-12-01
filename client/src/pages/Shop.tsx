@@ -423,31 +423,35 @@ export default function Shop() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold" data-testid="text-page-title">
+    <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 className="text-2xl sm:text-3xl font-semibold" data-testid="text-page-title">
           Shop Management
         </h1>
-        {canManageProducts && activeTab === "products" && (
-          <Button onClick={handleAddProduct} data-testid="button-add-product">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-        )}
-        {activeTab === "orders" && (
-          <Button
-            onClick={() => setOrderFormOpen(true)}
-            data-testid="button-create-order"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Order
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {canManageProducts && activeTab === "products" && (
+            <Button onClick={handleAddProduct} data-testid="button-add-product" className="flex-1 sm:flex-none">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          )}
+          {activeTab === "orders" && (
+            <Button
+              onClick={() => setOrderFormOpen(true)}
+              data-testid="button-create-order"
+              className="flex-1 sm:flex-none"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Order
+            </Button>
+          )}
+        </div>
       </div>
 
       {canManageProducts && (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -602,40 +606,42 @@ export default function Shop() {
         value={activeTab}
         onValueChange={setActiveTab}
         data-testid="tabs-shop"
+        className="w-full"
       >
-        <TabsList data-testid="tabs-list">
-          <TabsTrigger value="products" data-testid="tab-products">
+        <TabsList data-testid="tabs-list" className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex h-auto">
+          <TabsTrigger value="products" data-testid="tab-products" className="text-xs sm:text-sm py-2">
             Products
           </TabsTrigger>
           {canManageProducts && (
-            <TabsTrigger value="categories" data-testid="tab-categories">
+            <TabsTrigger value="categories" data-testid="tab-categories" className="text-xs sm:text-sm py-2">
               Categories
             </TabsTrigger>
           )}
           {(user?.role === "admin" || user?.role === "trainer") && (
-            <TabsTrigger value="orders" data-testid="tab-orders">
+            <TabsTrigger value="orders" data-testid="tab-orders" className="text-xs sm:text-sm py-2">
               Orders
             </TabsTrigger>
           )}
           {canManageProducts && (
-            <TabsTrigger value="settings" data-testid="tab-settings">
+            <TabsTrigger value="settings" data-testid="tab-settings" className="text-xs sm:text-sm py-2">
               Settings
             </TabsTrigger>
           )}
         </TabsList>
 
-        <TabsContent value="products" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
+        <TabsContent value="products" className="space-y-4 sm:space-y-6 mt-4">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <Card data-testid="card-total-products">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Products
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">
+                  Products
                 </CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
+                <Package className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground hidden sm:block" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div
-                  className="text-2xl font-bold"
+                  className="text-xl sm:text-2xl font-bold"
                   data-testid="text-total-products"
                 >
                   {totalProducts}
@@ -644,13 +650,13 @@ export default function Shop() {
             </Card>
 
             <Card data-testid="card-low-stock">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Low Stock</CardTitle>
+                <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600 hidden sm:block" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div
-                  className="text-2xl font-bold text-yellow-600"
+                  className="text-xl sm:text-2xl font-bold text-yellow-600"
                   data-testid="text-low-stock"
                 >
                   {lowStockProducts}
@@ -659,15 +665,15 @@ export default function Shop() {
             </Card>
 
             <Card data-testid="card-out-of-stock">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">
                   Out of Stock
                 </CardTitle>
-                <XCircle className="h-4 w-4 text-muted-foreground" />
+                <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600 hidden sm:block" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6 pt-0">
                 <div
-                  className="text-2xl font-bold text-red-600"
+                  className="text-xl sm:text-2xl font-bold text-red-600"
                   data-testid="text-out-of-stock"
                 >
                   {outOfStockProducts}
@@ -676,14 +682,15 @@ export default function Shop() {
             </Card>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[200px]">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search products by name or SKU..."
+                placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
                 data-testid="input-search-products"
               />
             </div>
@@ -692,7 +699,7 @@ export default function Shop() {
               onValueChange={setProductStatusFilter}
             >
               <SelectTrigger
-                className="w-[150px]"
+                className="w-full sm:w-[150px]"
                 data-testid="select-product-status-filter"
               >
                 <SelectValue placeholder="Status" />
@@ -714,18 +721,18 @@ export default function Shop() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
                   data-testid={`card-product-${product.id}`}
                   className={!product.isActive ? "opacity-60" : ""}
                 >
-                  <CardHeader className="pb-2">
+                  <CardHeader className="p-3 sm:p-6 pb-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <CardTitle
-                          className="text-lg"
+                          className="text-base sm:text-lg truncate"
                           data-testid={`text-product-name-${product.id}`}
                         >
                           {product.name}
@@ -736,27 +743,28 @@ export default function Shop() {
                           </p>
                         )}
                         {product.description && (
-                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                          <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">
                             {product.description}
                           </p>
                         )}
                       </div>
-                      <div className="flex flex-col gap-1 items-end">
+                      <div className="flex flex-col gap-1 items-end flex-shrink-0">
                         {product.isFeatured && (
                           <Badge
                             variant="default"
+                            className="text-xs"
                             data-testid={`badge-featured-${product.id}`}
                           >
                             Featured
                           </Badge>
                         )}
                         {!product.isActive && (
-                          <Badge variant="secondary">Inactive</Badge>
+                          <Badge variant="secondary" className="text-xs">Inactive</Badge>
                         )}
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="p-3 sm:p-6 pt-0 space-y-3">
                     <div className="space-y-1">
                       {product.mrp &&
                         product.mrp >
@@ -767,7 +775,7 @@ export default function Shop() {
                         )}
                       <div className="flex items-baseline gap-2">
                         <p
-                          className="text-2xl font-bold"
+                          className="text-xl sm:text-2xl font-bold"
                           data-testid={`text-product-price-${product.id}`}
                         >
                           ₹
@@ -776,7 +784,7 @@ export default function Shop() {
                           ).toFixed(2)}
                         </p>
                         {product.discountPrice && (
-                          <p className="text-sm text-muted-foreground line-through">
+                          <p className="text-xs sm:text-sm text-muted-foreground line-through">
                             ₹{parseFloat(product.price).toFixed(2)}
                           </p>
                         )}
@@ -790,6 +798,7 @@ export default function Shop() {
 
                     <Badge
                       variant={getStockBadgeVariant(product)}
+                      className="text-xs"
                       data-testid={`badge-stock-${product.id}`}
                     >
                       {getStockStatus(product)} ({product.stock})
@@ -800,7 +809,7 @@ export default function Shop() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="flex-1 text-xs sm:text-sm"
                           onClick={() => handleEditProduct(product)}
                           data-testid={`button-edit-${product.id}`}
                         >
@@ -935,26 +944,25 @@ export default function Shop() {
           )}
         </TabsContent>
 
-        <TabsContent value="orders" className="space-y-6">
-          <div className="flex flex-wrap gap-3">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger
-                className="w-[200px]"
-                data-testid="select-status-filter"
-              >
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Orders</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="packed">Packed</SelectItem>
-                <SelectItem value="shipped">Shipped</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <TabsContent value="orders" className="space-y-4 sm:space-y-6 mt-4">
+          {/* Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger
+              className="w-full sm:w-[200px]"
+              data-testid="select-status-filter"
+            >
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Orders</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="packed">Packed</SelectItem>
+              <SelectItem value="shipped">Shipped</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
 
           {ordersLoading ? (
             <p data-testid="status-loading">Loading orders...</p>
@@ -965,118 +973,180 @@ export default function Shop() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order Number</TableHead>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Total Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Order Date</TableHead>
-                    {(user?.role === "admin" || user?.role === "trainer") && (
-                      <TableHead>Actions</TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow
-                      key={order.id}
-                      data-testid={`row-order-${order.id}`}
-                    >
-                      <TableCell
-                        className="font-medium"
-                        data-testid={`text-order-number-${order.id}`}
-                      >
-                        {order.orderNumber}
-                      </TableCell>
-                      <TableCell data-testid={`text-member-${order.id}`}>
-                        {order.memberName}
-                      </TableCell>
-                      <TableCell data-testid={`text-amount-${order.id}`}>
-                        ₹{parseFloat(order.totalAmount).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
+            <>
+              {/* Mobile Card View */}
+              <div className="sm:hidden space-y-3">
+                {filteredOrders.map((order) => (
+                  <Card key={order.id} data-testid={`row-order-${order.id}`}>
+                    <CardContent className="p-3 space-y-3">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-sm" data-testid={`text-order-number-${order.id}`}>
+                            {order.orderNumber}
+                          </p>
+                          <p className="text-xs text-muted-foreground" data-testid={`text-member-${order.id}`}>
+                            {order.memberName}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold" data-testid={`text-amount-${order.id}`}>
+                            ₹{parseFloat(order.totalAmount).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground" data-testid={`text-date-${order.id}`}>
+                            {format(new Date(order.orderDate), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Status Badges */}
+                      <div className="flex gap-2">
                         <Badge
                           variant={getStatusBadgeVariant(order.status)}
+                          className="text-xs"
                           data-testid={`badge-status-${order.id}`}
                         >
                           {order.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
                         <Badge
-                          variant={getPaymentBadgeVariant(
-                            order.paymentStatus || "unpaid",
-                          )}
+                          variant={getPaymentBadgeVariant(order.paymentStatus || "unpaid")}
+                          className="text-xs"
                           data-testid={`badge-payment-${order.id}`}
                         >
                           {order.paymentStatus || "unpaid"}
                         </Badge>
-                      </TableCell>
-                      <TableCell data-testid={`text-date-${order.id}`}>
-                        {format(new Date(order.orderDate), "MMM d, yyyy")}
-                      </TableCell>
+                      </div>
+                      
+                      {/* Actions */}
                       {(user?.role === "admin" || user?.role === "trainer") && (
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Select
-                              value={order.status}
-                              onValueChange={(status) =>
-                                updateOrderStatusMutation.mutate({
+                        <div className="flex flex-col gap-2 pt-2 border-t">
+                          <Select
+                            value={order.status}
+                            onValueChange={(status) =>
+                              updateOrderStatusMutation.mutate({ id: order.id, status })
+                            }
+                            disabled={updateOrderStatusMutation.isPending}
+                          >
+                            <SelectTrigger className="w-full text-xs" data-testid={`select-status-${order.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="confirmed">Confirmed</SelectItem>
+                              <SelectItem value="packed">Packed</SelectItem>
+                              <SelectItem value="shipped">Shipped</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {order.paymentStatus !== "paid" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-xs"
+                              onClick={() =>
+                                updateOrderPaymentMutation.mutate({
                                   id: order.id,
-                                  status,
+                                  paymentStatus: "paid",
                                 })
                               }
-                              disabled={updateOrderStatusMutation.isPending}
+                              disabled={updateOrderPaymentMutation.isPending}
                             >
-                              <SelectTrigger
-                                className="w-[130px]"
-                                data-testid={`select-status-${order.id}`}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="confirmed">
-                                  Confirmed
-                                </SelectItem>
-                                <SelectItem value="packed">Packed</SelectItem>
-                                <SelectItem value="shipped">Shipped</SelectItem>
-                                <SelectItem value="delivered">
-                                  Delivered
-                                </SelectItem>
-                                <SelectItem value="cancelled">
-                                  Cancelled
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {order.paymentStatus !== "paid" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  updateOrderPaymentMutation.mutate({
-                                    id: order.id,
-                                    paymentStatus: "paid",
-                                  })
-                                }
-                                disabled={updateOrderPaymentMutation.isPending}
-                              >
-                                <Check className="h-3 w-3 mr-1" />
-                                Mark Paid
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                              <Check className="h-3 w-3 mr-1" />
+                              Mark Paid
+                            </Button>
+                          )}
+                        </div>
                       )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <Card className="hidden sm:block overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order Number</TableHead>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Total Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead>Order Date</TableHead>
+                        {(user?.role === "admin" || user?.role === "trainer") && (
+                          <TableHead>Actions</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            {order.orderNumber}
+                          </TableCell>
+                          <TableCell>{order.memberName}</TableCell>
+                          <TableCell>₹{parseFloat(order.totalAmount).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusBadgeVariant(order.status)}>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getPaymentBadgeVariant(order.paymentStatus || "unpaid")}>
+                              {order.paymentStatus || "unpaid"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{format(new Date(order.orderDate), "MMM d, yyyy")}</TableCell>
+                          {(user?.role === "admin" || user?.role === "trainer") && (
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Select
+                                  value={order.status}
+                                  onValueChange={(status) =>
+                                    updateOrderStatusMutation.mutate({ id: order.id, status })
+                                  }
+                                  disabled={updateOrderStatusMutation.isPending}
+                                >
+                                  <SelectTrigger className="w-[130px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                                    <SelectItem value="packed">Packed</SelectItem>
+                                    <SelectItem value="shipped">Shipped</SelectItem>
+                                    <SelectItem value="delivered">Delivered</SelectItem>
+                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {order.paymentStatus !== "paid" && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      updateOrderPaymentMutation.mutate({
+                                        id: order.id,
+                                        paymentStatus: "paid",
+                                      })
+                                    }
+                                    disabled={updateOrderPaymentMutation.isPending}
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Mark Paid
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </>
           )}
         </TabsContent>
 
