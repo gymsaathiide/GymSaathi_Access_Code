@@ -6683,21 +6683,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get admin payment details
   app.get('/api/admin/payment-details', requireRole('admin'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
-        return res.status(400).json({ error: 'User must be associated with a gym' });
-      }
-
       if (!isDbAvailable()) {
         return res.status(503).json({ error: 'Database not available' });
       }
 
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Get gymId from gymAdmins table for admin users
+      let gymId = user.gymId;
+      if (!gymId) {
+        const gymAdmin = await db!.select()
+          .from(schema.gymAdmins)
+          .where(eq(schema.gymAdmins.userId, user.id))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = gymAdmin?.gymId || null;
+      }
+
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
       const details = await db!.select()
         .from(schema.adminPaymentDetails)
-        .where(and(
-          eq(schema.adminPaymentDetails.adminId, user.id),
-          eq(schema.adminPaymentDetails.gymId, user.gymId)
-        ))
+        .where(eq(schema.adminPaymentDetails.gymId, gymId))
         .limit(1)
         .then(rows => rows[0] || null);
 
@@ -6711,13 +6723,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create or update admin payment details
   app.put('/api/admin/payment-details', requireRole('admin'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
-        return res.status(400).json({ error: 'User must be associated with a gym' });
-      }
-
       if (!isDbAvailable()) {
         return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Get gymId from gymAdmins table for admin users
+      let gymId = user.gymId;
+      if (!gymId) {
+        const gymAdmin = await db!.select()
+          .from(schema.gymAdmins)
+          .where(eq(schema.gymAdmins.userId, user.id))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = gymAdmin?.gymId || null;
+      }
+
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
       const { qrUrl, upiId, bankAccountNumber, ifscCode, holderName } = req.body;
@@ -6727,13 +6754,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'At least UPI ID or Bank Account Number is required' });
       }
 
-      // Check if details already exist
+      // Check if details already exist for this gym
       const existing = await db!.select()
         .from(schema.adminPaymentDetails)
-        .where(and(
-          eq(schema.adminPaymentDetails.adminId, user.id),
-          eq(schema.adminPaymentDetails.gymId, user.gymId)
-        ))
+        .where(eq(schema.adminPaymentDetails.gymId, gymId))
         .limit(1)
         .then(rows => rows[0] || null);
 
@@ -6757,7 +6781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details = await db!.insert(schema.adminPaymentDetails)
           .values({
             adminId: user.id,
-            gymId: user.gymId,
+            gymId: gymId,
             qrUrl,
             upiId,
             bankAccountNumber,
@@ -6778,8 +6802,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Upload QR code - stores base64 directly in database (no external storage needed)
   app.post('/api/admin/payment-details/upload-qr', requireRole('admin'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Get gymId from gymAdmins table for admin users
+      let gymId = user.gymId;
+      if (!gymId) {
+        const gymAdmin = await db!.select()
+          .from(schema.gymAdmins)
+          .where(eq(schema.gymAdmins.userId, user.id))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = gymAdmin?.gymId || null;
+      }
+
+      if (!gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
@@ -6803,28 +6846,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const qrUrl = base64Image;
 
       // Update payment details with new QR URL
-      if (isDbAvailable()) {
-        const existing = await db!.select()
-          .from(schema.adminPaymentDetails)
-          .where(and(
-            eq(schema.adminPaymentDetails.adminId, user.id),
-            eq(schema.adminPaymentDetails.gymId, user.gymId)
-          ))
-          .limit(1)
-          .then(rows => rows[0] || null);
+      const existing = await db!.select()
+        .from(schema.adminPaymentDetails)
+        .where(eq(schema.adminPaymentDetails.gymId, gymId))
+        .limit(1)
+        .then(rows => rows[0] || null);
 
-        if (existing) {
-          await db!.update(schema.adminPaymentDetails)
-            .set({ qrUrl, updatedAt: new Date() })
-            .where(eq(schema.adminPaymentDetails.id, existing.id));
-        } else {
-          await db!.insert(schema.adminPaymentDetails)
-            .values({
-              adminId: user.id,
-              gymId: user.gymId,
-              qrUrl,
-            });
-        }
+      if (existing) {
+        await db!.update(schema.adminPaymentDetails)
+          .set({ qrUrl, updatedAt: new Date() })
+          .where(eq(schema.adminPaymentDetails.id, existing.id));
+      } else {
+        await db!.insert(schema.adminPaymentDetails)
+          .values({
+            adminId: user.id,
+            gymId: gymId,
+            qrUrl,
+          });
       }
 
       res.json({ qrUrl, message: 'QR code uploaded successfully' });
@@ -6837,13 +6875,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send payment details to member(s) via WhatsApp/Email
   app.post('/api/admin/payment-details/send', requireRole('admin'), async (req, res) => {
     try {
-      const user = await userAccess.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
-        return res.status(400).json({ error: 'User must be associated with a gym' });
-      }
-
       if (!isDbAvailable()) {
         return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Get gymId from gymAdmins table for admin users
+      let gymId = user.gymId;
+      if (!gymId) {
+        const gymAdmin = await db!.select()
+          .from(schema.gymAdmins)
+          .where(eq(schema.gymAdmins.userId, user.id))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = gymAdmin?.gymId || null;
+      }
+
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
       const { memberIds, channels, customContact, customContactType } = req.body;
@@ -6862,7 +6915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get payment details
       const paymentDetails = await db!.select()
         .from(schema.adminPaymentDetails)
-        .where(eq(schema.adminPaymentDetails.gymId, user.gymId))
+        .where(eq(schema.adminPaymentDetails.gymId, gymId))
         .limit(1)
         .then(rows => rows[0]);
 
@@ -6871,7 +6924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get gym info
-      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, gymId)).limit(1).then(rows => rows[0]);
 
       const results = {
         success: [] as string[],
@@ -6915,7 +6968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const members = await db!.select()
           .from(schema.members)
           .where(and(
-            eq(schema.members.gymId, user.gymId),
+            eq(schema.members.gymId, gymId),
             inArray(schema.members.id, memberIds)
           ));
 
