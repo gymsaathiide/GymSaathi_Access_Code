@@ -60,7 +60,9 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 
 ## QR Code Storage & Delivery Fixes (December 2025)
 - QR codes now upload to **Supabase Storage** (`payment-qr-codes` bucket) instead of storing base64 in database
+- Uses **SUPABASE_SERVICE_ROLE_KEY** for server-side storage uploads (anon key doesn't have sufficient permissions)
 - This provides a **public HTTPS URL** that works with WhatsApp media API
 - Email inline attachments fixed: Uses Resend's `cid` property for proper image embedding
 - WhatsApp validates URL type: Only sends media if qrUrl starts with `http`, falls back to text if base64
 - Bucket auto-creates if not found, with public access enabled
+- Supabase admin client (`supabaseAdmin`) added in `server/db.ts` for storage operations
