@@ -5359,10 +5359,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: validationError.message });
       }
 
-      const newClass = await storage.createClass({
+      // Convert empty trainerId to null to avoid foreign key constraint violation
+      const classData = {
         ...validationResult.data,
         gymId: user.gymId,
-      });
+        trainerId: validationResult.data.trainerId || null,
+      };
+
+      const newClass = await storage.createClass(classData);
 
       res.status(201).json(newClass);
     } catch (error: any) {
@@ -5390,7 +5394,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: validationError.message });
       }
 
-      const updatedClass = await storage.updateClass(req.params.id, validationResult.data);
+      // Convert empty trainerId to null to avoid foreign key constraint violation
+      const updateData = {
+        ...validationResult.data,
+        trainerId: validationResult.data.trainerId === '' ? null : validationResult.data.trainerId,
+      };
+
+      const updatedClass = await storage.updateClass(req.params.id, updateData);
       res.json(updatedClass);
     } catch (error: any) {
       console.error(`Error updating class ${req.params.id}:`, error);
