@@ -10,8 +10,8 @@ import { fromZodError } from "zod-validation-error";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, gte, lte, lt, or, like, isNull } from "drizzle-orm";
 import * as schema from "@shared/schema";
-import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail } from "./services/emailService";
-import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber } from "./services/whatsappService";
+import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendNewPaymentDetailsEmail } from "./services/emailService";
+import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber, sendPaymentDetailsWhatsApp } from "./services/whatsappService";
 import { generateInvoicePdf, type InvoiceData } from "./services/invoicePdfService";
 import * as auditService from "./services/auditService";
 import { supabaseRepo } from "./supabaseRepository";
@@ -262,9 +262,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log(`✅ Login successful: ${email} (${user.role})`);
-      
+
       try { await auditService.logLogin(req, user.id, user.name, true); } catch (e) {}
-      
+
       res.json({
         user: userResponse,
         message: 'Login successful'
@@ -278,11 +278,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/logout', async (req, res) => {
     const userId = req.session?.userId;
     const user = userId ? await userAccess.getUserById(userId) : null;
-    
+
     if (user) {
       try { await auditService.logLogout(req, user.id, user.name); } catch (e) {}
     }
-    
+
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ error: 'Failed to logout' });
@@ -564,16 +564,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const checkRateLimit = (ip: string): boolean => {
     const now = Date.now();
     const entry = enquiryRateLimit.get(ip);
-    
+
     if (!entry || entry.resetAt < now) {
       enquiryRateLimit.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
       return true;
     }
-    
+
     if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
       return false;
     }
-    
+
     entry.count++;
     return true;
   };
@@ -592,21 +592,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/public/gym/:gymIdOrSlug', async (req, res) => {
     try {
       const { gymIdOrSlug } = req.params;
-      
+
       // Check if it's a UUID or a slug
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gymIdOrSlug);
-      
+
       let gym;
       if (isUuid) {
         gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       } else {
         gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.slug, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       }
-      
+
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
-      
+
       if (gym.status !== 'active') {
         return res.status(400).json({ error: 'This gym is not currently accepting enquiries' });
       }
@@ -690,18 +690,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if it's a UUID or a slug
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gymIdOrSlug);
-      
+
       let gym;
       if (isUuid) {
         gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       } else {
         gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.slug, gymIdOrSlug)).limit(1).then(rows => rows[0]);
       }
-      
+
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
-      
+
       if (gym.status !== 'active') {
         return res.status(400).json({ error: 'This gym is not currently accepting enquiries' });
       }
@@ -870,7 +870,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate or update gym slug
-  app.post('/api/gyms/:id/generate-slug', requireRole('admin', 'superadmin'), async (req, res) => {
+  app.post('/api/gyms/:id/generate-slug', requireRole('superadmin'), async (req, res) => {
     try {
       const { id } = req.params;
       const { customSlug } = req.body;
@@ -1098,24 +1098,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/gyms', requireRole('superadmin'), async (req, res) => {
     try {
       let gyms: any[] = [];
-      
+
       if (isDbAvailable()) {
         gyms = await db!.select().from(schema.gyms);
-        
+
         // Get member counts for each gym from the members table
         const gymsWithMemberCounts = await Promise.all(gyms.map(async (gym) => {
           const memberCountResult = await db!.select({ count: sql<number>`count(*)` })
             .from(schema.members)
             .where(eq(schema.members.gymId, gym.id));
-          
+
           const memberCount = Number(memberCountResult[0]?.count || 0);
-          
+
           return {
             ...gym,
             members: memberCount,
           };
         }));
-        
+
         res.json(gymsWithMemberCounts.map(transformGym));
       } else {
         const supabaseGyms = await supabaseRepo.getAllGyms();
@@ -1144,24 +1144,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/gyms/recent', requireRole('superadmin'), async (req, res) => {
     try {
       let gyms: any[] = [];
-      
+
       if (isDbAvailable()) {
         gyms = await db!.select().from(schema.gyms).orderBy(desc(schema.gyms.createdAt)).limit(10);
-        
+
         // Get member counts for each gym from the members table
         const gymsWithMemberCounts = await Promise.all(gyms.map(async (gym) => {
           const memberCountResult = await db!.select({ count: sql<number>`count(*)` })
             .from(schema.members)
             .where(eq(schema.members.gymId, gym.id));
-          
+
           const memberCount = Number(memberCountResult[0]?.count || 0);
-          
+
           return {
             ...gym,
             members: memberCount,
           };
         }));
-        
+
         res.json(gymsWithMemberCounts.map(transformGym));
       } else {
         const supabaseGyms = await supabaseRepo.getAllGyms();
@@ -1190,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/gyms/:id', requireRole('superadmin'), async (req, res) => {
     try {
       let gym: any = null;
-      
+
       if (isDbAvailable()) {
         gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, req.params.id)).limit(1).then(rows => rows[0]);
       } else {
@@ -1212,7 +1212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       }
-      
+
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
@@ -1386,7 +1386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Updating gym with body:', req.body);
       let gym: any = null;
-      
+
       if (isDbAvailable()) {
         gym = await db!.update(schema.gyms).set(req.body).where(eq(schema.gyms.id, req.params.id)).returning().then(rows => rows[0]);
       } else {
@@ -1413,7 +1413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       }
-      
+
       if (!gym) {
         return res.status(404).json({ error: 'Gym not found' });
       }
@@ -1428,7 +1428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let existingGym: any = null;
       let gym: any = null;
-      
+
       if (isDbAvailable()) {
         existingGym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, req.params.id)).limit(1).then(rows => rows[0]);
         if (!existingGym) {
@@ -1460,7 +1460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }
       }
-      
+
       res.json(transformGym(gym));
     } catch (error: any) {
       console.error(`Error suspending gym ${req.params.id}:`, error);
@@ -1655,10 +1655,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentYear = now.getFullYear();
       const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+      const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
+      const startOfLastMonth = new Date(lastMonthYear, lastMonth - 1, 1);
+      const endOfLastMonth = new Date(currentYear, currentMonth - 1, 0);
 
       // Get all active gyms
       const allGyms = await db!.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
-      
+
       // Calculate active members for each gym
       let totalActiveMembers = 0;
       let totalRevenue = 0;
@@ -1673,14 +1676,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(schema.memberships.status, 'active'),
             gte(schema.memberships.endDate, now)
           ));
-        
+
         const memberCount = Number(activeMembers[0]?.count || 0);
         totalActiveMembers += memberCount;
-        
+
         const rate = parseFloat(gym.ratePerMember || '75');
         const gymRevenue = memberCount * rate;
         totalRevenue += gymRevenue;
-        
+
         if (gym.pricingPlanType === 'custom') {
           customPlanRevenue += gymRevenue;
         } else {
@@ -1803,7 +1806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const now = new Date();
       const allGyms = await db!.select().from(schema.gyms).where(eq(schema.gyms.status, 'active'));
-      
+
       const gymStats = await Promise.all(allGyms.map(async (gym) => {
         const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
@@ -1812,10 +1815,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(schema.memberships.status, 'active'),
             gte(schema.memberships.endDate, now)
           ));
-        
+
         const memberCount = Number(activeMembers[0]?.count || 0);
         const rate = parseFloat(gym.ratePerMember || '75');
-        
+
         return {
           id: gym.id,
           name: gym.name,
@@ -1843,7 +1846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const now = new Date();
       const allGyms = await db!.select().from(schema.gyms);
-      
+
       const billingData = await Promise.all(allGyms.map(async (gym) => {
         const activeMembers = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.memberships)
@@ -1852,10 +1855,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(schema.memberships.status, 'active'),
             gte(schema.memberships.endDate, now)
           ));
-        
+
         const memberCount = Number(activeMembers[0]?.count || 0);
         const rate = parseFloat(gym.ratePerMember || '75');
-        
+
         // Get latest invoice for this gym
         const latestInvoice = await db!.select()
           .from(schema.gymInvoices)
@@ -1899,7 +1902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/superadmin/gyms/:id/pricing', requireRole('superadmin'), async (req, res) => {
     try {
       const { pricingPlanType, ratePerMember, billingCycleStart } = req.body;
-      
+
       const updateData: any = {};
       if (pricingPlanType) updateData.pricingPlanType = pricingPlanType;
       if (ratePerMember) updateData.ratePerMember = String(ratePerMember);
@@ -1926,7 +1929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/superadmin/gym-invoices', requireRole('superadmin'), async (req, res) => {
     try {
       const { month, year, status, gymId } = req.query;
-      
+
       let conditions = [];
       if (month) conditions.push(eq(schema.gymInvoices.month, Number(month)));
       if (year) conditions.push(eq(schema.gymInvoices.year, Number(year)));
@@ -2036,7 +2039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/superadmin/gym-invoices/:id', requireRole('superadmin'), async (req, res) => {
     try {
       const { status, paymentMethod, paymentRef, paidAmount, notes } = req.body;
-      
+
       const updateData: any = {};
       if (status) updateData.status = status;
       if (paymentMethod) updateData.paymentMethod = paymentMethod;
@@ -2167,7 +2170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isDbAvailable()) {
         const allGyms = await supabaseRepo.getAllGyms();
         const activeGyms = allGyms.filter(g => g.status === 'active');
-        
+
         let mrr = 0;
         let totalActiveMembers = 0;
 
@@ -2234,7 +2237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(schema.memberships.status, 'active'),
             gte(schema.memberships.endDate, now)
           ));
-        
+
         const memberCount = Number(activeMembers[0]?.count || 0);
         totalActiveMembers += memberCount;
         const rate = parseFloat(gym.ratePerMember || '75');
@@ -2288,7 +2291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             gte(schema.memberships.endDate, now),
             lte(schema.memberships.endDate, next30Days)
           ));
-        
+
         const count = Number(renewingMembers[0]?.count || 0);
         const rate = parseFloat(gym.ratePerMember || '75');
         upcomingRevenue += count * rate;
@@ -2361,10 +2364,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const activeGyms = allGyms.filter(g => g.status === 'active').length;
         const suspendedGyms = allGyms.filter(g => g.status === 'suspended').length;
         const pendingGyms = allGyms.filter(g => g.status === 'pending').length;
-        
+
         const memberCount = await supabaseRepo.getMembersCount();
         const activeMemberCount = await supabaseRepo.getActiveMembershipsCount();
-        
+
         const newGymsThisMonth = allGyms.filter(g => {
           const createdAt = g.created_at ? new Date(g.created_at) : null;
           return createdAt && createdAt >= startOfMonth;
@@ -2383,7 +2386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (let i = 5; i >= 0; i--) {
           const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
           const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-          
+
           const gymsInMonth = allGyms.filter(g => {
             const createdAt = g.created_at ? new Date(g.created_at) : null;
             return createdAt && createdAt >= monthStart && createdAt <= monthEnd;
@@ -2464,7 +2467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 5; i >= 0; i--) {
         const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-        
+
         const gymsInMonth = allGyms.filter(g => {
           const createdAt = g.createdAt ? new Date(g.createdAt) : null;
           return createdAt && createdAt >= monthStart && createdAt <= monthEnd;
@@ -2515,7 +2518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isDbAvailable()) {
         const allGyms = await supabaseRepo.getAllGyms();
         const invoices = await supabaseRepo.getGymInvoices();
-        
+
         const revenueTrend = [];
         for (let i = months - 1; i >= 0; i--) {
           const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -2547,7 +2550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (let i = months - 1; i >= 0; i--) {
           const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
           const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-          
+
           const newGyms = allGyms.filter(g => {
             const createdAt = g.created_at ? new Date(g.created_at) : null;
             return createdAt && createdAt >= monthStart && createdAt <= monthEnd;
@@ -2598,10 +2601,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Member growth trend
       const allGyms = await db!.select().from(schema.gyms);
       const memberTrend = [];
-      
+
       for (let i = months - 1; i >= 0; i--) {
         const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-        
+
         // Count active memberships at end of each month
         const activeAtMonth = await db!.select({ count: sql<number>`count(DISTINCT member_id)` })
           .from(schema.memberships)
@@ -2622,7 +2625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = months - 1; i >= 0; i--) {
         const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-        
+
         const newGyms = allGyms.filter(g => {
           const createdAt = g.createdAt ? new Date(g.createdAt) : null;
           return createdAt && createdAt >= monthStart && createdAt <= monthEnd;
@@ -2813,12 +2816,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(schema.membershipPlans.isActive, 1)
             ))
             .limit(1).then(rows => rows[0]);
-          
+
           if (plan) {
             const startDate = new Date();
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + plan.duration);
-            
+
             membership = await db!.insert(schema.memberships).values({
               memberId: member.id,
               planId: plan.id,
@@ -2832,7 +2835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         await auditService.logMemberCreated(req, user.id, user.name || 'Admin', validationResult.data.name, gymName);
-        
+
         res.status(201).json({ 
           member, 
           membership,
@@ -2895,7 +2898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(schema.membershipPlans.isActive, 1)
             ))
             .limit(1).then(rows => rows[0]);
-          
+
           if (plan) {
             await db!.update(schema.memberships)
               .set({ status: 'cancelled' })
@@ -2903,11 +2906,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 eq(schema.memberships.memberId, req.params.id),
                 eq(schema.memberships.status, 'active')
               ));
-            
+
             const startDate = new Date();
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + plan.duration);
-            
+
             membership = await db!.insert(schema.memberships).values({
               memberId: req.params.id,
               planId: plan.id,
@@ -2999,7 +3002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { name, description, price, duration, durationType, features, isActive } = req.body;
-      
+
       let durationInDays = duration;
       if (durationType === 'months') {
         durationInDays = duration * 30;
@@ -3044,7 +3047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { name, description, price, duration, durationType, features, isActive } = req.body;
-      
+
       let durationInDays = duration;
       if (durationType === 'months') {
         durationInDays = duration * 30;
@@ -3146,7 +3149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(400).json({ error: 'User not found' });
       }
-      
+
       // Get gym ID for the user
       let gymId: string | null = null;
       if (isDbAvailable()) {
@@ -3160,11 +3163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         gymId = await supabaseRepo.getGymIdForUser(user.id, user.role);
       }
-      
+
       if (!gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
-      
+
       // If database is not available, return fallback dashboard data
       if (!isDbAvailable()) {
         console.log('Database not available, returning fallback dashboard data');
@@ -3192,7 +3195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           _note: 'Using fallback data - database unavailable'
         });
       }
-      
+
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
@@ -3320,7 +3323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sql`${schema.classes.startTime} >= ${todayStr}::timestamp`,
           sql`${schema.classes.startTime} < ${tomorrowStr}::timestamp`
         ));
-      
+
       const classesTotal = todaysClasses.length;
       const classesCompleted = todaysClasses.filter(c => c.status === 'completed').length;
       const classesOngoing = todaysClasses.filter(c => c.status === 'ongoing').length;
@@ -3577,7 +3580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const itemsCount = await db!.select({ count: sql<number>`count(*)` })
           .from(schema.orderItems)
           .where(eq(schema.orderItems.orderId, row.order.id));
-        
+
         return {
           id: row.order.id,
           orderNumber: row.order.orderNumber,
@@ -3608,7 +3611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Build alerts
       const alerts: any[] = [];
-      
+
       // Expiring memberships today
       const expiringToday = expiringSoonRows.filter(r => r.daysLeft <= 1).length;
       if (expiringToday > 0) {
@@ -3788,12 +3791,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { from, to } = req.query;
-      
+
       // Default to current month if no date range specified
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      
+
       const dateFrom = from ? new Date(from as string) : startOfMonth;
       const dateTo = to ? new Date(to as string) : endOfMonth;
 
@@ -3844,8 +3847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(p => p.paymentType === 'upi')
         .reduce((sum, p) => sum + parseFloat(p.amount), 0);
       const cardRevenue = paidPayments
-        .filter(p => p.paymentType === 'card')
-        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        .filter(p => p.paymentType === 'card')        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
       const bankTransferRevenue = paidPayments
         .filter(p => p.paymentType === 'bank_transfer')
         .reduce((sum, p) => sum + parseFloat(p.amount), 0);
@@ -3969,7 +3971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const amountPaid = data.amount;
       const totalAmount = data.totalAmount || amountPaid;
       const amountDue = data.amountDue !== undefined ? data.amountDue : (totalAmount - amountPaid);
-      
+
       let status: 'paid' | 'pending' | 'partially_paid' | 'failed' | 'refunded' = 'paid';
       if (amountDue > 0 && amountPaid > 0) {
         status = 'partially_paid';
@@ -4275,7 +4277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Group by month
       const monthlyData: Record<string, { month: string; year: number; collected: number; pending: number }> = {};
-      
+
       for (let i = 5; i >= 0; i--) {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
@@ -4318,7 +4320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dateTo = to ? new Date(to as string) : new Date();
 
       let csvContent = '';
-      
+
       if (type === 'invoices') {
         const invoices = await db!.select({
           invoiceNumber: schema.invoices.invoiceNumber,
@@ -4689,7 +4691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send welcome notifications to the lead
       const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
-      
+
       if (gym) {
         // Send welcome email (only if lead has email)
         if (lead.email) {
@@ -4748,7 +4750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updateData: any = { ...validationResult.data, updatedAt: new Date() };
-      
+
       // Ensure followUpDate is properly set or null
       if (updateData.followUpDate === undefined && req.body.followUpDate !== undefined) {
         updateData.followUpDate = null;
@@ -4804,7 +4806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user with this email already exists
       const memberEmail = req.body.email || existingLead.email;
       const existingUser = await db!.select().from(schema.users).where(eq(schema.users.email, memberEmail)).limit(1).then(rows => rows[0]);
-      
+
       if (existingUser) {
         return res.status(400).json({ error: 'A user with this email already exists' });
       }
@@ -4931,7 +4933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let conditions = [eq(schema.productCategories.gymId, user.gymId)];
-      
+
       if (req.query.isActive !== undefined) {
         conditions.push(eq(schema.productCategories.isActive, req.query.isActive === 'true' ? 1 : 0));
       }
@@ -4969,11 +4971,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/product-categories/:id', requireRole('admin'), async (req, res) => {
     try {
       const category = await db!.update(schema.productCategories).set(req.body).where(eq(schema.productCategories.id, req.params.id)).returning().then(rows => rows[0]);
-      
+
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
-      
+
       res.json(category);
     } catch (error: any) {
       console.error('Error updating product category:', error);
@@ -5616,10 +5618,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if email already exists for a user
       const existingUser = await db!.select().from(schema.users).where(eq(schema.users.email, validationResult.data.email)).limit(1).then(rows => rows[0]);
-      
+
       let trainerUserId: string;
       let passwordToSend: string;
-      
+
       if (existingUser) {
         // Check if this user is already a trainer at this gym
         const existingTrainer = await db!.select().from(schema.trainers).where(and(eq(schema.trainers.userId, existingUser.id), eq(schema.trainers.gymId, user.gymId))).limit(1).then(rows => rows[0]);
@@ -5633,7 +5635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const tempPassword = validationResult.data.password || (Math.random().toString(36).slice(-8) + 'A1!');
         passwordToSend = tempPassword;
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
-        
+
         const newUser = await db!.insert(schema.users).values({
           email: validationResult.data.email,
           passwordHash: hashedPassword,
@@ -5641,16 +5643,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: validationResult.data.phone,
           role: 'trainer',
         }).returning().then(rows => rows[0]);
-        
+
         trainerUserId = newUser.id;
 
         // Send welcome email and WhatsApp with credentials
         const memberPortalUrl = process.env.REPLIT_DEV_DOMAIN 
           ? `https://${process.env.REPLIT_DEV_DOMAIN}/login`
           : 'https://gymsaathi.com/login';
-        
+
         const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
-        
+
         if (gym) {
           // Send welcome email
           sendTrainerWelcomeEmail({
@@ -6125,7 +6127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let config = await storage.getAttendanceQrConfig(user.gymId);
-      
+
       // If no config exists, create one
       if (!config) {
         config = await storage.createAttendanceQrConfig(user.gymId);
@@ -6328,7 +6330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get open session (auto-closes expired sessions)
       const openSession = await storage.getOpenAttendanceSession(member.gymId, member.id, new Date());
-      
+
       if (!openSession) {
         // No open session - member is not in gym
         return res.status(400).json({
@@ -6366,7 +6368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const limit = parseInt(req.query.limit as string) || 30;
-      
+
       const history = await db!.select()
         .from(schema.attendance)
         .where(eq(schema.attendance.memberId, member.id))
@@ -6415,7 +6417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Determine status based on inGym flag (which already accounts for auto-close)
       const status = inGym ? 'in_gym' : 'checked_out';
-      
+
       res.json({
         status,
         message: inGym 
@@ -6447,7 +6449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const settings = await db!.select().from(schema.storeSettings).where(eq(schema.storeSettings.gymId, user.gymId)).limit(1).then(rows => rows[0]);
-      
+
       if (!settings) {
         // Create default settings if none exist
         const newSettings = await db!.insert(schema.storeSettings).values({
@@ -6455,7 +6457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }).returning().then(rows => rows[0]);
         return res.json(newSettings);
       }
-      
+
       res.json(settings);
     } catch (error: any) {
       console.error('Error fetching store settings:', error);
@@ -6523,7 +6525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Best selling products (top 5)
       const allOrders = await db!.select().from(schema.orders).where(eq(schema.orders.gymId, user.gymId));
       const orderIds = allOrders.map(o => o.id);
-      
+
       const orderItems = orderIds.length > 0 
         ? await db!.select().from(schema.orderItems).where(sql`${schema.orderItems.orderId} IN ${orderIds}`)
         : [];
@@ -6573,18 +6575,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      
+
       if (!isDbAvailable()) {
         const notifications = await supabaseRepo.getNotifications(userId);
         return res.json(notifications);
       }
-      
+
       const notifications = await db!.select()
         .from(schema.notifications)
         .where(eq(schema.notifications.userId, userId))
         .orderBy(desc(schema.notifications.createdAt))
         .limit(50);
-      
+
       res.json(notifications);
     } catch (error: any) {
       console.error('Error fetching notifications:', error);
@@ -6596,19 +6598,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications/unread-count', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      
+
       if (!isDbAvailable()) {
         const count = await supabaseRepo.getUnreadNotificationCount(userId);
         return res.json({ count });
       }
-      
+
       const result = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.notifications)
         .where(and(
           eq(schema.notifications.userId, userId),
           eq(schema.notifications.isRead, 0)
         ));
-      
+
       res.json({ count: Number(result[0]?.count || 0) });
     } catch (error: any) {
       console.error('Error fetching unread count:', error);
@@ -6620,7 +6622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/notifications/:id/read', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      
+
       if (!isDbAvailable()) {
         const success = await supabaseRepo.markNotificationAsRead(req.params.id, userId);
         if (!success) {
@@ -6628,7 +6630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return res.json({ success: true });
       }
-      
+
       const notification = await db!.select()
         .from(schema.notifications)
         .where(and(
@@ -6637,7 +6639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .limit(1)
         .then(rows => rows[0]);
-      
+
       if (!notification) {
         return res.status(404).json({ error: 'Notification not found' });
       }
@@ -6645,7 +6647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db!.update(schema.notifications)
         .set({ isRead: 1 })
         .where(eq(schema.notifications.id, req.params.id));
-      
+
       res.json({ success: true });
     } catch (error: any) {
       console.error('Error marking notification as read:', error);
@@ -6657,16 +6659,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/notifications/mark-all-read', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
-      
+
       if (!isDbAvailable()) {
         await supabaseRepo.markAllNotificationsAsRead(userId);
         return res.json({ success: true });
       }
-      
+
       await db!.update(schema.notifications)
         .set({ isRead: 1 })
         .where(eq(schema.notifications.userId, userId));
-      
+
       res.json({ success: true });
     } catch (error: any) {
       console.error('Error marking all notifications as read:', error);
@@ -6835,7 +6837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send payment details to member(s) via WhatsApp/Email
   app.post('/api/admin/payment-details/send', requireRole('admin'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
+      const user = await userAccess.getUserById(req.session!.userId!);
       if (!user || !user.gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
@@ -6844,113 +6846,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: 'Database not available' });
       }
 
-      const { memberIds, channels, customContact, customContactType } = req.body;
-      
-      // Validate: either memberIds or customContact must be provided
-      const hasMembers = memberIds && Array.isArray(memberIds) && memberIds.length > 0;
-      const hasCustomContact = customContact && typeof customContact === 'string' && customContact.trim();
-      
-      if (!hasMembers && !hasCustomContact) {
-        return res.status(400).json({ error: 'Please select members or enter a contact to send payment details' });
+      const { memberIds, sendVia } = req.body;
+
+      if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+        return res.status(400).json({ error: 'Please select at least one member' });
       }
-      if (!channels || (!channels.whatsapp && !channels.email)) {
-        return res.status(400).json({ error: 'At least one channel (whatsapp or email) must be selected' });
+
+      if (!sendVia || !['email', 'whatsapp', 'both'].includes(sendVia)) {
+        return res.status(400).json({ error: 'Invalid send method' });
       }
 
       // Get payment details
       const paymentDetails = await db!.select()
         .from(schema.adminPaymentDetails)
-        .where(and(
-          eq(schema.adminPaymentDetails.adminId, user.id),
-          eq(schema.adminPaymentDetails.gymId, user.gymId)
-        ))
+        .where(eq(schema.adminPaymentDetails.gymId, user.gymId))
         .limit(1)
-        .then(rows => rows[0] || null);
+        .then(rows => rows[0]);
 
       if (!paymentDetails) {
-        return res.status(400).json({ error: 'No payment details found. Please add your payment details first.' });
+        return res.status(404).json({ error: 'Payment details not configured' });
       }
 
       // Get gym info
-      const gym = await db!.select()
-        .from(schema.gyms)
-        .where(eq(schema.gyms.id, user.gymId))
-        .limit(1)
-        .then(rows => rows[0] || null);
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, user.gymId)).limit(1).then(rows => rows[0]);
+
+      // Get selected members - use IN clause instead of ANY
+      const members = await db!.select()
+        .from(schema.members)
+        .where(and(
+          eq(schema.members.gymId, user.gymId),
+          sql`${schema.members.id} IN (${sql.join(memberIds.map((id: string) => sql`${id}`), sql`, `)})` 
+        ));
 
       const results = {
         success: [] as string[],
         failed: [] as { contact: string; error: string }[]
       };
 
-      // Handle sending to custom contact (any phone/email)
-      if (hasCustomContact) {
+      for (const member of members) {
         try {
-          const contact = customContact.trim();
-          const isEmail = contact.includes('@');
-          const recipientName = 'Customer';
-          
-          if (isEmail && channels.email) {
-            await sendPaymentDetailsEmail(contact, recipientName, paymentDetails, gym?.name || 'Our Gym');
-            results.success.push(contact);
-          } else if (!isEmail && channels.whatsapp) {
-            const phoneValidation = validateAndFormatPhoneNumber(contact);
-            if (phoneValidation.isValid) {
-              try {
-                await sendPaymentDetailsWhatsApp(contact, recipientName, paymentDetails, gym?.name || 'Our Gym');
-                results.success.push(contact);
-              } catch (whatsappError) {
-                console.log('WhatsApp API not available for custom contact');
-                results.failed.push({ contact, error: 'WhatsApp sending failed' });
-              }
-            } else {
-              results.failed.push({ contact, error: 'Invalid phone number format' });
-            }
-          } else {
-            results.failed.push({ contact, error: 'Channel not available for this contact type' });
-          }
-        } catch (customError: any) {
-          results.failed.push({ contact: customContact, error: customError.message });
-        }
-      }
-
-      // Handle sending to selected members
-      if (hasMembers) {
-        const members = await db!.select()
-          .from(schema.members)
-          .where(and(
-            eq(schema.members.gymId, user.gymId),
-            sql`${schema.members.id} = ANY(${memberIds}::uuid[])`
-          ));
-
-        for (const member of members) {
-          try {
-            if (channels.whatsapp && member.phone) {
+          if (sendVia === 'whatsapp' || sendVia === 'both') {
+            if (member.phone) {
               const phoneValidation = validateAndFormatPhoneNumber(member.phone);
               if (phoneValidation.isValid) {
                 try {
                   await sendPaymentDetailsWhatsApp(member.phone, member.name, paymentDetails, gym?.name || 'Our Gym');
                 } catch (whatsappError) {
                   console.log('WhatsApp API not available, using fallback');
+                  // Optionally log this error or add to failed list if preferred
                 }
+              } else {
+                results.failed.push({ contact: member.name || member.id, error: 'Invalid phone number' });
               }
+            } else {
+              results.failed.push({ contact: member.name || member.id, error: 'Member has no phone number' });
             }
-
-            if (channels.email && member.email) {
-              await sendPaymentDetailsEmail(member.email, member.name, paymentDetails, gym?.name || 'Our Gym');
-            }
-
-            results.success.push(member.name || member.id);
-          } catch (memberError: any) {
-            results.failed.push({ contact: member.name || member.id, error: memberError.message });
           }
+
+          if (sendVia === 'email' || sendVia === 'both') {
+            if (member.email) {
+              await sendPaymentDetailsEmail(member.email, member.name, paymentDetails, gym?.name || 'Our Gym');
+            } else {
+              results.failed.push({ contact: member.name || member.id, error: 'Member has no email address' });
+            }
+          }
+
+          results.success.push(member.name || member.id);
+        } catch (memberError: any) {
+          results.failed.push({ contact: member.name || member.id, error: memberError.message });
         }
       }
 
       const successCount = results.success.length;
-      const message = hasCustomContact && !hasMembers
-        ? `Payment details sent to ${customContact}`
-        : `Payment details sent to ${successCount} recipient(s)`;
+      const message = `Payment details sent to ${successCount} recipient(s)`;
 
       res.json({ message, results });
     } catch (error: any) {
@@ -6966,29 +6934,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // Helper function to build payment message
 function buildPaymentMessage(paymentDetails: any, gymName: string): string {
   let message = `Payment Details from ${gymName}\n\n`;
-  
+
   if (paymentDetails.upiId) {
     message += `UPI ID: ${paymentDetails.upiId}\n`;
   }
-  
+
   if (paymentDetails.holderName) {
     message += `Account Holder: ${paymentDetails.holderName}\n`;
   }
-  
+
   if (paymentDetails.bankAccountNumber) {
     message += `Bank Account: ${paymentDetails.bankAccountNumber}\n`;
   }
-  
+
   if (paymentDetails.ifscCode) {
     message += `IFSC Code: ${paymentDetails.ifscCode}\n`;
   }
-  
+
   if (paymentDetails.qrUrl) {
     message += `\nQR Code: ${paymentDetails.qrUrl}\n`;
   }
-  
+
   message += `\nPlease use these details to make your payment. Thank you!`;
-  
+
   return message;
 }
 
@@ -7001,27 +6969,27 @@ async function sendPaymentDetailsEmail(
 ): Promise<void> {
   const { Resend } = await import('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
-  
+
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #f97316;">Payment Details from ${gymName}</h2>
       <p>Dear ${memberName},</p>
       <p>Here are the payment details for your convenience:</p>
-      
+
       <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
         ${paymentDetails.upiId ? `<p><strong>UPI ID:</strong> ${paymentDetails.upiId}</p>` : ''}
         ${paymentDetails.holderName ? `<p><strong>Account Holder:</strong> ${paymentDetails.holderName}</p>` : ''}
         ${paymentDetails.bankAccountNumber ? `<p><strong>Bank Account:</strong> ${paymentDetails.bankAccountNumber}</p>` : ''}
         ${paymentDetails.ifscCode ? `<p><strong>IFSC Code:</strong> ${paymentDetails.ifscCode}</p>` : ''}
       </div>
-      
+
       ${paymentDetails.qrUrl ? `
         <div style="text-align: center; margin: 20px 0;">
           <p><strong>Scan QR Code to Pay:</strong></p>
           <img src="${paymentDetails.qrUrl}" alt="Payment QR Code" style="max-width: 200px; border: 1px solid #e2e8f0; border-radius: 8px;" />
         </div>
       ` : ''}
-      
+
       <p>Please use these details to make your payment. Thank you!</p>
       <p style="color: #64748b; font-size: 12px;">This is an automated message from ${gymName}.</p>
     </div>
