@@ -67,5 +67,10 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 - Bucket auto-creates if not found, with public access enabled
 - Supabase admin client (`supabaseAdmin`) added in `server/db.ts` for storage operations
 
+## Analytics Dashboard Enhancements (December 2025)
+- Added Monthly Revenue Chart to AdminAnalyticsDashboard showing last 6 months
+- Chart displays both collected (green) and pending (orange) amounts as area charts
+- Shows total collected, total pending, and average monthly revenue
+
 ## Feature Removals (December 2025)
 - Removed "Create New Branch" feature from admin dashboard branch dropdown
