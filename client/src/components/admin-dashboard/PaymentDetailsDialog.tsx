@@ -33,6 +33,7 @@ import {
   X,
   Users,
   CheckCircle2,
+  UserPlus,
 } from "lucide-react";
 
 interface PaymentDetailsDialogProps {
@@ -61,10 +62,6 @@ interface PaymentDetailsResponse {
   paymentDetails: PaymentDetails | null;
 }
 
-interface MembersResponse {
-  members: Member[];
-}
-
 export function PaymentDetailsDialog({
   open,
   onOpenChange,
@@ -79,13 +76,16 @@ export function PaymentDetailsDialog({
   const [sendChannels, setSendChannels] = useState({ email: true, whatsapp: true });
   const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  
+  const [customContact, setCustomContact] = useState("");
+  const [customContactType, setCustomContactType] = useState<"phone" | "email">("phone");
 
   const { data: paymentDetailsData, isLoading: isLoadingDetails } = useQuery<PaymentDetailsResponse>({
     queryKey: ["/api/admin/payment-details"],
     enabled: open,
   });
 
-  const { data: membersData, isLoading: isLoadingMembers } = useQuery<MembersResponse>({
+  const { data: membersData, isLoading: isLoadingMembers } = useQuery<Member[]>({
     queryKey: ["/api/members"],
     enabled: open,
   });
@@ -162,15 +162,12 @@ export function PaymentDetailsDialog({
   });
 
   const sendDetailsMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (payload: { memberIds?: string[]; customContact?: string; customContactType?: string; channels: { email: boolean; whatsapp: boolean } }) => {
       const res = await fetch("/api/admin/payment-details/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          memberIds: selectedMembers,
-          channels: sendChannels,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const error = await res.json();
@@ -184,6 +181,7 @@ export function PaymentDetailsDialog({
         description: data.message,
       });
       setSelectedMembers([]);
+      setCustomContact("");
     },
     onError: (error: Error) => {
       toast({
@@ -237,7 +235,7 @@ export function PaymentDetailsDialog({
     saveDetailsMutation.mutate(formData);
   };
 
-  const handleSend = () => {
+  const handleSendToMembers = () => {
     if (selectedMembers.length === 0) {
       toast({
         title: "Select Members",
@@ -254,7 +252,45 @@ export function PaymentDetailsDialog({
       });
       return;
     }
-    sendDetailsMutation.mutate();
+    sendDetailsMutation.mutate({
+      memberIds: selectedMembers,
+      channels: sendChannels,
+    });
+  };
+
+  const handleSendToCustomContact = () => {
+    if (!customContact.trim()) {
+      toast({
+        title: "Enter Contact",
+        description: "Please enter a phone number or email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isEmail = customContact.includes("@");
+    const isPhone = /^[+]?[\d\s-]{10,}$/.test(customContact.replace(/\s/g, ""));
+
+    if (!isEmail && !isPhone) {
+      toast({
+        title: "Invalid Contact",
+        description: "Please enter a valid phone number or email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const contactType = isEmail ? "email" : "phone";
+    const channels = {
+      email: isEmail,
+      whatsapp: !isEmail,
+    };
+
+    sendDetailsMutation.mutate({
+      customContact: customContact.trim(),
+      customContactType: contactType,
+      channels,
+    });
   };
 
   const toggleMember = (memberId: string) => {
@@ -270,15 +306,15 @@ export function PaymentDetailsDialog({
   };
 
   const selectAllMembers = () => {
-    const members = membersData?.members || [];
-    if (selectedMembers.length === members.length) {
+    const membersList = membersData || [];
+    if (selectedMembers.length === membersList.length) {
       setSelectedMembers([]);
     } else {
-      setSelectedMembers(members.map((m: Member) => m.id));
+      setSelectedMembers(membersList.map((m: Member) => m.id));
     }
   };
 
-  const members: Member[] = membersData?.members || [];
+  const members: Member[] = membersData || [];
   
   const filteredMembers = members.filter((member) =>
     member.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
@@ -484,7 +520,7 @@ export function PaymentDetailsDialog({
                   <div className="flex items-center justify-between">
                     <Label className="text-white/80 flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      Select Members
+                      Select Gym Members
                     </Label>
                     {members.length > 0 && (
                       <Button
@@ -538,7 +574,7 @@ export function PaymentDetailsDialog({
                           </div>
                         ) : filteredMembers.length === 0 ? (
                           <div className="text-center py-6 text-white/40 text-sm">
-                            {memberSearchQuery ? "No members match your search" : "No members found"}
+                            {memberSearchQuery ? "No members match your search" : "No members found in your gym"}
                           </div>
                         ) : (
                           <div className="p-1">
@@ -616,63 +652,110 @@ export function PaymentDetailsDialog({
                       )}
                     </div>
                   )}
-                </div>
 
-                <div className="space-y-3">
-                  <Label className="text-white/80">Send via</Label>
-                  <div className="flex flex-wrap gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
-                      <Checkbox
-                        checked={sendChannels.email}
-                        onCheckedChange={(checked) =>
-                          setSendChannels((prev) => ({
-                            ...prev,
-                            email: checked as boolean,
-                          }))
-                        }
-                        className="border-white/30 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                      />
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-                          <Mail className="h-3.5 w-3.5 text-blue-400" />
+                  <div className="space-y-3">
+                    <Label className="text-white/80">Send via</Label>
+                    <div className="flex flex-wrap gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <Checkbox
+                          checked={sendChannels.email}
+                          onCheckedChange={(checked) =>
+                            setSendChannels((prev) => ({
+                              ...prev,
+                              email: checked as boolean,
+                            }))
+                          }
+                          className="border-white/30 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                        />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <Mail className="h-3.5 w-3.5 text-blue-400" />
+                          </div>
+                          <span className="text-sm text-white/80">Email</span>
                         </div>
-                        <span className="text-sm text-white/80">Email</span>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
-                      <Checkbox
-                        checked={sendChannels.whatsapp}
-                        onCheckedChange={(checked) =>
-                          setSendChannels((prev) => ({
-                            ...prev,
-                            whatsapp: checked as boolean,
-                          }))
-                        }
-                        className="border-white/30 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                      />
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                          <Phone className="h-3.5 w-3.5 text-green-400" />
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <Checkbox
+                          checked={sendChannels.whatsapp}
+                          onCheckedChange={(checked) =>
+                            setSendChannels((prev) => ({
+                              ...prev,
+                              whatsapp: checked as boolean,
+                            }))
+                          }
+                          className="border-white/30 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                        />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                            <Phone className="h-3.5 w-3.5 text-green-400" />
+                          </div>
+                          <span className="text-sm text-white/80">WhatsApp</span>
                         </div>
-                        <span className="text-sm text-white/80">WhatsApp</span>
-                      </div>
-                    </label>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={handleSendToMembers}
+                      disabled={sendDetailsMutation.isPending || selectedMembers.length === 0}
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      {sendDetailsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                      Send to {selectedMembers.length > 0 ? `${selectedMembers.length} Member(s)` : "Members"}
+                    </Button>
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-2">
-                  <Button
-                    onClick={handleSend}
-                    disabled={sendDetailsMutation.isPending || selectedMembers.length === 0}
-                    className="gap-2 bg-green-600 hover:bg-green-700"
-                  >
-                    {sendDetailsMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                    Send to {selectedMembers.length > 0 ? `${selectedMembers.length} Member(s)` : "Members"}
-                  </Button>
+                <div className="border-t border-white/10 pt-4 mt-4">
+                  <div className="space-y-3">
+                    <Label className="text-white/80 flex items-center gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      Send to Any Contact
+                    </Label>
+                    <p className="text-xs text-white/50">
+                      Enter a phone number or email to send payment details to anyone (even non-members)
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          placeholder="Enter phone number or email..."
+                          value={customContact}
+                          onChange={(e) => setCustomContact(e.target.value)}
+                          className="bg-white/5 border-white/10 text-white placeholder:text-white/40 pr-10"
+                        />
+                        {customContact && (
+                          <button
+                            onClick={() => setCustomContact("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <Button
+                        onClick={handleSendToCustomContact}
+                        disabled={sendDetailsMutation.isPending || !customContact.trim()}
+                        className="gap-2 bg-blue-600 hover:bg-blue-700 shrink-0"
+                      >
+                        {sendDetailsMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                        Send
+                      </Button>
+                    </div>
+                    
+                    <p className="text-xs text-white/40">
+                      Phone numbers will receive WhatsApp message. Email addresses will receive email.
+                    </p>
+                  </div>
                 </div>
               </>
             )}

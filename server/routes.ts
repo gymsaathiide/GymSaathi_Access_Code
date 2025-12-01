@@ -6844,9 +6844,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: 'Database not available' });
       }
 
-      const { memberIds, channels } = req.body;
-      if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
-        return res.status(400).json({ error: 'At least one member ID is required' });
+      const { memberIds, channels, customContact, customContactType } = req.body;
+      
+      // Validate: either memberIds or customContact must be provided
+      const hasMembers = memberIds && Array.isArray(memberIds) && memberIds.length > 0;
+      const hasCustomContact = customContact && typeof customContact === 'string' && customContact.trim();
+      
+      if (!hasMembers && !hasCustomContact) {
+        return res.status(400).json({ error: 'Please select members or enter a contact to send payment details' });
       }
       if (!channels || (!channels.whatsapp && !channels.email)) {
         return res.status(400).json({ error: 'At least one channel (whatsapp or email) must be selected' });
@@ -6873,49 +6878,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1)
         .then(rows => rows[0] || null);
 
-      // Get members
-      const members = await db!.select()
-        .from(schema.members)
-        .where(and(
-          eq(schema.members.gymId, user.gymId),
-          sql`${schema.members.id} = ANY(${memberIds}::uuid[])`
-        ));
-
       const results = {
         success: [] as string[],
-        failed: [] as { memberId: string; error: string }[]
+        failed: [] as { contact: string; error: string }[]
       };
 
-      for (const member of members) {
+      // Handle sending to custom contact (any phone/email)
+      if (hasCustomContact) {
         try {
-          // Build payment message
-          const paymentMessage = buildPaymentMessage(paymentDetails, gym?.name || 'Our Gym');
-
-          if (channels.whatsapp && member.phone) {
-            const phoneValidation = validateAndFormatPhoneNumber(member.phone);
+          const contact = customContact.trim();
+          const isEmail = contact.includes('@');
+          const recipientName = 'Customer';
+          
+          if (isEmail && channels.email) {
+            await sendPaymentDetailsEmail(contact, recipientName, paymentDetails, gym?.name || 'Our Gym');
+            results.success.push(contact);
+          } else if (!isEmail && channels.whatsapp) {
+            const phoneValidation = validateAndFormatPhoneNumber(contact);
             if (phoneValidation.isValid) {
               try {
-                await sendPaymentDetailsWhatsApp(member.phone, member.name, paymentDetails, gym?.name || 'Our Gym');
+                await sendPaymentDetailsWhatsApp(contact, recipientName, paymentDetails, gym?.name || 'Our Gym');
+                results.success.push(contact);
               } catch (whatsappError) {
-                console.log('WhatsApp API not available, using fallback');
+                console.log('WhatsApp API not available for custom contact');
+                results.failed.push({ contact, error: 'WhatsApp sending failed' });
               }
+            } else {
+              results.failed.push({ contact, error: 'Invalid phone number format' });
             }
+          } else {
+            results.failed.push({ contact, error: 'Channel not available for this contact type' });
           }
-
-          if (channels.email && member.email) {
-            await sendPaymentDetailsEmail(member.email, member.name, paymentDetails, gym?.name || 'Our Gym');
-          }
-
-          results.success.push(member.id);
-        } catch (memberError: any) {
-          results.failed.push({ memberId: member.id, error: memberError.message });
+        } catch (customError: any) {
+          results.failed.push({ contact: customContact, error: customError.message });
         }
       }
 
-      res.json({
-        message: `Payment details sent to ${results.success.length} member(s)`,
-        results
-      });
+      // Handle sending to selected members
+      if (hasMembers) {
+        const members = await db!.select()
+          .from(schema.members)
+          .where(and(
+            eq(schema.members.gymId, user.gymId),
+            sql`${schema.members.id} = ANY(${memberIds}::uuid[])`
+          ));
+
+        for (const member of members) {
+          try {
+            if (channels.whatsapp && member.phone) {
+              const phoneValidation = validateAndFormatPhoneNumber(member.phone);
+              if (phoneValidation.isValid) {
+                try {
+                  await sendPaymentDetailsWhatsApp(member.phone, member.name, paymentDetails, gym?.name || 'Our Gym');
+                } catch (whatsappError) {
+                  console.log('WhatsApp API not available, using fallback');
+                }
+              }
+            }
+
+            if (channels.email && member.email) {
+              await sendPaymentDetailsEmail(member.email, member.name, paymentDetails, gym?.name || 'Our Gym');
+            }
+
+            results.success.push(member.name || member.id);
+          } catch (memberError: any) {
+            results.failed.push({ contact: member.name || member.id, error: memberError.message });
+          }
+        }
+      }
+
+      const successCount = results.success.length;
+      const message = hasCustomContact && !hasMembers
+        ? `Payment details sent to ${customContact}`
+        : `Payment details sent to ${successCount} recipient(s)`;
+
+      res.json({ message, results });
     } catch (error: any) {
       console.error('Error sending payment details:', error);
       res.status(500).json({ error: error.message });
