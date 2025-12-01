@@ -196,6 +196,139 @@ function AttendanceChart({ data }: { data: Array<{ date: string; day: string; ch
   );
 }
 
+function MonthlyRevenueChart() {
+  const { data: revenueTrend, isLoading } = useQuery<{ month: string; year: number; collected: number; pending: number }[]>({
+    queryKey: ['/api/billing/revenue-trend'],
+    queryFn: async () => {
+      const res = await fetch('/api/billing/revenue-trend', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch revenue trend');
+      return res.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="bg-card-dark border-white/5 col-span-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+            <IndianRupee className="h-4 w-4 text-green-500" />
+            Monthly Revenue
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-48">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!revenueTrend || revenueTrend.length === 0) {
+    return (
+      <Card className="bg-card-dark border-white/5 col-span-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+            <IndianRupee className="h-4 w-4 text-green-500" />
+            Monthly Revenue
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-48">
+          <p className="text-white/50 text-sm">No revenue data available</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalCollected = revenueTrend.reduce((sum, item) => sum + item.collected, 0);
+  const totalPending = revenueTrend.reduce((sum, item) => sum + item.pending, 0);
+  const avgRevenue = totalCollected / revenueTrend.length;
+
+  return (
+    <Card className="bg-card-dark border-white/5 col-span-2">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
+            <IndianRupee className="h-4 w-4 text-green-500" />
+            Monthly Revenue (Last 6 Months)
+          </CardTitle>
+          <div className="flex gap-4 text-right">
+            <div>
+              <p className="text-xs text-white/50">Collected</p>
+              <p className="text-lg font-bold text-green-400">{formatCurrency(totalCollected)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-white/50">Pending</p>
+              <p className="text-lg font-bold text-orange-400">{formatCurrency(totalPending)}</p>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorPending" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis 
+                dataKey="month" 
+                axisLine={false} 
+                tickLine={false}
+                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false}
+                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                tickFormatter={(value) => `₹${value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: '#fff'
+                }}
+                labelStyle={{ color: '#9ca3af' }}
+                formatter={(value: number, name: string) => [
+                  `₹${value.toLocaleString('en-IN')}`, 
+                  name === 'collected' ? 'Collected' : 'Pending'
+                ]}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="collected" 
+                stroke="#22c55e" 
+                strokeWidth={2}
+                fill="url(#colorCollected)" 
+                name="collected"
+              />
+              <Area 
+                type="monotone" 
+                dataKey="pending" 
+                stroke="#f97316" 
+                strokeWidth={2}
+                fill="url(#colorPending)" 
+                name="pending"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-4 flex items-center justify-between text-xs text-white/50 border-t border-white/5 pt-3">
+          <span>Avg. Monthly: {formatCurrency(avgRevenue)}</span>
+          <span>{revenueTrend.length} months shown</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function PlanDistributionChart({ data }: { data: Array<{ name: string; value: number }> }) {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   
@@ -345,6 +478,10 @@ export function AdminAnalyticsDashboard() {
           iconColor="text-blue-500"
         />
         <CollectionRateGauge rate={data.revenue.collectionRate} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <MonthlyRevenueChart />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
