@@ -35,6 +35,7 @@ export const gyms = pgTable("gyms", {
   billingCycleStart: integer("billing_cycle_start").default(1),
   suspendedAt: timestamp("suspended_at"),
   suspensionReason: text("suspension_reason"),
+  parentGymId: uuid("parent_gym_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

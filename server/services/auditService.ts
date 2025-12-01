@@ -334,3 +334,16 @@ export async function logSystemEvent(action: string, resource: string, details: 
     details,
   });
 }
+
+export async function logBranchCreated(gymId: string, userId: string, userName: string, branchName: string, branchId: string): Promise<void> {
+  await logAuditEvent({
+    userId,
+    userName,
+    action: 'CREATE',
+    resource: `Branch: ${branchName}`,
+    severity: 'info',
+    status: 'success',
+    ipAddress: '127.0.0.1',
+    details: `Created new branch "${branchName}" (ID: ${branchId}) under gym ${gymId}`,
+  });
+}
