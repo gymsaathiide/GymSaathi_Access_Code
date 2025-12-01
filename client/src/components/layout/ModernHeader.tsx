@@ -16,7 +16,6 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { QuickActionDropdown } from "@/components/admin-dashboard/QuickActionDropdown";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
@@ -265,10 +264,6 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
-        {user?.role === "admin" && (
-          <QuickActionDropdown />
-        )}
-
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
