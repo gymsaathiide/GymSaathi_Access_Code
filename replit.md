@@ -206,3 +206,24 @@ Old Replit Neon PG env vars (PGHOST, PGDATABASE, PGUSER, PGPASSWORD, PGPORT) are
   - ResetPassword.tsx: Password/confirm form with token validation
 - Login page now includes "Forgot password?" link to /forgot-password route
 - Dark theme styling consistent with rest of application
+
+## Quick Action Dropdown for Admin (December 2025)
+- Added Quick Action button to admin header with two main features:
+- **My Payment Details**: Admin can manage payment collection info
+  - Upload UPI QR code images (stored in Supabase storage)
+  - Add UPI ID and bank account details (account number, IFSC, holder name)
+  - Send payment details to selected members via WhatsApp and/or Email
+- **GymSaathi Helpdesk**: 24x7 support contact dialog
+  - Toll-free: (011) 6926-8182
+  - Mobile: +91 98707 53186
+  - Click-to-call functionality and copy-to-clipboard
+- Schema: `admin_payment_details` table with fields (id, gymId, qrUrl, upiId, bankAccountNumber, ifscCode, holderName, createdAt, updatedAt)
+- Backend API endpoints (admin-only):
+  - GET /api/admin/payment-details: Fetch payment details
+  - PUT /api/admin/payment-details: Save/update payment details
+  - POST /api/admin/payment-details/upload-qr: Upload QR code image
+  - POST /api/admin/payment-details/send: Send payment info to members
+- Frontend components:
+  - QuickActionDropdown.tsx: Header dropdown menu
+  - PaymentDetailsDialog.tsx: Manage payment details with member selection
+  - HelpdeskDialog.tsx: Support contact information
