@@ -6913,13 +6913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const paymentMessage = buildPaymentMessage(paymentDetails, gym?.name || 'Our Gym');
 
           if (channels.whatsapp && member.phone) {
-            const formattedPhone = validateAndFormatPhoneNumber(member.phone);
-            if (formattedPhone) {
-              // Create WhatsApp deep link with payment message
-              const whatsappMessage = encodeURIComponent(paymentMessage);
-              const whatsappLink = `https://wa.me/${formattedPhone.replace('+', '')}?text=${whatsappMessage}`;
-              // We can't actually send WhatsApp message programmatically, but we return the link
-              // For now, we'll use the WatX API if configured
+            const phoneValidation = validateAndFormatPhoneNumber(member.phone);
+            if (phoneValidation.isValid) {
               try {
                 await sendPaymentDetailsWhatsApp(member.phone, member.name, paymentDetails, gym?.name || 'Our Gym');
               } catch (whatsappError) {
@@ -7038,8 +7033,8 @@ async function sendPaymentDetailsWhatsApp(
     throw new Error('WATX_API_KEY not configured');
   }
 
-  const formattedPhone = validateAndFormatPhoneNumber(phone);
-  if (!formattedPhone) {
+  const phoneValidation = validateAndFormatPhoneNumber(phone);
+  if (!phoneValidation.isValid) {
     throw new Error('Invalid phone number');
   }
 
@@ -7052,7 +7047,7 @@ async function sendPaymentDetailsWhatsApp(
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      to: formattedPhone,
+      to: phoneValidation.formattedNumber,
       type: 'text',
       text: { body: message }
     }),
