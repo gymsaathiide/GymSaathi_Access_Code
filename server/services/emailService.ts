@@ -1054,13 +1054,45 @@ export async function sendPaymentDetailsEmail(
       ifscCode: paymentDetails.ifscCode,
     };
 
-    const { data, error } = await resend.emails.send({
+    // Prepare attachments if QR code exists
+    const attachments: { filename: string; content: Buffer }[] = [];
+    let qrCid: string | null = null;
+    
+    if (paymentDetails.qrUrl && paymentDetails.qrUrl.startsWith('data:image/')) {
+      try {
+        // Extract base64 data from data URL
+        const matches = paymentDetails.qrUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (matches) {
+          const [, imageType, base64Data] = matches;
+          const buffer = Buffer.from(base64Data, 'base64');
+          qrCid = 'qrcode@gymsaathi';
+          attachments.push({
+            filename: `payment-qr.${imageType}`,
+            content: buffer,
+          });
+          // Update payload to use CID reference
+          payload.qrUrl = `cid:${qrCid}`;
+          console.log(`[email] QR code attached (${buffer.length} bytes, type: ${imageType})`);
+        }
+      } catch (qrError) {
+        console.error('[email] Error processing QR code for attachment:', qrError);
+      }
+    }
+
+    const emailOptions: any = {
       from: `${gymName} via GYMSAATHI <${fromEmail}>`,
       to: recipientEmail,
       subject: `Payment Details from ${gymName}`,
       html: getPaymentDetailsEmailHtml(payload),
       text: `Hi ${recipientName}, Here are the payment details from ${gymName}. UPI ID: ${paymentDetails.upiId || 'N/A'}. Bank Account: ${paymentDetails.bankAccountNumber || 'N/A'}. IFSC: ${paymentDetails.ifscCode || 'N/A'}.`,
-    });
+    };
+
+    // Add attachments if QR code exists
+    if (attachments.length > 0) {
+      emailOptions.attachments = attachments;
+    }
+
+    const { data, error } = await resend.emails.send(emailOptions);
 
     if (error) {
       console.error('[email] ERROR sending payment details email:', error);

@@ -426,6 +426,60 @@ Follow up quickly to convert this lead!
   return sendWhatsAppMessage(payload.adminPhone, message);
 }
 
+async function sendWhatsAppMediaMessage(phoneNumber: string, imageUrl: string, caption: string): Promise<boolean> {
+  const apiSecret = process.env.WATX_API_KEY;
+  const baseUrl = process.env.WATX_BASE_URL;
+  const accountId = process.env.WATX_INSTANCE_ID;
+
+  if (!apiSecret || !baseUrl || !accountId) {
+    console.log('[whatsapp] WatX credentials not fully configured for media message');
+    return false;
+  }
+
+  const formattedPhone = formatPhoneNumber(phoneNumber);
+  
+  if (!formattedPhone) {
+    console.log('[whatsapp] Skipping media message - invalid phone number');
+    return false;
+  }
+  
+  try {
+    const form = new FormData();
+    form.append('secret', apiSecret);
+    form.append('account', accountId);
+    form.append('recipient', formattedPhone);
+    form.append('type', 'media');
+    form.append('media_url', imageUrl);
+    form.append('media_type', 'image');
+    if (caption) {
+      form.append('caption', caption);
+    }
+
+    console.log(`[whatsapp] Sending media message to ${formattedPhone} via WatX API...`);
+
+    const response = await axios.post(`${baseUrl}/send/whatsapp`, form, {
+      headers: {
+        ...form.getHeaders(),
+      },
+    });
+
+    if (response.data && response.data.status === 200) {
+      console.log(`[whatsapp] SUCCESS: Media message sent to ${formattedPhone}`, response.data);
+      return true;
+    } else {
+      console.error('[whatsapp] API returned non-200 status for media:', response.data);
+      return false;
+    }
+  } catch (error: any) {
+    if (error.response) {
+      console.error('[whatsapp] Media API Error:', error.response.status, error.response.data);
+    } else {
+      console.error('[whatsapp] Media Error:', error.message);
+    }
+    return false;
+  }
+}
+
 export async function sendPaymentDetailsWhatsApp(
   recipientPhone: string,
   recipientName: string,
@@ -469,6 +523,12 @@ Here are the payment details you requested:
   if (paymentDetails.ifscCode) {
     message += `
 🏛️ IFSC: ${paymentDetails.ifscCode}`;
+  }
+
+  if (paymentDetails.qrUrl) {
+    message += `
+
+📸 *QR Code:* Please check your email for the payment QR code, or ask your gym admin for the QR code image.`;
   }
 
   message += `
