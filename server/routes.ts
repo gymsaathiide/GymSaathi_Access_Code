@@ -4809,12 +4809,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Lead has already been converted' });
       }
 
-      // Check if user with this email already exists
+      // Check if a member already exists with this email at this gym
+      // Note: We only check members table, not users table, because leads don't have user accounts
+      // This allows converting a lead even if the email exists as a lead elsewhere
       const memberEmail = req.body.email || existingLead.email;
-      const existingUser = await db!.select().from(schema.users).where(eq(schema.users.email, memberEmail)).limit(1).then(rows => rows[0]);
+      const existingMember = await db!.select().from(schema.members)
+        .where(and(
+          eq(schema.members.email, memberEmail),
+          eq(schema.members.gymId, existingLead.gymId)
+        ))
+        .limit(1).then(rows => rows[0]);
 
-      if (existingUser) {
-        return res.status(400).json({ error: 'A user with this email already exists' });
+      if (existingMember) {
+        return res.status(400).json({ error: 'A member with this email already exists at this gym' });
       }
 
       // Get gym details for notifications

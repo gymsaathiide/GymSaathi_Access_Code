@@ -1235,15 +1235,37 @@ class Storage {
       let userId = existingUserId || null;
       let createdUser = null;
       if (userData) {
-        createdUser = await tx.insert(schema.users).values({
-          email: userData.email,
-          passwordHash: userData.passwordHash,
-          role: 'member',
-          name: userData.name,
-          phone: userData.phone || null,
-          isActive: 1
-        }).returning().then(rows => rows[0]);
-        userId = createdUser.id;
+        // Check if a user already exists with this email (could be from previous partial conversion)
+        const existingUser = await tx.select().from(schema.users)
+          .where(eq(schema.users.email, userData.email))
+          .limit(1).then(rows => rows[0]);
+        
+        if (existingUser && existingUser.role === 'member') {
+          // Only reuse existing member-role accounts (from partial conversions)
+          // This prevents overwriting admin/trainer credentials
+          await tx.update(schema.users).set({
+            passwordHash: userData.passwordHash,
+            name: userData.name,
+            phone: userData.phone || existingUser.phone,
+            isActive: 1
+          }).where(eq(schema.users.id, existingUser.id));
+          userId = existingUser.id;
+        } else if (existingUser) {
+          // User exists with different role (admin, trainer, etc.)
+          // Cannot convert lead - would conflict with existing account
+          throw new Error('A user with this email already exists with a different role');
+        } else {
+          // Create new user account
+          createdUser = await tx.insert(schema.users).values({
+            email: userData.email,
+            passwordHash: userData.passwordHash,
+            role: 'member',
+            name: userData.name,
+            phone: userData.phone || null,
+            isActive: 1
+          }).returning().then(rows => rows[0]);
+          userId = createdUser.id;
+        }
       }
 
       // Create member record
