@@ -167,7 +167,7 @@ export default function Shop() {
 
   const updateProductMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
-      apiRequest(`/api/products/${id}`, "PATCH", data),
+      apiRequest("PATCH", `/api/products/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["/api/products"],
@@ -190,7 +190,7 @@ export default function Shop() {
   });
 
   const deleteProductMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/products/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["/api/products"],
@@ -239,7 +239,7 @@ export default function Shop() {
 
   const updateOrderStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiRequest(`/api/orders/${id}/status`, "PATCH", { status }),
+      apiRequest("PATCH", `/api/orders/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["/api/orders"],
@@ -269,7 +269,7 @@ export default function Shop() {
       paymentStatus: string;
       paymentType?: string;
     }) =>
-      apiRequest(`/api/orders/${id}/payment`, "PATCH", {
+      apiRequest("PATCH", `/api/orders/${id}/payment`, {
         paymentStatus,
         paymentType,
       }),
@@ -316,7 +316,7 @@ export default function Shop() {
 
   const updateCategoryMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
-      apiRequest(`/api/product-categories/${id}`, "PATCH", data),
+      apiRequest("PATCH", `/api/product-categories/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["/api/product-categories"],
@@ -338,7 +338,7 @@ export default function Shop() {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest(`/api/product-categories/${id}`, "DELETE"),
+      apiRequest("DELETE", `/api/product-categories/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["/api/product-categories"],
