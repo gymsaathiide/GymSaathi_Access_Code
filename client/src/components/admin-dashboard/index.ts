@@ -17,3 +17,7 @@ export { DashboardHeader, FilterBar } from './DashboardHeader';
 export { WelcomeBanner } from './WelcomeBanner';
 
 export { MemberActivityChart, MembershipPieChart, TargetGauge } from './MemberActivityChart';
+
+export { PendingPaymentsTable } from './PendingPaymentsTable';
+
+export { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';

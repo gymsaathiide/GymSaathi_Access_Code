@@ -669,46 +669,6 @@ function getPaymentReminderEmailHtml(payload: PaymentReminderEmailPayload): stri
   `.trim();
 }
 
-export async function sendPaymentReminderEmail(payload: PaymentReminderEmailPayload): Promise<boolean> {
-  if (process.env.ENABLE_EMAIL_NOTIFICATIONS === 'false') {
-    console.log('[email] Email notifications disabled, skipping payment reminder email');
-    return true;
-  }
-
-  if (!payload.memberEmail) {
-    console.log('[email] No email provided for member, skipping payment reminder email');
-    return false;
-  }
-
-  if (!resend) {
-    console.log('[email] RESEND_API_KEY not configured, skipping email');
-    return false;
-  }
-
-  try {
-    const formattedAmount = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(payload.amountDue);
-
-    const { data, error } = await resend.emails.send({
-      from: `${payload.gymName} via GYMSAATHI <${fromEmail}>`,
-      to: payload.memberEmail,
-      subject: `Payment Reminder - ${formattedAmount} Due at ${payload.gymName}`,
-      html: getPaymentReminderEmailHtml(payload),
-      text: `Hi ${payload.memberName}, This is a reminder that you have an outstanding payment of ${formattedAmount} due at ${payload.gymName}. Please make the payment at your earliest convenience.`,
-    });
-
-    if (error) {
-      console.error('[email] ERROR sending payment reminder email:', error);
-      return false;
-    }
-
-    console.log(`[email] Sent payment reminder email to ${payload.memberEmail} (ID: ${data?.id})`);
-    return true;
-  } catch (error) {
-    console.error('[email] ERROR sending payment reminder email:', error);
-    return false;
-  }
-}
-
 export interface NewLeadNotificationEmailPayload {
   adminEmail: string;
   adminName: string;
@@ -1103,6 +1063,111 @@ export async function sendPaymentDetailsEmail(
     return true;
   } catch (error) {
     console.error('[email] ERROR sending payment details email:', error);
+    return false;
+  }
+}
+
+export async function sendPaymentReminderEmail(
+  recipientEmail: string,
+  recipientName: string,
+  amountDue: number,
+  dueDate: string | Date | null,
+  gymName: string
+): Promise<boolean> {
+  if (!resend) {
+    console.log('[email] RESEND_API_KEY not configured, skipping payment reminder email');
+    return false;
+  }
+
+  try {
+    const formattedAmount = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amountDue);
+
+    const dueDateStr = dueDate 
+      ? new Date(dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'soon';
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Reminder from ${gymName}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px 20px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">🔔 Payment Reminder</h1>
+        <p style="color: #ffffff; margin: 10px 0 0; opacity: 0.9;">from ${gymName}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 30px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Hi ${recipientName},
+        </p>
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          This is a friendly reminder about your pending payment at <strong>${gymName}</strong>.
+        </p>
+        
+        <div style="margin: 25px 0; padding: 20px; background-color: #fef2f2; border-radius: 12px; border-left: 4px solid #ef4444;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <span style="color: #6b7280;">Amount Due:</span>
+            <span style="color: #ef4444; font-weight: bold; font-size: 20px;">${formattedAmount}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #6b7280;">Due Date:</span>
+            <span style="color: #374151; font-weight: 600;">${dueDateStr}</span>
+          </div>
+        </div>
+        
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Please make the payment at your earliest convenience to continue enjoying uninterrupted services.
+        </p>
+        
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 25px 0 0;">
+          For payment methods, please contact your gym directly or ask for payment details.
+        </p>
+        
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 25px 0 0;">
+          Thank you for being a valued member!
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 30px; background-color: #1f2937; text-align: center;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+          © ${new Date().getFullYear()} GYMSAATHI. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const { data, error } = await resend.emails.send({
+      from: `${gymName} via GYMSAATHI <${fromEmail}>`,
+      to: recipientEmail,
+      subject: `Payment Reminder - ${formattedAmount} Due ${dueDateStr}`,
+      html,
+      text: `Hi ${recipientName}, This is a friendly reminder about your pending payment of ${formattedAmount} due ${dueDateStr} at ${gymName}. Please make the payment at your earliest convenience. Thank you!`,
+    });
+
+    if (error) {
+      console.error('[email] ERROR sending payment reminder email:', error);
+      return false;
+    }
+
+    console.log(`[email] Sent payment reminder email to ${recipientEmail} (ID: ${data?.id})`);
+    return true;
+  } catch (error) {
+    console.error('[email] ERROR sending payment reminder email:', error);
     return false;
   }
 }

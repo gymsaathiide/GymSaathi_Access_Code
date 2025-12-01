@@ -16,6 +16,8 @@ import {
   AnalyticsPanel,
   FilterBar,
   WelcomeBanner,
+  PendingPaymentsTable,
+  AdminAnalyticsDashboard,
 } from '@/components/admin-dashboard';
 import {
   UserPlus,
@@ -120,6 +122,10 @@ export default function AdminDashboardNew() {
   return (
     <div className="space-y-6">
       <WelcomeBanner />
+
+      <PendingPaymentsTable />
+
+      <AdminAnalyticsDashboard />
 
       <FilterBar
         selectedPeriod={selectedPeriod}

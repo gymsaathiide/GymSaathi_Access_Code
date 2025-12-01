@@ -343,42 +343,6 @@ Please make the payment before the due date.
   return sendWhatsAppMessage(payload.phoneNumber, message);
 }
 
-export interface PaymentReminderWhatsAppPayload {
-  memberName: string;
-  memberPhone: string;
-  gymName: string;
-  amountDue: number;
-}
-
-export async function sendPaymentReminderWhatsApp(payload: PaymentReminderWhatsAppPayload): Promise<boolean> {
-  if (process.env.ENABLE_WHATSAPP_NOTIFICATIONS === 'false') {
-    console.log('[whatsapp] WhatsApp notifications disabled, skipping payment reminder');
-    return true;
-  }
-
-  if (!payload.memberPhone) {
-    console.log('[whatsapp] No phone number provided for member, skipping payment reminder');
-    return false;
-  }
-
-  const formattedAmount = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(payload.amountDue);
-
-  const message = `💰 *Payment Reminder from ${payload.gymName}*
-
-Hi ${payload.memberName},
-
-This is a friendly reminder that you have an outstanding payment due.
-
-💳 *Amount Due: ${formattedAmount}*
-
-Please make the payment at your earliest convenience to continue enjoying our services without interruption.
-
-If you have already made the payment, please disregard this message.
-
-- Team ${payload.gymName}`;
-
-  return sendWhatsAppMessage(payload.memberPhone, message);
-}
 
 export interface NewLeadNotificationWhatsAppPayload {
   adminPhone: string;
@@ -534,6 +498,53 @@ Here are the payment details you requested:
   message += `
 
 For any queries, please contact your gym.
+
+- Team ${gymName}`;
+
+  return sendWhatsAppMessage(recipientPhone, message);
+}
+
+export async function sendPaymentReminderWhatsApp(
+  recipientPhone: string,
+  recipientName: string,
+  amountDue: number,
+  dueDate: string | Date | null,
+  gymName: string
+): Promise<boolean> {
+  if (process.env.ENABLE_WHATSAPP_NOTIFICATIONS === 'false') {
+    console.log('[whatsapp] WhatsApp notifications disabled, skipping payment reminder');
+    return true;
+  }
+
+  if (!recipientPhone) {
+    console.log('[whatsapp] No phone number provided, skipping payment reminder WhatsApp');
+    return false;
+  }
+
+  const formattedAmount = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(amountDue);
+
+  const dueDateStr = dueDate 
+    ? new Date(dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : 'soon';
+
+  const message = `🔔 *Payment Reminder from ${gymName}*
+
+Hi ${recipientName},
+
+This is a friendly reminder about your pending payment.
+
+💰 *Amount Due:* ${formattedAmount}
+📅 *Due Date:* ${dueDateStr}
+
+Please make the payment at your earliest convenience to continue enjoying uninterrupted services.
+
+For payment methods, please contact your gym or ask for payment details.
+
+Thank you for being a valued member!
 
 - Team ${gymName}`;
 

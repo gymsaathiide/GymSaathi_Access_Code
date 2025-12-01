@@ -10,8 +10,8 @@ import { fromZodError } from "zod-validation-error";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, gte, lte, lt, or, like, isNull, inArray } from "drizzle-orm";
 import * as schema from "@shared/schema";
-import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendPaymentDetailsEmail } from "./services/emailService";
-import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber, sendPaymentDetailsWhatsApp } from "./services/whatsappService";
+import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendPaymentDetailsEmail, sendPaymentReminderEmail } from "./services/emailService";
+import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber, sendPaymentDetailsWhatsApp, sendPaymentReminderWhatsApp } from "./services/whatsappService";
 import { generateInvoicePdf, type InvoiceData } from "./services/invoicePdfService";
 import * as auditService from "./services/auditService";
 import { supabaseRepo } from "./supabaseRepository";
@@ -4165,14 +4165,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (channel === 'email' || channel === 'both') {
         if (member.email) {
           try {
-            const { sendPaymentReminderEmail } = await import('./services/emailService');
-            await sendPaymentReminderEmail({
-              memberName: member.name,
-              memberEmail: member.email,
-              gymName,
+            await sendPaymentReminderEmail(
+              member.email,
+              member.name,
               amountDue,
-              dueDate: new Date().toLocaleDateString('en-IN'),
-            });
+              new Date(),
+              gymName
+            );
           } catch (emailError: any) {
             errors.push(`Email: ${emailError.message}`);
           }
@@ -4184,13 +4183,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (channel === 'whatsapp' || channel === 'both') {
         if (member.phone) {
           try {
-            const { sendPaymentReminderWhatsApp } = await import('./services/whatsappService');
-            await sendPaymentReminderWhatsApp({
-              memberName: member.name,
-              memberPhone: member.phone,
-              gymName,
+            await sendPaymentReminderWhatsApp(
+              member.phone,
+              member.name,
               amountDue,
-            });
+              new Date(),
+              gymName
+            );
           } catch (whatsappError: any) {
             errors.push(`WhatsApp: ${whatsappError.message}`);
           }
@@ -7004,6 +7003,400 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message, results });
     } catch (error: any) {
       console.error('Error sending payment details:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // =============================================
+  // PENDING PAYMENTS & ANALYTICS ENDPOINTS
+  // =============================================
+
+  // Get pending payments with member details
+  app.get('/api/admin/pending-payments', requireRole('admin'), async (req, res) => {
+    try {
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Get gymId from gymAdmins table for admin users
+      let gymId = user.gymId;
+      if (!gymId) {
+        const gymAdmin = await db!.select()
+          .from(schema.gymAdmins)
+          .where(eq(schema.gymAdmins.userId, user.id))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = gymAdmin?.gymId || null;
+      }
+
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      // Get all invoices with pending/partially_paid status for this gym
+      const pendingInvoices = await db!.select({
+        invoiceId: schema.invoices.id,
+        invoiceNumber: schema.invoices.invoiceNumber,
+        memberId: schema.invoices.memberId,
+        memberName: schema.members.name,
+        memberEmail: schema.members.email,
+        memberPhone: schema.members.phone,
+        memberJoinedAt: schema.members.joinDate,
+        totalAmount: schema.invoices.amount,
+        amountPaid: schema.invoices.amountPaid,
+        amountDue: schema.invoices.amountDue,
+        dueDate: schema.invoices.dueDate,
+        status: schema.invoices.status,
+        createdAt: schema.invoices.createdAt,
+      })
+        .from(schema.invoices)
+        .innerJoin(schema.members, eq(schema.invoices.memberId, schema.members.id))
+        .where(and(
+          eq(schema.invoices.gymId, gymId),
+          or(
+            eq(schema.invoices.status, 'pending'),
+            eq(schema.invoices.status, 'partially_paid')
+          )
+        ))
+        .orderBy(desc(schema.invoices.dueDate));
+
+      // Also get members with pending payments (amountDue > 0) from payments table
+      const pendingPayments = await db!.select({
+        paymentId: schema.payments.id,
+        memberId: schema.payments.memberId,
+        memberName: schema.members.name,
+        memberEmail: schema.members.email,
+        memberPhone: schema.members.phone,
+        memberJoinedAt: schema.members.joinDate,
+        totalAmount: schema.payments.totalAmount,
+        amountPaid: schema.payments.amount,
+        amountDue: schema.payments.amountDue,
+        status: schema.payments.status,
+        createdAt: schema.payments.createdAt,
+      })
+        .from(schema.payments)
+        .innerJoin(schema.members, eq(schema.payments.memberId, schema.members.id))
+        .where(and(
+          eq(schema.payments.gymId, gymId),
+          or(
+            eq(schema.payments.status, 'pending'),
+            eq(schema.payments.status, 'partially_paid')
+          )
+        ))
+        .orderBy(desc(schema.payments.createdAt));
+
+      // Combine and format results
+      const allPending = [
+        ...pendingInvoices.map(inv => ({
+          id: inv.invoiceId,
+          type: 'invoice' as const,
+          invoiceNumber: inv.invoiceNumber,
+          memberId: inv.memberId,
+          memberName: inv.memberName,
+          memberEmail: inv.memberEmail,
+          memberPhone: inv.memberPhone,
+          joinedAt: inv.memberJoinedAt,
+          totalAmount: parseFloat(inv.totalAmount || '0'),
+          amountPaid: parseFloat(inv.amountPaid || '0'),
+          amountDue: parseFloat(inv.amountDue || '0'),
+          dueDate: inv.dueDate,
+          status: inv.status,
+          createdAt: inv.createdAt,
+        })),
+        ...pendingPayments.map(pay => ({
+          id: pay.paymentId,
+          type: 'payment' as const,
+          invoiceNumber: null,
+          memberId: pay.memberId,
+          memberName: pay.memberName,
+          memberEmail: pay.memberEmail,
+          memberPhone: pay.memberPhone,
+          joinedAt: pay.memberJoinedAt,
+          totalAmount: parseFloat(pay.totalAmount || '0'),
+          amountPaid: parseFloat(pay.amountPaid || '0'),
+          amountDue: parseFloat(pay.amountDue || '0'),
+          dueDate: null,
+          status: pay.status,
+          createdAt: pay.createdAt,
+        })),
+      ];
+
+      // Calculate summary
+      const totalPendingAmount = allPending.reduce((sum, p) => sum + p.amountDue, 0);
+      const totalInvoices = allPending.length;
+
+      res.json({
+        pendingPayments: allPending,
+        summary: {
+          totalPendingAmount,
+          totalInvoices,
+        }
+      });
+    } catch (error: any) {
+      console.error('Error fetching pending payments:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send payment reminder to a member
+  app.post('/api/admin/send-payment-reminder', requireRole('admin'), async (req, res) => {
+    try {
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Get gymId from gymAdmins table for admin users
+      let gymId = user.gymId;
+      if (!gymId) {
+        const gymAdmin = await db!.select()
+          .from(schema.gymAdmins)
+          .where(eq(schema.gymAdmins.userId, user.id))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = gymAdmin?.gymId || null;
+      }
+
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const { memberId, memberName, memberPhone, memberEmail, amountDue, dueDate } = req.body;
+
+      if (!memberId) {
+        return res.status(400).json({ error: 'Member ID is required' });
+      }
+
+      // Get gym info
+      const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, gymId)).limit(1).then(rows => rows[0]);
+      const gymName = gym?.name || 'Our Gym';
+
+      const results = {
+        whatsapp: false,
+        email: false,
+        errors: [] as string[]
+      };
+
+      // Send WhatsApp reminder
+      if (memberPhone) {
+        try {
+          const phoneValidation = validateAndFormatPhoneNumber(memberPhone);
+          if (phoneValidation.isValid) {
+            await sendPaymentReminderWhatsApp(
+              memberPhone,
+              memberName || 'Member',
+              amountDue,
+              dueDate,
+              gymName
+            );
+            results.whatsapp = true;
+          } else {
+            results.errors.push('Invalid phone number');
+          }
+        } catch (whatsappError: any) {
+          console.error('WhatsApp reminder error:', whatsappError);
+          results.errors.push('WhatsApp sending failed');
+        }
+      }
+
+      // Send Email reminder
+      if (memberEmail) {
+        try {
+          await sendPaymentReminderEmail(
+            memberEmail,
+            memberName || 'Member',
+            amountDue,
+            dueDate,
+            gymName
+          );
+          results.email = true;
+        } catch (emailError: any) {
+          console.error('Email reminder error:', emailError);
+          results.errors.push('Email sending failed');
+        }
+      }
+
+      if (!results.whatsapp && !results.email) {
+        return res.status(400).json({ 
+          error: 'Could not send reminder. No valid contact info or sending failed.',
+          details: results.errors
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Reminder sent via ${[results.whatsapp && 'WhatsApp', results.email && 'Email'].filter(Boolean).join(' and ')}`,
+        results
+      });
+    } catch (error: any) {
+      console.error('Error sending payment reminder:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get admin analytics data
+  app.get('/api/admin/analytics', requireRole('admin'), async (req, res) => {
+    try {
+      if (!isDbAvailable()) {
+        return res.status(503).json({ error: 'Database not available' });
+      }
+
+      const user = await userAccess.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Get gymId from gymAdmins table for admin users
+      let gymId = user.gymId;
+      if (!gymId) {
+        const gymAdmin = await db!.select()
+          .from(schema.gymAdmins)
+          .where(eq(schema.gymAdmins.userId, user.id))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = gymAdmin?.gymId || null;
+      }
+
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+      // Get all members for this gym
+      const allMembers = await db!.select()
+        .from(schema.members)
+        .where(eq(schema.members.gymId, gymId));
+
+      const activeMembers = allMembers.filter(m => m.status === 'active');
+      const newMembersThisMonth = allMembers.filter(m => 
+        m.joinDate && new Date(m.joinDate) >= startOfMonth
+      );
+
+      // Get memberships expiring in next 7 days
+      const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const expiringMemberships = await db!.select()
+        .from(schema.memberships)
+        .where(and(
+          eq(schema.memberships.gymId, gymId),
+          eq(schema.memberships.status, 'active'),
+          lte(schema.memberships.endDate, sevenDaysLater),
+          gte(schema.memberships.endDate, now)
+        ));
+
+      // Get revenue data - payments for this gym
+      const allPayments = await db!.select()
+        .from(schema.payments)
+        .where(eq(schema.payments.gymId, gymId));
+
+      const paidPayments = allPayments.filter(p => p.status === 'paid');
+      const pendingPayments = allPayments.filter(p => p.status === 'pending' || p.status === 'partially_paid');
+
+      const totalCollected = paidPayments.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0);
+      const totalPending = pendingPayments.reduce((sum, p) => sum + parseFloat(p.amountDue || '0'), 0);
+
+      // This month's collection
+      const thisMonthPayments = paidPayments.filter(p => 
+        p.paymentDate && new Date(p.paymentDate) >= startOfMonth
+      );
+      const thisMonthCollection = thisMonthPayments.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0);
+
+      // Last month's collection for comparison
+      const lastMonthPayments = paidPayments.filter(p => 
+        p.paymentDate && new Date(p.paymentDate) >= startOfLastMonth && new Date(p.paymentDate) <= endOfLastMonth
+      );
+      const lastMonthCollection = lastMonthPayments.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0);
+
+      const collectionGrowth = lastMonthCollection > 0 
+        ? ((thisMonthCollection - lastMonthCollection) / lastMonthCollection) * 100 
+        : (thisMonthCollection > 0 ? 100 : 0);
+
+      // Attendance data for last 7 days
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const attendanceRecords = await db!.select()
+        .from(schema.attendance)
+        .where(and(
+          eq(schema.attendance.gymId, gymId),
+          gte(schema.attendance.checkInTime, sevenDaysAgo)
+        ));
+
+      // Group attendance by day
+      const attendanceByDay: Record<string, number> = {};
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateStr = date.toISOString().split('T')[0];
+        attendanceByDay[dateStr] = 0;
+      }
+      attendanceRecords.forEach(record => {
+        if (record.checkInTime) {
+          const dateStr = new Date(record.checkInTime).toISOString().split('T')[0];
+          if (attendanceByDay[dateStr] !== undefined) {
+            attendanceByDay[dateStr]++;
+          }
+        }
+      });
+
+      const attendanceTrend = Object.entries(attendanceByDay).map(([date, count]) => ({
+        date,
+        day: new Date(date).toLocaleDateString('en-IN', { weekday: 'short' }),
+        checkIns: count
+      }));
+
+      // Membership plan distribution
+      const memberships = await db!.select({
+        planName: schema.membershipPlans.name,
+        count: sql<number>`count(*)::int`
+      })
+        .from(schema.memberships)
+        .innerJoin(schema.membershipPlans, eq(schema.memberships.planId, schema.membershipPlans.id))
+        .where(and(
+          eq(schema.memberships.gymId, gymId),
+          eq(schema.memberships.status, 'active')
+        ))
+        .groupBy(schema.membershipPlans.name);
+
+      // Calculate collection rate
+      const totalBilled = totalCollected + totalPending;
+      const collectionRate = totalBilled > 0 ? (totalCollected / totalBilled) * 100 : 100;
+
+      res.json({
+        revenue: {
+          thisMonth: thisMonthCollection,
+          lastMonth: lastMonthCollection,
+          growth: Math.round(collectionGrowth * 100) / 100,
+          totalCollected,
+          totalPending,
+          collectionRate: Math.round(collectionRate * 100) / 100,
+        },
+        members: {
+          total: allMembers.length,
+          active: activeMembers.length,
+          newThisMonth: newMembersThisMonth.length,
+          expiringSoon: expiringMemberships.length,
+        },
+        attendance: {
+          trend: attendanceTrend,
+          todayCheckIns: attendanceByDay[now.toISOString().split('T')[0]] || 0,
+        },
+        planDistribution: memberships.map(m => ({
+          name: m.planName,
+          value: m.count,
+        })),
+      });
+    } catch (error: any) {
+      console.error('Error fetching admin analytics:', error);
       res.status(500).json({ error: error.message });
     }
   });
