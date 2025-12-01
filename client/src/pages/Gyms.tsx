@@ -60,6 +60,8 @@ export default function Gyms() {
     status: 'active',
     address: '',
     logoUrl: '',
+    adminEmail: '',
+    adminPassword: '',
   });
 
   const { toast } = useToast();
@@ -128,6 +130,8 @@ export default function Gyms() {
       status: 'active',
       address: '',
       logoUrl: '',
+      adminEmail: '',
+      adminPassword: '',
     });
     setEditingGym(null);
   };
@@ -376,6 +380,39 @@ export default function Gyms() {
                   </div>
                 </div>
               </div>
+
+              {!editingGym && (
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="text-sm font-medium mb-3">Create New Admin (Optional)</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Create login credentials for the gym admin. If left empty, no admin account will be created.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="adminEmail">Admin Email</Label>
+                      <Input
+                        id="adminEmail"
+                        type="email"
+                        value={formData.adminEmail || ''}
+                        onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                        placeholder="admin@gym.com"
+                        data-testid="input-admin-email"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="adminPassword">Admin Password</Label>
+                      <Input
+                        id="adminPassword"
+                        type="password"
+                        value={formData.adminPassword || ''}
+                        onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                        placeholder="Min 6 characters"
+                        data-testid="input-admin-password"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

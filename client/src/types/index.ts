@@ -23,6 +23,8 @@ export interface GymFormData {
   status: string;
   address?: string;
   logoUrl?: string;
+  adminEmail?: string;
+  adminPassword?: string;
 }
 
 // Billing & Subscription Types

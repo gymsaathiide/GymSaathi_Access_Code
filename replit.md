@@ -69,4 +69,3 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 
 ## Feature Removals (December 2025)
 - Removed "Create New Branch" feature from admin dashboard branch dropdown
-- Removed "Create New Admin" credentials section from Gyms page (superadmin gym creation form)
