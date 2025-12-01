@@ -496,9 +496,15 @@ For any queries, please contact your gym.
 
 - Team ${gymName}`;
 
-  if (paymentDetails.qrUrl) {
+  if (paymentDetails.qrUrl && paymentDetails.qrUrl.startsWith('http')) {
     console.log(`[whatsapp] Sending payment QR code with UPI details to ${recipientPhone}`);
+    console.log(`[whatsapp] QR URL: ${paymentDetails.qrUrl}`);
     return sendWhatsAppMediaMessage(recipientPhone, paymentDetails.qrUrl, caption);
+  }
+
+  if (paymentDetails.qrUrl && paymentDetails.qrUrl.startsWith('data:')) {
+    console.log(`[whatsapp] QR code is base64 (not a public URL), cannot send via WhatsApp media API`);
+    caption += `\n\n📸 *Note:* QR code available via email.`;
   }
 
   return sendWhatsAppMessage(recipientPhone, caption);

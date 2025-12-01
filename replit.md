@@ -55,5 +55,12 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 - When admin sends payment details via WhatsApp and QR URL exists, recipient receives:
   - QR code image displayed in WhatsApp
   - Caption with UPI ID, account holder, bank account number, IFSC code
-- Falls back to text-only message if no QR code is uploaded
+- Falls back to text-only message if no QR code is uploaded or if QR is base64-only
 - API field fix: Uses `message` field for caption per UPMtech API documentation
+
+## QR Code Storage & Delivery Fixes (December 2025)
+- QR codes now upload to **Supabase Storage** (`payment-qr-codes` bucket) instead of storing base64 in database
+- This provides a **public HTTPS URL** that works with WhatsApp media API
+- Email inline attachments fixed: Uses Resend's `cid` property for proper image embedding
+- WhatsApp validates URL type: Only sends media if qrUrl starts with `http`, falls back to text if base64
+- Bucket auto-creates if not found, with public access enabled

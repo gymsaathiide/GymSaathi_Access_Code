@@ -1014,28 +1014,30 @@ export async function sendPaymentDetailsEmail(
       ifscCode: paymentDetails.ifscCode,
     };
 
-    // Prepare attachments if QR code exists
-    const attachments: { filename: string; content: Buffer }[] = [];
-    let qrCid: string | null = null;
+    // Prepare attachments if QR code exists as base64
+    const attachments: any[] = [];
     
-    if (paymentDetails.qrUrl && paymentDetails.qrUrl.startsWith('data:image/')) {
-      try {
-        // Extract base64 data from data URL
-        const matches = paymentDetails.qrUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-        if (matches) {
-          const [, imageType, base64Data] = matches;
-          const buffer = Buffer.from(base64Data, 'base64');
-          qrCid = 'qrcode@gymsaathi';
-          attachments.push({
-            filename: `payment-qr.${imageType}`,
-            content: buffer,
-          });
-          // Update payload to use CID reference
-          payload.qrUrl = `cid:${qrCid}`;
-          console.log(`[email] QR code attached (${buffer.length} bytes, type: ${imageType})`);
+    if (paymentDetails.qrUrl) {
+      if (paymentDetails.qrUrl.startsWith('data:image/')) {
+        // Base64 image - embed as inline attachment
+        try {
+          const matches = paymentDetails.qrUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (matches) {
+            const [, imageType, base64Data] = matches;
+            const buffer = Buffer.from(base64Data, 'base64');
+            attachments.push({
+              filename: `payment-qr.${imageType}`,
+              content: buffer,
+              cid: 'qrcode',
+            });
+            payload.qrUrl = 'cid:qrcode';
+            console.log(`[email] QR code embedded as inline attachment (${buffer.length} bytes, type: ${imageType})`);
+          }
+        } catch (qrError) {
+          console.error('[email] Error processing QR code for attachment:', qrError);
         }
-      } catch (qrError) {
-        console.error('[email] Error processing QR code for attachment:', qrError);
+      } else if (paymentDetails.qrUrl.startsWith('http')) {
+        console.log(`[email] Using public QR URL directly: ${paymentDetails.qrUrl}`);
       }
     }
 
@@ -1047,7 +1049,7 @@ export async function sendPaymentDetailsEmail(
       text: `Hi ${recipientName}, Here are the payment details from ${gymName}. UPI ID: ${paymentDetails.upiId || 'N/A'}. Bank Account: ${paymentDetails.bankAccountNumber || 'N/A'}. IFSC: ${paymentDetails.ifscCode || 'N/A'}.`,
     };
 
-    // Add attachments if QR code exists
+    // Add attachments if any exist
     if (attachments.length > 0) {
       emailOptions.attachments = attachments;
     }

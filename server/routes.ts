@@ -6809,7 +6809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload QR code - stores base64 directly in database (no external storage needed)
+  // Upload QR code - uploads to Supabase storage for public URL access
   app.post('/api/admin/payment-details/upload-qr', requireRole('admin'), async (req, res) => {
     try {
       if (!isDbAvailable()) {
@@ -6846,14 +6846,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid image format. Please upload a valid image file.' });
       }
 
-      // Check image size (max 2MB for base64 storage)
+      // Check image size (max 2MB)
       const sizeInBytes = (base64Image.length * 3) / 4;
       if (sizeInBytes > 2 * 1024 * 1024) {
         return res.status(400).json({ error: 'Image too large. Please upload an image smaller than 2MB.' });
       }
 
-      // Store base64 directly as qrUrl
-      const qrUrl = base64Image;
+      // Extract base64 data and image type
+      const matches = base64Image.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (!matches) {
+        return res.status(400).json({ error: 'Invalid base64 image format' });
+      }
+
+      const [, imageType, base64Data] = matches;
+      const buffer = Buffer.from(base64Data, 'base64');
+      const fileName = `payment-qr-${gymId}-${Date.now()}.${imageType}`;
+
+      let qrUrl: string;
+
+      // Try to upload to Supabase storage
+      if (supabase) {
+        try {
+          // Upload to Supabase storage
+          const { data, error } = await supabase.storage
+            .from('payment-qr-codes')
+            .upload(fileName, buffer, {
+              contentType: `image/${imageType}`,
+              upsert: true,
+            });
+
+          if (error) {
+            // If bucket doesn't exist, create it and retry
+            if (error.message.includes('Bucket not found') || error.message.includes('not found')) {
+              console.log('[qr-upload] Bucket not found, attempting to create...');
+              const { error: createError } = await supabase.storage.createBucket('payment-qr-codes', {
+                public: true,
+                fileSizeLimit: 2 * 1024 * 1024,
+              });
+              
+              if (createError && !createError.message.includes('already exists')) {
+                console.error('[qr-upload] Failed to create bucket:', createError);
+                throw createError;
+              }
+
+              // Retry upload
+              const { data: retryData, error: retryError } = await supabase.storage
+                .from('payment-qr-codes')
+                .upload(fileName, buffer, {
+                  contentType: `image/${imageType}`,
+                  upsert: true,
+                });
+
+              if (retryError) {
+                console.error('[qr-upload] Retry upload failed:', retryError);
+                throw retryError;
+              }
+            } else {
+              throw error;
+            }
+          }
+
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('payment-qr-codes')
+            .getPublicUrl(fileName);
+
+          qrUrl = urlData.publicUrl;
+          console.log(`[qr-upload] Uploaded to Supabase storage: ${qrUrl}`);
+        } catch (storageError: any) {
+          console.error('[qr-upload] Supabase storage failed, falling back to base64:', storageError.message);
+          // Fall back to base64 storage
+          qrUrl = base64Image;
+        }
+      } else {
+        // No Supabase client, use base64 storage
+        qrUrl = base64Image;
+      }
 
       // Update payment details with new QR URL
       const existing = await db!.select()
