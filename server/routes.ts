@@ -4099,17 +4099,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const currentDue = parseFloat(existingPayment.amountDue || '0');
-      if (amount > currentDue) {
-        return res.status(400).json({ error: `Payment amount cannot exceed due amount of ₹${currentDue}` });
+      if (amount > currentDue + 0.01) { // Allow small floating point tolerance
+        return res.status(400).json({ error: `Payment amount cannot exceed due amount of ₹${currentDue.toFixed(2)}` });
       }
 
       const newAmountPaid = parseFloat(existingPayment.amount) + amount;
-      const newAmountDue = currentDue - amount;
-      const newStatus = newAmountDue <= 0 ? 'paid' : 'partially_paid';
+      let newAmountDue = currentDue - amount;
+      
+      // Ensure no negative or tiny remaining amounts due to floating point
+      if (newAmountDue < 0.01) {
+        newAmountDue = 0;
+      }
+      
+      const newStatus = newAmountDue === 0 ? 'paid' : 'partially_paid';
 
       const updatedPayment = await db!.update(schema.payments).set({
-        amount: newAmountPaid.toString(),
-        amountDue: newAmountDue.toString(),
+        amount: newAmountPaid.toFixed(2),
+        amountDue: newAmountDue.toFixed(2),
         status: newStatus,
         paymentType: paymentType || existingPayment.paymentType,
         transactionRef: transactionRef || existingPayment.transactionRef,
