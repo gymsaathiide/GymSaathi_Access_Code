@@ -66,3 +66,7 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 - WhatsApp validates URL type: Only sends media if qrUrl starts with `http`, falls back to text if base64
 - Bucket auto-creates if not found, with public access enabled
 - Supabase admin client (`supabaseAdmin`) added in `server/db.ts` for storage operations
+
+## Feature Removals (December 2025)
+- Removed "Create New Branch" feature from admin dashboard branch dropdown
+- Removed "Create New Admin" credentials section from Gyms page (superadmin gym creation form)
