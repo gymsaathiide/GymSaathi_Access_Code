@@ -444,5 +444,123 @@ export const supabaseRepo = {
       return false;
     }
     return true;
+  },
+
+  async getMembersCount(): Promise<number> {
+    const { count, error } = await supabase
+      .from('members')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('Supabase getMembersCount error:', error);
+      return 0;
+    }
+    return count || 0;
+  },
+
+  async getActiveMembershipsCount(): Promise<number> {
+    const now = new Date().toISOString();
+    const { count, error } = await supabase
+      .from('memberships')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .gte('end_date', now);
+    
+    if (error) {
+      console.error('Supabase getActiveMembershipsCount error:', error);
+      return 0;
+    }
+    return count || 0;
+  },
+
+  async getNotifications(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error) {
+      console.error('Supabase getNotifications error:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', 0);
+    
+    if (error) {
+      console.error('Supabase getUnreadNotificationCount error:', error);
+      return 0;
+    }
+    return count || 0;
+  },
+
+  async markNotificationAsRead(notificationId: string, userId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: 1 })
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Supabase markNotificationAsRead error:', error);
+      return false;
+    }
+    return true;
+  },
+
+  async markAllNotificationsAsRead(userId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: 1 })
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Supabase markAllNotificationsAsRead error:', error);
+      return false;
+    }
+    return true;
+  },
+
+  async getGymInvoices(month?: number, year?: number): Promise<any[]> {
+    let query = supabase.from('gym_invoices').select('*');
+    
+    if (month !== undefined) {
+      query = query.eq('month', month);
+    }
+    if (year !== undefined) {
+      query = query.eq('year', year);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Supabase getGymInvoices error:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async getMembershipsForGym(gymId: string): Promise<any[]> {
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('memberships')
+      .select('*')
+      .eq('gym_id', gymId)
+      .eq('status', 'active')
+      .gte('end_date', now);
+    
+    if (error) {
+      console.error('Supabase getMembershipsForGym error:', error);
+      return [];
+    }
+    return data || [];
   }
 };

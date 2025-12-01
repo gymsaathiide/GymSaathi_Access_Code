@@ -770,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: lead.message || undefined,
             dashboardUrl,
           }).then(sent => {
-            if (sent) {
+            if (sent && db) {
               db.update(schema.leads)
                 .set({ emailSent: 1 })
                 .where(eq(schema.leads.id, lead.id))
@@ -793,7 +793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             source: lead.source || undefined,
             dashboardUrl,
           }).then(sent => {
-            if (sent) {
+            if (sent && db) {
               db.update(schema.leads)
                 .set({ whatsappSent: 1 })
                 .where(eq(schema.leads.id, lead.id))
@@ -2162,6 +2162,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startOfLastMonth = new Date(lastMonthYear, lastMonth - 1, 1);
       const endOfLastMonth = new Date(currentYear, currentMonth - 1, 0);
 
+      // Use Supabase fallback if db is not available
+      if (!isDbAvailable()) {
+        const allGyms = await supabaseRepo.getAllGyms();
+        const activeGyms = allGyms.filter(g => g.status === 'active');
+        
+        let mrr = 0;
+        let totalActiveMembers = 0;
+
+        for (const gym of activeGyms) {
+          const memberships = await supabaseRepo.getMembershipsForGym(gym.id);
+          const memberCount = memberships.length;
+          totalActiveMembers += memberCount;
+          const rate = parseFloat(gym.revenue || '75');
+          mrr += memberCount * rate;
+        }
+
+        const arr = mrr * 12;
+        const invoices = await supabaseRepo.getGymInvoices();
+        const thisMonthInvoices = invoices.filter(i => i.month === currentMonth && i.year === currentYear && i.status === 'paid');
+        const revenueThisMonth = thisMonthInvoices.reduce((sum, i) => sum + parseFloat(i.total_amount || '0'), 0) || mrr;
+
+        const lastMonthInvoices = invoices.filter(i => i.month === lastMonth && i.year === lastMonthYear && i.status === 'paid');
+        const revenuePrevMonth = lastMonthInvoices.reduce((sum, i) => sum + parseFloat(i.total_amount || '0'), 0);
+
+        const revenueGrowth = revenuePrevMonth > 0 
+          ? ((revenueThisMonth - revenuePrevMonth) / revenuePrevMonth) * 100 
+          : (revenueThisMonth > 0 ? 100 : 0);
+
+        const paidInvoices = invoices.filter(i => i.status === 'paid');
+        const totalRevenueAllTime = paidInvoices.reduce((sum, i) => sum + parseFloat(i.total_amount || '0'), 0);
+
+        return res.json({
+          revenueThisMonth: {
+            value: revenueThisMonth,
+            growth: Math.round(revenueGrowth * 100) / 100,
+            sparkline: []
+          },
+          revenueAllTime: {
+            value: totalRevenueAllTime > 0 ? totalRevenueAllTime : mrr
+          },
+          mrr: {
+            value: mrr,
+            formula: `${totalActiveMembers} members × avg rate`
+          },
+          arr: {
+            value: arr,
+            formula: 'MRR × 12'
+          },
+          upcomingRevenue: {
+            value: mrr,
+            period: 'Next 30 days'
+          }
+        });
+      }
+
       // Get all gyms for calculations
       const allGyms = await db!.select().from(schema.gyms);
       const activeGyms = allGyms.filter(g => g.status === 'active');
@@ -2299,6 +2354,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
+      // Use Supabase fallback if db is not available
+      if (!isDbAvailable()) {
+        const allGyms = await supabaseRepo.getAllGyms();
+        const activeGyms = allGyms.filter(g => g.status === 'active').length;
+        const suspendedGyms = allGyms.filter(g => g.status === 'suspended').length;
+        const pendingGyms = allGyms.filter(g => g.status === 'pending').length;
+        
+        const memberCount = await supabaseRepo.getMembersCount();
+        const activeMemberCount = await supabaseRepo.getActiveMembershipsCount();
+        
+        const newGymsThisMonth = allGyms.filter(g => {
+          const createdAt = g.created_at ? new Date(g.created_at) : null;
+          return createdAt && createdAt >= startOfMonth;
+        }).length;
+
+        const newGymsLastMonth = allGyms.filter(g => {
+          const createdAt = g.created_at ? new Date(g.created_at) : null;
+          return createdAt && createdAt >= startOfLastMonth && createdAt <= endOfLastMonth;
+        }).length;
+
+        const gymGrowth = newGymsLastMonth > 0 
+          ? ((newGymsThisMonth - newGymsLastMonth) / newGymsLastMonth) * 100 
+          : (newGymsThisMonth > 0 ? 100 : 0);
+
+        const gymSparkline = [];
+        for (let i = 5; i >= 0; i--) {
+          const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+          
+          const gymsInMonth = allGyms.filter(g => {
+            const createdAt = g.created_at ? new Date(g.created_at) : null;
+            return createdAt && createdAt >= monthStart && createdAt <= monthEnd;
+          }).length;
+
+          gymSparkline.push({
+            month: monthStart.toLocaleString('default', { month: 'short' }),
+            value: gymsInMonth
+          });
+        }
+
+        return res.json({
+          totalGyms: {
+            value: allGyms.length,
+            breakdown: {
+              active: activeGyms,
+              suspended: suspendedGyms,
+              pending: pendingGyms
+            }
+          },
+          activeGyms: {
+            value: activeGyms,
+            label: 'Paying gyms'
+          },
+          totalMembers: {
+            value: memberCount,
+            activeMembers: activeMemberCount
+          },
+          newGymsThisMonth: {
+            value: newGymsThisMonth,
+            growth: Math.round(gymGrowth * 100) / 100,
+            sparkline: gymSparkline
+          }
+        });
+      }
+
       // Get all gyms
       const allGyms = await db!.select().from(schema.gyms);
 
@@ -2389,6 +2509,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const now = new Date();
       const months = parseInt(req.query.months as string) || 6;
+
+      // Use Supabase fallback if db is not available
+      if (!isDbAvailable()) {
+        const allGyms = await supabaseRepo.getAllGyms();
+        const invoices = await supabaseRepo.getGymInvoices();
+        
+        const revenueTrend = [];
+        for (let i = months - 1; i >= 0; i--) {
+          const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthNum = month.getMonth() + 1;
+          const year = month.getFullYear();
+
+          const monthInvoices = invoices.filter(inv => inv.month === monthNum && inv.year === year);
+          const billed = monthInvoices.reduce((sum, inv) => sum + parseFloat(inv.total_amount || '0'), 0);
+          const collected = monthInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + parseFloat(inv.total_amount || '0'), 0);
+
+          revenueTrend.push({
+            month: month.toLocaleString('default', { month: 'short' }),
+            year,
+            billed,
+            collected
+          });
+        }
+
+        const memberTrend = [];
+        for (let i = months - 1; i >= 0; i--) {
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+          memberTrend.push({
+            month: monthEnd.toLocaleString('default', { month: 'short' }),
+            value: 0
+          });
+        }
+
+        const gymTrend = [];
+        for (let i = months - 1; i >= 0; i--) {
+          const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+          
+          const newGyms = allGyms.filter(g => {
+            const createdAt = g.created_at ? new Date(g.created_at) : null;
+            return createdAt && createdAt >= monthStart && createdAt <= monthEnd;
+          }).length;
+
+          const totalToDate = allGyms.filter(g => {
+            const createdAt = g.created_at ? new Date(g.created_at) : null;
+            return createdAt && createdAt <= monthEnd;
+          }).length;
+
+          gymTrend.push({
+            month: monthStart.toLocaleString('default', { month: 'short' }),
+            newGyms,
+            totalGyms: totalToDate
+          });
+        }
+
+        return res.json({
+          revenueTrend,
+          memberTrend,
+          gymTrend
+        });
+      }
 
       // Revenue trend
       const revenueTrend = [];
@@ -6391,6 +6572,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
+      
+      if (!isDbAvailable()) {
+        const notifications = await supabaseRepo.getNotifications(userId);
+        return res.json(notifications);
+      }
+      
       const notifications = await db!.select()
         .from(schema.notifications)
         .where(eq(schema.notifications.userId, userId))
@@ -6408,6 +6595,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/notifications/unread-count', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
+      
+      if (!isDbAvailable()) {
+        const count = await supabaseRepo.getUnreadNotificationCount(userId);
+        return res.json({ count });
+      }
+      
       const result = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.notifications)
         .where(and(
@@ -6426,6 +6619,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/notifications/:id/read', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
+      
+      if (!isDbAvailable()) {
+        const success = await supabaseRepo.markNotificationAsRead(req.params.id, userId);
+        if (!success) {
+          return res.status(404).json({ error: 'Notification not found' });
+        }
+        return res.json({ success: true });
+      }
+      
       const notification = await db!.select()
         .from(schema.notifications)
         .where(and(
@@ -6454,6 +6656,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/notifications/mark-all-read', requireAuth, async (req, res) => {
     try {
       const userId = req.session!.userId!;
+      
+      if (!isDbAvailable()) {
+        await supabaseRepo.markAllNotificationsAsRead(userId);
+        return res.json({ success: true });
+      }
+      
       await db!.update(schema.notifications)
         .set({ isRead: 1 })
         .where(eq(schema.notifications.userId, userId));
