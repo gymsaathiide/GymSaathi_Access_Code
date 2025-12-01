@@ -292,9 +292,9 @@ export default function MemberStore() {
                           <p className="font-bold text-lg">₹{parseFloat(order.totalAmount).toFixed(2)}</p>
                           <div className="flex gap-2">
                             <Badge variant={
-                              order.status === 'completed' || order.status === 'delivered' ? 'default' :
+                              order.status === 'delivered' ? 'default' :
                               order.status === 'cancelled' ? 'destructive' :
-                              order.status === 'confirmed' || order.status === 'packed' ? 'default' :
+                              order.status === 'confirmed' || order.status === 'packed' || order.status === 'shipped' ? 'default' :
                               'secondary'
                             }>
                               {order.status}
@@ -338,9 +338,14 @@ export default function MemberStore() {
                           Your order is packed and ready for pickup at the gym!
                         </p>
                       )}
-                      {order.status === 'completed' && (
+                      {order.status === 'shipped' && (
+                        <p className="text-sm text-blue-600 mt-3">
+                          Your order has been shipped and is on its way!
+                        </p>
+                      )}
+                      {order.status === 'delivered' && (
                         <p className="text-sm text-green-600 mt-3">
-                          Order completed. Thank you for your purchase!
+                          Order delivered. Thank you for your purchase!
                         </p>
                       )}
                     </div>

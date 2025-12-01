@@ -387,7 +387,6 @@ export default function Shop() {
       case "shipped":
         return "default";
       case "delivered":
-      case "completed":
         return "default";
       case "cancelled":
         return "destructive";
@@ -950,7 +949,8 @@ export default function Shop() {
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="packed">Packed</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="shipped">Shipped</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
@@ -1044,8 +1044,9 @@ export default function Shop() {
                                   Confirmed
                                 </SelectItem>
                                 <SelectItem value="packed">Packed</SelectItem>
-                                <SelectItem value="completed">
-                                  Completed
+                                <SelectItem value="shipped">Shipped</SelectItem>
+                                <SelectItem value="delivered">
+                                  Delivered
                                 </SelectItem>
                                 <SelectItem value="cancelled">
                                   Cancelled
