@@ -230,16 +230,16 @@ export default function Billing() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold" data-testid="text-billing-title">Billing Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold" data-testid="text-billing-title">Billing Management</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Track member payments and invoices
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-full sm:w-36">
               <SelectValue placeholder="Date Range" />
             </SelectTrigger>
             <SelectContent>
@@ -249,15 +249,16 @@ export default function Billing() {
             </SelectContent>
           </Select>
           {canEdit && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button data-testid="button-generate-invoice">
+                  <Button data-testid="button-generate-invoice" className="w-full sm:w-auto">
                     <FileText className="mr-2 h-4 w-4" />
-                    Generate Invoice
+                    <span className="hidden sm:inline">Generate Invoice</span>
+                    <span className="sm:hidden">Invoice</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Generate Invoice</DialogTitle>
                   </DialogHeader>
@@ -267,12 +268,13 @@ export default function Billing() {
 
               <Dialog open={isPaymentDialogOpen} onOpenChange={handleClosePaymentDialog}>
                 <DialogTrigger asChild>
-                  <Button data-testid="button-record-payment">
+                  <Button data-testid="button-record-payment" className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
-                    Record Payment
+                    <span className="hidden sm:inline">Record Payment</span>
+                    <span className="sm:hidden">Payment</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{editingPayment ? 'Edit Payment' : 'Record Payment'}</DialogTitle>
                   </DialogHeader>
@@ -490,10 +492,10 @@ export default function Billing() {
         <TabsContent value="payments" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <CardTitle>Payment History</CardTitle>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative w-64">
+                <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2">
+                  <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Search payments..."
@@ -504,7 +506,7 @@ export default function Billing() {
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-36" data-testid="select-status-filter">
+                    <SelectTrigger className="w-full sm:w-36" data-testid="select-status-filter">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -517,7 +519,7 @@ export default function Billing() {
                     </SelectContent>
                   </Select>
                   <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
-                    <SelectTrigger className="w-32" data-testid="select-payment-type-filter">
+                    <SelectTrigger className="w-full sm:w-32" data-testid="select-payment-type-filter">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -532,8 +534,8 @@ export default function Billing() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Table>
+            <CardContent className="overflow-x-auto">
+              <Table className="min-w-[700px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Member</TableHead>
@@ -613,10 +615,10 @@ export default function Billing() {
         <TabsContent value="invoices" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <CardTitle>Invoices</CardTitle>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative w-64">
+                <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2">
+                  <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Search invoices..."
@@ -627,7 +629,7 @@ export default function Billing() {
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-32" data-testid="select-invoice-status-filter">
+                    <SelectTrigger className="w-full sm:w-32" data-testid="select-invoice-status-filter">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -640,8 +642,8 @@ export default function Billing() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Table>
+            <CardContent className="overflow-x-auto">
+              <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice #</TableHead>

@@ -241,10 +241,10 @@ export default function Classes() {
               <CardTitle>Class Schedule</CardTitle>
               <CardDescription>Browse and manage upcoming classes</CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
               <Select value={filterClassType} onValueChange={setFilterClassType}>
-                <SelectTrigger className="w-[180px]" data-testid="select-filter-class-type">
-                  <SelectValue placeholder="All Class Types" />
+                <SelectTrigger className="w-full sm:w-[140px]" data-testid="select-filter-class-type">
+                  <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Class Types</SelectItem>
@@ -257,7 +257,7 @@ export default function Classes() {
               </Select>
 
               <Select value={filterTrainer} onValueChange={setFilterTrainer}>
-                <SelectTrigger className="w-[180px]" data-testid="select-filter-trainer">
+                <SelectTrigger className="w-full sm:w-[140px]" data-testid="select-filter-trainer">
                   <SelectValue placeholder="All Trainers" />
                 </SelectTrigger>
                 <SelectContent>
@@ -271,7 +271,7 @@ export default function Classes() {
               </Select>
 
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[180px]" data-testid="select-filter-status">
+                <SelectTrigger className="w-full sm:w-[140px]" data-testid="select-filter-status">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>

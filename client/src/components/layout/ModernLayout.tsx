@@ -32,7 +32,7 @@ export function ModernLayout({ children }: ModernLayoutProps) {
     };
   }, [mobileMenuOpen]);
 
-  const showMobileNav = user?.role === 'admin' || user?.role === 'trainer';
+  const showMobileNav = user?.role === 'admin' || user?.role === 'trainer' || user?.role === 'member';
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
@@ -58,6 +58,7 @@ export function ModernLayout({ children }: ModernLayoutProps) {
           <MobileBottomNav 
             currentPath={location}
             onNavigate={(path) => navigate(path)}
+            userRole={user?.role}
           />
         )}
       </div>
