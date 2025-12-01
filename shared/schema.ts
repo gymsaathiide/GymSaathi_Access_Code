@@ -181,6 +181,24 @@ export const insertGymAdminSchema = createInsertSchema(gymAdmins).omit({ id: tru
 export type InsertGymAdmin = z.infer<typeof insertGymAdminSchema>;
 export type GymAdmin = typeof gymAdmins.$inferSelect;
 
+// Admin Payment Details - stores admin's UPI/bank details for receiving payments
+export const adminPaymentDetails = pgTable("admin_payment_details", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  adminId: uuid("admin_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  gymId: uuid("gym_id").references(() => gyms.id, { onDelete: "cascade" }).notNull(),
+  qrUrl: text("qr_url"),
+  upiId: text("upi_id"),
+  bankAccountNumber: text("bank_account_number"),
+  ifscCode: text("ifsc_code"),
+  holderName: text("holder_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAdminPaymentDetailsSchema = createInsertSchema(adminPaymentDetails).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAdminPaymentDetails = z.infer<typeof insertAdminPaymentDetailsSchema>;
+export type AdminPaymentDetails = typeof adminPaymentDetails.$inferSelect;
+
 // Membership Plans
 export const membershipPlans = pgTable("membership_plans", {
   id: uuid("id").primaryKey().defaultRandom(),
