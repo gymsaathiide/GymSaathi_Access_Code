@@ -5,9 +5,11 @@ import * as schema from '../shared/schema';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const connectionString = process.env.DATABASE_URL;
 
 export let supabase: SupabaseClient | null = null;
+export let supabaseAdmin: SupabaseClient | null = null;
 export let db: NodePgDatabase<typeof schema> | null = null;
 export let pool: Pool | null = null;
 
@@ -17,6 +19,11 @@ if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
   useSupabaseClient = true;
   console.log('✅ Supabase client initialized');
+}
+
+if (supabaseUrl && supabaseServiceRoleKey) {
+  supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+  console.log('✅ Supabase admin client initialized (for storage)');
 }
 
 if (connectionString) {

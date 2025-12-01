@@ -7,7 +7,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { insertMemberSchema, insertPaymentSchema, insertInvoiceSchema, insertLeadSchema, insertProductSchema, insertOrderSchema, insertClassSchema, insertClassTypeSchema, insertClassBookingSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { db } from "./db";
+import { db, supabaseAdmin } from "./db";
 import { eq, and, desc, asc, sql, gte, lte, lt, or, like, isNull, inArray } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendPaymentDetailsEmail, sendPaymentReminderEmail, sendNewBranchNotificationEmail } from "./services/emailService";
@@ -6864,11 +6864,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let qrUrl: string;
 
-      // Try to upload to Supabase storage
-      if (supabase) {
+      // Try to upload to Supabase storage using admin client (service role key)
+      if (supabaseAdmin) {
         try {
-          // Upload to Supabase storage
-          const { data, error } = await supabase.storage
+          // Upload to Supabase storage with service role key
+          const { data, error } = await supabaseAdmin.storage
             .from('payment-qr-codes')
             .upload(fileName, buffer, {
               contentType: `image/${imageType}`,
@@ -6878,8 +6878,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (error) {
             // If bucket doesn't exist, create it and retry
             if (error.message.includes('Bucket not found') || error.message.includes('not found')) {
-              console.log('[qr-upload] Bucket not found, attempting to create...');
-              const { error: createError } = await supabase.storage.createBucket('payment-qr-codes', {
+              console.log('[qr-upload] Bucket not found, creating with service role key...');
+              const { error: createError } = await supabaseAdmin.storage.createBucket('payment-qr-codes', {
                 public: true,
                 fileSizeLimit: 2 * 1024 * 1024,
               });
@@ -6888,9 +6888,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.error('[qr-upload] Failed to create bucket:', createError);
                 throw createError;
               }
+              console.log('[qr-upload] Bucket created successfully');
 
               // Retry upload
-              const { data: retryData, error: retryError } = await supabase.storage
+              const { data: retryData, error: retryError } = await supabaseAdmin.storage
                 .from('payment-qr-codes')
                 .upload(fileName, buffer, {
                   contentType: `image/${imageType}`,
@@ -6901,25 +6902,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.error('[qr-upload] Retry upload failed:', retryError);
                 throw retryError;
               }
+              console.log('[qr-upload] Upload succeeded after bucket creation');
             } else {
+              console.error('[qr-upload] Upload error:', error.message);
               throw error;
             }
           }
 
           // Get public URL
-          const { data: urlData } = supabase.storage
+          const { data: urlData } = supabaseAdmin.storage
             .from('payment-qr-codes')
             .getPublicUrl(fileName);
 
           qrUrl = urlData.publicUrl;
-          console.log(`[qr-upload] Uploaded to Supabase storage: ${qrUrl}`);
+          console.log(`[qr-upload] ✅ Uploaded to Supabase storage: ${qrUrl}`);
         } catch (storageError: any) {
-          console.error('[qr-upload] Supabase storage failed, falling back to base64:', storageError.message);
+          console.error('[qr-upload] ❌ Supabase storage failed, falling back to base64:', storageError.message);
           // Fall back to base64 storage
           qrUrl = base64Image;
         }
       } else {
-        // No Supabase client, use base64 storage
+        console.log('[qr-upload] ⚠️ No Supabase admin client available, using base64 storage');
+        // No Supabase admin client, use base64 storage
         qrUrl = base64Image;
       }
 
