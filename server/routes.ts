@@ -3778,16 +3778,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         members = (memberData || []).map(m => ({ id: m.id, name: m.name, email: m.email, phone: m.phone, type: 'member' }));
         leads = (leadData || []).map(l => ({ id: l.id, name: l.name, email: l.email, phone: l.phone, status: l.status, type: 'lead' }));
       } else {
-        // Use Drizzle when available
+        // Use Drizzle with raw SQL for ILIKE (PostgreSQL case-insensitive search)
         const memberResults = await db!.select()
           .from(schema.members)
           .where(and(
             eq(schema.members.gymId, gymId),
-            or(
-              like(sql`LOWER(${schema.members.name})`, searchPattern),
-              like(sql`LOWER(${schema.members.email})`, searchPattern),
-              like(schema.members.phone, searchPattern)
-            )
+            sql`(${schema.members.name} ILIKE ${searchPattern} OR ${schema.members.email} ILIKE ${searchPattern} OR ${schema.members.phone} ILIKE ${searchPattern})`
           ))
           .limit(5);
 
@@ -3795,11 +3791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(schema.leads)
           .where(and(
             eq(schema.leads.gymId, gymId),
-            or(
-              like(sql`LOWER(${schema.leads.name})`, searchPattern),
-              like(sql`LOWER(${schema.leads.email})`, searchPattern),
-              like(schema.leads.phone, searchPattern)
-            )
+            sql`(${schema.leads.name} ILIKE ${searchPattern} OR ${schema.leads.email} ILIKE ${searchPattern} OR ${schema.leads.phone} ILIKE ${searchPattern})`
           ))
           .limit(5);
 
