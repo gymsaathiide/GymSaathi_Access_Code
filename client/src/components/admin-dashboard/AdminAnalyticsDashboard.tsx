@@ -208,7 +208,7 @@ function MonthlyRevenueChart() {
 
   if (isLoading) {
     return (
-      <Card className="bg-card-dark border-white/5 col-span-2">
+      <Card className="bg-card-dark border-white/5 md:col-span-2">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
             <IndianRupee className="h-4 w-4 text-green-500" />
@@ -224,7 +224,7 @@ function MonthlyRevenueChart() {
 
   if (!revenueTrend || revenueTrend.length === 0) {
     return (
-      <Card className="bg-card-dark border-white/5 col-span-2">
+      <Card className="bg-card-dark border-white/5 md:col-span-2">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
             <IndianRupee className="h-4 w-4 text-green-500" />
@@ -243,12 +243,12 @@ function MonthlyRevenueChart() {
   const avgRevenue = totalCollected / revenueTrend.length;
 
   return (
-    <Card className="bg-card-dark border-white/5 col-span-2">
+    <Card className="bg-card-dark border-white/5 md:col-span-2">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="text-sm font-medium text-white/60 flex items-center gap-2">
             <IndianRupee className="h-4 w-4 text-green-500" />
-            Monthly Revenue (Last 6 Months)
+            <span className="truncate">Monthly Revenue (Last 6 Months)</span>
           </CardTitle>
           <div className="flex gap-4 text-right">
             <div>

@@ -161,16 +161,30 @@ export default function MemberStore() {
       return;
     }
 
+    const memberId = memberData?.member?.id;
+    if (!memberId) {
+      toast({
+        title: "Error",
+        description: "Unable to identify member. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createOrderMutation.mutate({
-      memberId: memberData?.member?.id,
-      memberName: memberData?.member?.name || user?.name,
-      subtotal: cartTotal,
-      taxAmount: taxAmount,
-      totalAmount,
+      memberId: memberId,
+      subtotal: Number(cartTotal) || 0,
+      taxAmount: Number(taxAmount) || 0,
+      totalAmount: Number(totalAmount) || 0,
       status: "pending",
       paymentType: selectedPaymentMethod,
       paymentStatus: "unpaid",
-      items: cart,
+      items: cart.map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: Number(item.price) || 0,
+      })),
     });
   };
 

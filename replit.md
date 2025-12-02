@@ -116,3 +116,23 @@ Fixed 23 TypeScript errors in `server/storage.ts` caused by references to non-ex
 - **Classes table**: Removed `name`, `description`, `location`; added `notes` (matches actual schema)
 - **Null date handling**: Added null check for `checkInTime` in attendance auto-checkout logic (line 2369)
 - **Safe migration strategy**: Fixed by removing phantom column references in storage.ts rather than adding schema columns, avoiding database migrations
+
+## Order Placement Fix (December 2025)
+Fixed validation error when placing orders:
+- **Shop.tsx**: Fixed `handleCheckout` to include all required fields: `memberId`, `subtotal`, `totalAmount`, and proper item format with `productName` and `price` (was using `unitPrice`)
+- **MemberStore.tsx**: Enhanced checkout to validate member ID and convert all numeric fields to `Number()` type
+- **OrderForm.tsx**: Added `subtotal` and `paymentStatus` to payload, ensured items have proper format
+- **Error**: Was sending `unitPrice` instead of `price`, missing `productName`, `memberId`, `subtotal`, `totalAmount`
+
+## Trainer RBAC - Order Creation (December 2025)
+Restricted trainers from creating orders:
+- **Backend**: Added role check in `POST /api/orders` endpoint - returns 403 error for trainers
+- **Frontend Shop.tsx**: Hidden "Create Order" button for trainers, disabled checkout button with clear message
+- **Frontend Shop.tsx**: Added trainer check in `handleCheckout` with user-friendly toast message
+- **Policy**: Trainers can view orders and products but cannot place orders - must contact admin
+
+## Analytics Dashboard Mobile Fix (December 2025)
+Fixed mobile rendering for AdminAnalyticsDashboard:
+- **MonthlyRevenueChart**: Changed `col-span-2` to `md:col-span-2` so it displays correctly on mobile (single column)
+- **Header layout**: Added `flex-col sm:flex-row` for stacked layout on mobile
+- **Title truncation**: Added `truncate` class for long titles on small screens

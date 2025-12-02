@@ -195,14 +195,56 @@ export default function Shop() {
   });
 
   const handleCheckout = () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      toast({
+        title: "Cart is Empty",
+        description: "Please add items to cart before checkout",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Trainers cannot create orders
+    if (user?.role === "trainer") {
+      toast({
+        title: "Not Allowed",
+        description: "Trainers cannot place orders. Please contact an admin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Get member ID from member data or user context
+    const memberId = memberData?.member?.id;
+    if (!memberId) {
+      toast({
+        title: "Error",
+        description: "Unable to identify member. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Calculate totals
+    const subtotal = cartTotal;
+    const taxRate = storeSettings?.defaultTaxPercent ? parseFloat(storeSettings.defaultTaxPercent) : 0;
+    const taxAmount = (subtotal * taxRate) / 100;
+    const total = subtotal + taxAmount;
+
     createOrderFromCartMutation.mutate({
+      memberId: memberId,
+      subtotal: subtotal,
+      taxAmount: taxAmount,
+      totalAmount: total,
+      status: "pending",
+      paymentType: selectedPaymentMethod,
+      paymentStatus: "unpaid",
       items: cart.map((item) => ({
         productId: item.productId,
+        productName: item.productName,
         quantity: item.quantity,
-        unitPrice: item.price,
+        price: Number(item.price) || 0,
       })),
-      paymentMethod: selectedPaymentMethod,
     });
   };
 
@@ -213,6 +255,18 @@ export default function Shop() {
 
   const { data: storeSettings } = useQuery<any>({
     queryKey: ["/api/store-settings"],
+  });
+
+  // Get member data for store mode (needed for checkout)
+  const { data: memberData } = useQuery<any>({
+    queryKey: ["/api/me"],
+    enabled: !!user,
+  });
+
+  // Get members list for admin/trainer to select member when creating orders
+  const { data: members = [] } = useQuery<any[]>({
+    queryKey: ["/api/members"],
+    enabled: user?.role === "admin" || user?.role === "trainer",
   });
 
   // Mobile store filtered products (active only, with search and category)
@@ -709,8 +763,14 @@ export default function Shop() {
                       <SelectItem value="card">Card</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button className="w-full" size="lg" onClick={handleCheckout} disabled={createOrderFromCartMutation.isPending}>
-                    {createOrderFromCartMutation.isPending ? "Placing Order..." : "Place Order"}
+                  <Button 
+                    className="w-full" 
+                    size="lg" 
+                    onClick={handleCheckout} 
+                    disabled={createOrderFromCartMutation.isPending || user?.role === "trainer"}
+                  >
+                    {createOrderFromCartMutation.isPending ? "Placing Order..." : 
+                     user?.role === "trainer" ? "Trainers Cannot Place Orders" : "Place Order"}
                   </Button>
                 </div>
               </div>
@@ -788,7 +848,7 @@ export default function Shop() {
               Add Product
             </Button>
           )}
-          {activeTab === "orders" && (
+          {activeTab === "orders" && user?.role === "admin" && (
             <Button
               onClick={() => setOrderFormOpen(true)}
               data-testid="button-create-order"

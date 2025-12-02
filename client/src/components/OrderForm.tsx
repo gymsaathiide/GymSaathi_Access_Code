@@ -130,9 +130,16 @@ export function OrderForm({ open, onClose, onSubmit, isPending }: OrderFormProps
 
     const payload = {
       memberId: data.memberId,
-      totalAmount,
+      subtotal: totalAmount,
+      totalAmount: totalAmount,
       status: data.status,
-      items: orderItems,
+      paymentStatus: "unpaid",
+      items: orderItems.map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: Number(item.price) || 0,
+      })),
     };
 
     onSubmit(payload);

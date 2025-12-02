@@ -5174,6 +5174,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
+      // Trainers cannot create orders - only admins and members can
+      if (user.role === 'trainer') {
+        return res.status(403).json({ error: 'Trainers are not allowed to create orders. Please contact an admin.' });
+      }
+
       const validationResult = createOrderSchema.safeParse(req.body);
       if (!validationResult.success) {
         const validationError = fromZodError(validationResult.error);
