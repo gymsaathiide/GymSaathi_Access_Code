@@ -165,3 +165,11 @@ Admin dashboard revenue graph now updates after orders:
 - **Query invalidation**: Order placement invalidates `/api/billing/revenue-trend` cache
 - **Auto-refresh**: Revenue chart refreshes every 60 seconds
 - **Stale time**: 30-second stale time for optimal performance
+
+## Cart & Toast System Hardening (December 2025)
+Additional fixes for cart persistence and toast system robustness:
+- **Browser safety**: All localStorage accesses (load, save, clearCart) wrapped in `isBrowser()` guard to prevent SSR errors
+- **Price validation**: Added parseFloat with isNaN check before adding items to cart in both Shop.tsx and MemberStore.tsx
+- **Invalid price handling**: Shows error toast if product price is invalid or negative
+- **Toast timeout cleanup**: REMOVE_TOAST action clears both toastTimeouts and autoDismissTimeouts to prevent memory leaks
+- **Query key consistency**: All revenue trend invalidations use `/api/billing/revenue-trend` key
