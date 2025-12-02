@@ -27,7 +27,6 @@ import {
   CartesianGrid
 } from 'recharts';
 import { cn } from '@/lib/utils';
-import { ModernLayout } from '@/components/layout/ModernLayout';
 import { useLocation } from 'wouter';
 
 interface ShopRevenueData {
@@ -393,77 +392,75 @@ export default function ShopRevenueDashboard() {
   };
 
   return (
-    <ModernLayout>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Shop Orders Revenue</h1>
-            <p className="text-white/60 text-sm mt-1">Track your shop sales and revenue performance</p>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isFetching}
-            className="border-white/10 text-white hover:bg-white/10 self-start sm:self-auto"
-          >
-            <RefreshCw className={cn("h-4 w-4 mr-2", isFetching && "animate-spin")} />
-            Refresh
-          </Button>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Shop Orders Revenue</h1>
+          <p className="text-white/60 text-sm mt-1">Track your shop sales and revenue performance</p>
         </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard
-            title="Today's Revenue"
-            value={formatCurrency(data?.todayRevenue || 0)}
-            icon={IndianRupee}
-            iconColor="text-green-500"
-          />
-          <StatCard
-            title="Monthly Revenue"
-            value={formatCurrency(data?.monthlyRevenue || 0)}
-            subtitle="This month"
-            icon={Calendar}
-            iconColor="text-blue-500"
-          />
-          <StatCard
-            title="Total Orders"
-            value={data?.ordersCount || 0}
-            subtitle={`₹${(data?.avgOrderValue || 0).toFixed(0)} avg`}
-            icon={ShoppingCart}
-            iconColor="text-orange-500"
-          />
-          <StatCard
-            title="Avg Order Value"
-            value={formatCurrency(data?.avgOrderValue || 0)}
-            icon={TrendingUp}
-            iconColor="text-purple-500"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {periodOptions.map((option) => (
-            <Button
-              key={option.value}
-              variant={selectedPeriod === option.value ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedPeriod(option.value)}
-              className={cn(
-                "text-xs sm:text-sm",
-                selectedPeriod === option.value 
-                  ? 'bg-orange-500 hover:bg-orange-600 text-white' 
-                  : 'border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
-              )}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
-
-        <RevenueGraph data={data?.graphData || []} isLoading={isLoading} />
-
-        <RecentOrdersTable orders={data?.recentOrders || []} isLoading={isLoading} />
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isFetching}
+          className="border-white/10 text-white hover:bg-white/10 self-start sm:self-auto"
+        >
+          <RefreshCw className={cn("h-4 w-4 mr-2", isFetching && "animate-spin")} />
+          Refresh
+        </Button>
       </div>
-    </ModernLayout>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard
+          title="Today's Revenue"
+          value={formatCurrency(data?.todayRevenue || 0)}
+          icon={IndianRupee}
+          iconColor="text-green-500"
+        />
+        <StatCard
+          title="Monthly Revenue"
+          value={formatCurrency(data?.monthlyRevenue || 0)}
+          subtitle="This month"
+          icon={Calendar}
+          iconColor="text-blue-500"
+        />
+        <StatCard
+          title="Total Orders"
+          value={data?.ordersCount || 0}
+          subtitle={`₹${(data?.avgOrderValue || 0).toFixed(0)} avg`}
+          icon={ShoppingCart}
+          iconColor="text-orange-500"
+        />
+        <StatCard
+          title="Avg Order Value"
+          value={formatCurrency(data?.avgOrderValue || 0)}
+          icon={TrendingUp}
+          iconColor="text-purple-500"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {periodOptions.map((option) => (
+          <Button
+            key={option.value}
+            variant={selectedPeriod === option.value ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedPeriod(option.value)}
+            className={cn(
+              "text-xs sm:text-sm",
+              selectedPeriod === option.value 
+                ? 'bg-orange-500 hover:bg-orange-600 text-white' 
+                : 'border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+            )}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+
+      <RevenueGraph data={data?.graphData || []} isLoading={isLoading} />
+
+      <RecentOrdersTable orders={data?.recentOrders || []} isLoading={isLoading} />
+    </div>
   );
 }
