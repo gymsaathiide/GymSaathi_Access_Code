@@ -33,7 +33,6 @@ The platform features a modern dark theme with navy backgrounds, white/5% opacit
 -   **QR Attendance System**: Member check-in/check-out via QR codes with admin controls.
 -   **Public Enquiry Form System**: Gym-branded forms for lead generation with email/WhatsApp notifications and anti-spam.
 -   **Trainer Management System**: CRUD operations for trainers, role management, and a dedicated dashboard.
--   **Branch Management System**: Allows superadmins to create and manage multiple gym branches.
 -   **Quick Action Dropdown**: Provides quick access for admins to manage payment details (UPI QR, bank details) and access a 24/7 helpdesk.
 -   **Cart Persistence System**: Cart state persists across page refreshes using local storage, user-specific, and clears on logout.
 -   **Order Notification System**: Comprehensive notifications for members (WhatsApp, Email, In-App) and admins (In-App) upon order creation.

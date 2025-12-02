@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -9,21 +7,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface Branch {
-  id: string;
-  name: string;
-  isMain: boolean;
-  address?: string;
-  phone?: string;
-}
-
 interface DashboardHeaderProps {
   gymName: string;
   userName: string;
   userAvatar?: string;
-  branches?: string[];
-  selectedBranch?: string;
-  onBranchChange?: (branch: string) => void;
   periods?: string[];
   selectedPeriod?: string;
   onPeriodChange?: (period: string) => void;
@@ -35,9 +22,6 @@ export function DashboardHeader({
   gymName,
   userName,
   userAvatar,
-  branches = ['Main Branch'],
-  selectedBranch = 'Main Branch',
-  onBranchChange,
   periods = ['This Month', 'Last Month', 'This Week', 'Today'],
   selectedPeriod = 'This Month',
   onPeriodChange,
@@ -84,53 +68,8 @@ export function FilterBar({
   selectedPeriod = 'This Month',
   onPeriodChange,
 }: FilterBarProps) {
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-
-  const { data: branches = [] } = useQuery<Branch[]>({
-    queryKey: ['/api/branches'],
-    refetchInterval: 30000,
-  });
-
-  const selectedBranch = branches.find(b => b.id === selectedBranchId) || branches.find(b => b.isMain) || branches[0];
-  const displayBranchName = selectedBranch?.isMain ? 'Main Branch' : selectedBranch?.name || 'Main Branch';
-
-  const handleBranchSelect = (branch: Branch) => {
-    setSelectedBranchId(branch.id);
-  };
-
   return (
     <div className="flex flex-wrap gap-3 px-4 md:px-6 pb-4">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="branch-selector flex items-center gap-2">
-            {displayBranchName}
-            <ChevronDown className="h-4 w-4 opacity-70" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56 bg-slate-900 border-white/10">
-          {branches.length > 0 ? (
-            branches.map((branch) => (
-              <DropdownMenuItem
-                key={branch.id}
-                onClick={() => handleBranchSelect(branch)}
-                className={`text-white hover:bg-white/10 ${branch.id === selectedBranch?.id ? 'bg-white/10' : ''}`}
-              >
-                <div className="flex flex-col">
-                  <span>{branch.isMain ? 'Main Branch' : branch.name}</span>
-                  {branch.address && (
-                    <span className="text-xs text-white/50 truncate max-w-[200px]">{branch.address}</span>
-                  )}
-                </div>
-              </DropdownMenuItem>
-            ))
-          ) : (
-            <DropdownMenuItem disabled className="text-white/50">
-              No branches found
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="period-selector flex items-center gap-2">
