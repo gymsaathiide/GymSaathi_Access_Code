@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,27 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart, Plus, Minus, Trash2, Search, ShoppingBag, Package, Eye } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Search, ShoppingBag, Package, Eye, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format } from "date-fns";
 
-interface CartItem {
-  productId: string;
-  productName: string;
-  price: number;
-  quantity: number;
-  stock: number;
-  image?: string;
-}
-
 export default function MemberStore() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { cart, addToCart: contextAddToCart, updateQuantity, removeFromCart, clearCart, cartTotal, cartItemCount } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("cash");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -61,20 +52,23 @@ export default function MemberStore() {
 
   const createOrderMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/orders", data),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      setCart([]);
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/revenue-trend"] });
+      clearCart();
       setIsCartOpen(false);
       toast({
         title: "Order Placed Successfully!",
-        description: "Visit the gym to collect your order and pay at the counter.",
+        description: `Order #${response.orderNumber || 'NEW'} has been placed. Visit the gym to collect your order and pay at the counter.`,
+        duration: 5000,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to place order",
+        title: "Order Failed",
+        description: error.message || "We couldn't place your order. Please try again.",
         variant: "destructive",
+        duration: 4000,
       });
     },
   });
@@ -94,58 +88,25 @@ export default function MemberStore() {
     });
 
   const addToCart = (product: any) => {
-    const existingItem = cart.find((item) => item.productId === product.id);
-    if (existingItem) {
-      if (existingItem.quantity < product.stock) {
-        setCart(cart.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        ));
-        toast({
-          title: "Added to Cart",
-          description: `${product.name} quantity updated`,
-        });
-      } else {
-        toast({
-          title: "Out of Stock",
-          description: "Cannot add more than available stock",
-          variant: "destructive",
-        });
-      }
-    } else {
-      setCart([...cart, {
-        productId: product.id,
-        productName: product.name,
-        price: product.discountPrice || product.price,
-        quantity: 1,
-        stock: product.stock,
-        image: product.imageUrl,
-      }]);
+    const rawPrice = product.discountPrice || product.price;
+    const price = parseFloat(rawPrice);
+    if (isNaN(price) || price < 0) {
       toast({
-        title: "Added to Cart",
-        description: `${product.name} added to your cart`,
+        title: "Error",
+        description: "Invalid product price. Please try again.",
+        variant: "destructive",
       });
+      return;
     }
+    contextAddToCart({
+      productId: product.id,
+      productName: product.name,
+      price: price,
+      stock: product.stock,
+      image: product.imageUrl,
+    });
   };
 
-  const updateQuantity = (productId: string, delta: number) => {
-    setCart(cart.map((item) => {
-      if (item.productId === productId) {
-        const newQuantity = item.quantity + delta;
-        if (newQuantity > 0 && newQuantity <= item.stock) {
-          return { ...item, quantity: newQuantity };
-        }
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
-  };
-
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter((item) => item.productId !== productId));
-  };
-
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const taxAmount = settings?.defaultTaxPercent 
     ? (cartTotal * parseFloat(settings.defaultTaxPercent)) / 100 
     : 0;
@@ -187,8 +148,6 @@ export default function MemberStore() {
       })),
     });
   };
-
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-6">

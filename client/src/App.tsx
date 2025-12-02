@@ -6,6 +6,7 @@ import { ThemeProvider } from './components/theme-provider';
 import { Toaster } from './components/ui/toaster';
 import { ModernLayout } from './components/layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
@@ -194,8 +195,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light">
         <AuthProvider>
-          <AppContent />
-          <Toaster />
+          <CartProvider>
+            <AppContent />
+            <Toaster />
+          </CartProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

@@ -5,14 +5,16 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 3
+const TOAST_REMOVE_DELAY = 300
+const DEFAULT_TOAST_DURATION = 2000
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  duration?: number
 }
 
 const actionTypes = {
@@ -114,10 +116,22 @@ export const reducer = (state: State, action: Action): State => {
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
+        toastTimeouts.forEach((timeout) => clearTimeout(timeout))
+        toastTimeouts.clear()
+        autoDismissTimeouts.forEach((timeout) => clearTimeout(timeout))
+        autoDismissTimeouts.clear()
         return {
           ...state,
           toasts: [],
         }
+      }
+      if (toastTimeouts.has(action.toastId)) {
+        clearTimeout(toastTimeouts.get(action.toastId))
+        toastTimeouts.delete(action.toastId)
+      }
+      if (autoDismissTimeouts.has(action.toastId)) {
+        clearTimeout(autoDismissTimeouts.get(action.toastId))
+        autoDismissTimeouts.delete(action.toastId)
       }
       return {
         ...state,
@@ -139,7 +153,9 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+const autoDismissTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+function toast({ duration = DEFAULT_TOAST_DURATION, ...props }: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -147,7 +163,13 @@ function toast({ ...props }: Toast) {
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+  const dismiss = () => {
+    if (autoDismissTimeouts.has(id)) {
+      clearTimeout(autoDismissTimeouts.get(id))
+      autoDismissTimeouts.delete(id)
+    }
+    dispatch({ type: "DISMISS_TOAST", toastId: id })
+  }
 
   dispatch({
     type: "ADD_TOAST",
@@ -155,11 +177,20 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
+      duration,
       onOpenChange: (open) => {
         if (!open) dismiss()
       },
     },
   })
+
+  if (duration > 0) {
+    const timeout = setTimeout(() => {
+      autoDismissTimeouts.delete(id)
+      dismiss()
+    }, duration)
+    autoDismissTimeouts.set(id, timeout)
+  }
 
   return {
     id: id,

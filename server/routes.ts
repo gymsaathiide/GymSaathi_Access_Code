@@ -5201,6 +5201,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentStatus: validationResult.data.paymentStatus || 'unpaid',
       });
 
+      // Create admin notifications for new order (non-blocking)
+      try {
+        const adminUserIds = await supabaseRepo.getGymAdminUserIds(user.gymId);
+        const memberInfo = await storage.getMemberById(validationResult.data.memberId);
+        const memberName = memberInfo?.name || 'A member';
+        const orderTotal = validationResult.data.totalAmount.toFixed(2);
+        
+        for (const adminUserId of adminUserIds) {
+          await supabaseRepo.createNotification({
+            userId: adminUserId,
+            title: 'New Shop Order',
+            message: `${memberName} placed an order #${orderNumber} for ₹${orderTotal}`,
+            type: 'info',
+          });
+        }
+        console.log(`✅ Sent order notifications to ${adminUserIds.length} admin(s)`);
+      } catch (notifyError) {
+        console.error('Error sending order notifications (non-critical):', notifyError);
+      }
+
       res.status(201).json(order);
     } catch (error: any) {
       console.error('Error creating order:', error);

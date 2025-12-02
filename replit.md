@@ -136,3 +136,32 @@ Fixed mobile rendering for AdminAnalyticsDashboard:
 - **MonthlyRevenueChart**: Changed `col-span-2` to `md:col-span-2` so it displays correctly on mobile (single column)
 - **Header layout**: Added `flex-col sm:flex-row` for stacked layout on mobile
 - **Title truncation**: Added `truncate` class for long titles on small screens
+
+## Cart Persistence System (December 2025)
+Implemented cart persistence that survives page refresh:
+- **CartContext**: New context provider (`client/src/contexts/CartContext.tsx`) manages cart state globally
+- **localStorage**: Cart automatically saved to localStorage with user-specific keys (`gymsaathi_cart_{userId}`)
+- **User-aware**: Cart persists per user, clears on logout
+- **Error handling**: Safe JSON parsing with fallback to empty cart
+- **Integration**: Both Shop.tsx and MemberStore.tsx now use shared CartContext
+
+## Enhanced Toast Notification System (December 2025)
+Improved toast notifications for better UX:
+- **Auto-dismiss**: Toasts now auto-dismiss after 2 seconds (was 16+ minutes)
+- **Duration control**: Added `duration` prop support for custom timing
+- **Multiple toasts**: Increased limit from 1 to 3 simultaneous toasts
+- **Order confirmations**: Enhanced success messages with order number display
+- **Error messages**: User-friendly error messages for failed operations
+
+## Admin Order Notifications (December 2025)
+New order notification system for admins:
+- **Backend**: `supabaseRepository.createNotification()` and `getGymAdminUserIds()` added
+- **Order creation**: POST /api/orders now creates notifications for all gym admins
+- **Non-blocking**: Notification errors don't fail the order creation
+- **UI integration**: Notifications appear in header bell icon with unread count
+
+## Revenue Graph Real-time Updates (December 2025)
+Admin dashboard revenue graph now updates after orders:
+- **Query invalidation**: Order placement invalidates `/api/billing/revenue-trend` cache
+- **Auto-refresh**: Revenue chart refreshes every 60 seconds
+- **Stale time**: 30-second stale time for optimal performance

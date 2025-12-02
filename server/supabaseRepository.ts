@@ -562,5 +562,43 @@ export const supabaseRepo = {
       return [];
     }
     return data || [];
+  },
+
+  async createNotification(notification: {
+    userId: string;
+    title: string;
+    message: string;
+    type?: string;
+  }): Promise<any> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: notification.userId,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type || 'info',
+        is_read: 0,
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Supabase createNotification error:', error);
+      return null;
+    }
+    return data;
+  },
+
+  async getGymAdminUserIds(gymId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('gym_admins')
+      .select('user_id')
+      .eq('gym_id', gymId);
+    
+    if (error) {
+      console.error('Supabase getGymAdminUserIds error:', error);
+      return [];
+    }
+    return (data || []).map(row => row.user_id);
   }
 };

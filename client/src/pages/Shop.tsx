@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +76,7 @@ export default function Shop() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { cart, addToCart: contextAddToCart, updateQuantity: contextUpdateQuantity, removeFromCart: contextRemoveFromCart, clearCart, cartTotal, cartItemCount } = useCart();
   const canManageProducts = user?.role === "admin";
   const [activeTab, setActiveTab] = useState("products");
   const [productFormOpen, setProductFormOpen] = useState(false);
@@ -87,7 +89,6 @@ export default function Shop() {
   
   // Mobile Store State
   const [mobileViewMode, setMobileViewMode] = useState<"store" | "admin">("store");
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("cash");
   const [mobileProductDetail, setMobileProductDetail] = useState<any>(null);
@@ -127,69 +128,58 @@ export default function Shop() {
     statusFilter === "all" ? true : order.status === statusFilter,
   );
 
-  // Cart functions
+  // Cart functions using context
   const addToCart = (product: any) => {
-    const existingItem = cart.find((item) => item.productId === product.id);
-    if (existingItem) {
-      if (existingItem.quantity < product.stock) {
-        setCart(cart.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        ));
-        toast({ title: "Added to cart", description: `${product.name} quantity updated` });
-      } else {
-        toast({ title: "Stock limit", description: "Maximum available quantity reached", variant: "destructive" });
-      }
-    } else {
-      setCart([...cart, {
-        productId: product.id,
-        productName: product.name,
-        price: parseFloat(product.discountPrice || product.price),
-        quantity: 1,
-        stock: product.stock,
-        image: product.imageUrl,
-      }]);
-      toast({ title: "Added to cart", description: `${product.name} added to your cart` });
+    const rawPrice = product.discountPrice || product.price;
+    const price = parseFloat(rawPrice);
+    if (isNaN(price) || price < 0) {
+      toast({ 
+        title: "Error", 
+        description: "Invalid product price. Please try again.", 
+        variant: "destructive" 
+      });
+      return;
     }
+    contextAddToCart({
+      productId: product.id,
+      productName: product.name,
+      price: price,
+      stock: product.stock,
+      image: product.imageUrl,
+    });
   };
 
   const updateCartQuantity = (productId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      setCart(cart.filter((item) => item.productId !== productId));
-    } else {
-      const item = cart.find((i) => i.productId === productId);
-      if (item && newQuantity <= item.stock) {
-        setCart(cart.map((i) =>
-          i.productId === productId ? { ...i, quantity: newQuantity } : i
-        ));
-      }
+    const item = cart.find((i) => i.productId === productId);
+    if (item) {
+      const delta = newQuantity - item.quantity;
+      contextUpdateQuantity(productId, delta);
     }
   };
 
   const removeFromCart = (productId: string) => {
-    setCart(cart.filter((item) => item.productId !== productId));
+    contextRemoveFromCart(productId);
   };
-
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const createOrderFromCartMutation = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/orders", data),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      setCart([]);
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/revenue-trend"] });
+      clearCart();
       setIsCartOpen(false);
       toast({
         title: "Order Placed Successfully!",
-        description: "Your order has been submitted for processing.",
+        description: `Order #${response.orderNumber || 'NEW'} has been submitted for processing.`,
+        duration: 5000,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to place order",
+        title: "Order Failed",
+        description: error.message || "We couldn't place your order. Please try again.",
         variant: "destructive",
+        duration: 4000,
       });
     },
   });

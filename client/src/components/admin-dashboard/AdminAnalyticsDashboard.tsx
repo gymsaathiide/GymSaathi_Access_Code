@@ -204,6 +204,8 @@ function MonthlyRevenueChart() {
       if (!res.ok) throw new Error('Failed to fetch revenue trend');
       return res.json();
     },
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
 
   if (isLoading) {
