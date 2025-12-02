@@ -108,3 +108,11 @@ Comprehensive mobile responsiveness overhaul for AdminDashboard.tsx:
 - **Typography Scale**: Uses text-[10px] for ultra-compact mobile, text-xs/sm for regular, text-base for desktop
 - **Touch Targets**: All interactive elements minimum 44x44px on mobile per accessibility guidelines
 - **Responsive Breakpoints**: Uses sm:640px, md:768px, lg:1024px consistent with Tailwind defaults
+
+## Schema-Storage Sync Audit (December 2025)
+Fixed 23 TypeScript errors in `server/storage.ts` caused by references to non-existent schema columns:
+- **Members table**: Removed `emergencyContactName`, `emergencyContactPhone`, `medicalInfo` (not in schema)
+- **ClassTypes table**: Changed `color` to `capacity` (schema has capacity, not color)
+- **Classes table**: Removed `name`, `description`, `location`; added `notes` (matches actual schema)
+- **Null date handling**: Added null check for `checkInTime` in attendance auto-checkout logic (line 2369)
+- **Safe migration strategy**: Fixed by removing phantom column references in storage.ts rather than adding schema columns, avoiding database migrations
