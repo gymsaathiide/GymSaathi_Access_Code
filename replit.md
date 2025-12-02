@@ -38,6 +38,14 @@ The platform features a modern dark theme with navy backgrounds, white/5% opacit
 -   **Order Notification System**: Comprehensive notifications for members (WhatsApp, Email, In-App) and admins (In-App) upon order creation.
 -   **Enhanced Toast Notification System**: Improved toast notifications with auto-dismissal, duration control, multiple simultaneous toasts, and enhanced UI with smart icons and variants.
 -   **Revenue Graph Real-time Updates**: Admin dashboard revenue graph updates automatically after orders and refreshes periodically.
+-   **Shop Orders Revenue Dashboard**: Comprehensive dashboard for shop sales analytics with:
+    -   Responsive stats cards (Today's Revenue, Monthly Revenue, Total Orders, Avg Order Value)
+    -   Date filter tabs (Today, 7 Days, 30 Days, This Month, This Year)
+    -   Interactive revenue trend graph with tooltips (Recharts)
+    -   Recent orders table with status badges
+    -   60-second auto-refresh for real-time updates
+    -   Full mobile responsiveness with touch-friendly design
+    -   Routes: `/admin/shop-revenue` and `/trainer/shop-revenue`
 
 # External Dependencies
 

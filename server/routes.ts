@@ -6703,6 +6703,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shop Orders Revenue Dashboard API
+  app.get('/api/admin/shop-revenue', requireRole('admin', 'trainer'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const period = (req.query.period as string) || '30days';
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      let startDate: Date;
+      switch (period) {
+        case 'today':
+          startDate = today;
+          break;
+        case '7days':
+          startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30days':
+          startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default:
+          startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
+
+      let orders: any[] = [];
+      let members: Map<string, string> = new Map();
+
+      if (!isDbAvailable()) {
+        // Use Supabase directly when Drizzle DB is not available
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('gym_id', user.gymId)
+          .gte('order_date', startDate.toISOString())
+          .order('order_date', { ascending: false });
+
+        if (orderError) {
+          console.error('Supabase order fetch error:', orderError);
+          orders = [];
+        } else {
+          orders = (orderData || []).map(o => ({
+            id: o.id,
+            orderNumber: o.order_number,
+            memberId: o.member_id,
+            totalAmount: o.total_amount,
+            status: o.status,
+            paymentStatus: o.payment_status,
+            orderDate: o.order_date,
+            gymId: o.gym_id,
+          }));
+        }
+
+        // Fetch member names for recent orders
+        const memberIds = [...new Set(orders.slice(0, 10).map(o => o.memberId).filter(Boolean))];
+        if (memberIds.length > 0) {
+          const { data: memberData } = await supabase
+            .from('members')
+            .select('id, name')
+            .in('id', memberIds);
+          
+          if (memberData) {
+            memberData.forEach(m => members.set(m.id, m.name));
+          }
+        }
+      } else {
+        // Use Drizzle when available
+        orders = await db!.select().from(schema.orders)
+          .where(and(
+            eq(schema.orders.gymId, user.gymId),
+            gte(schema.orders.orderDate, startDate)
+          ))
+          .orderBy(desc(schema.orders.orderDate));
+
+        // Fetch member names for recent orders
+        const memberIds = [...new Set(orders.slice(0, 10).map(o => o.memberId).filter(Boolean))];
+        if (memberIds.length > 0 && db) {
+          const memberData = await db.select({ id: schema.members.id, name: schema.members.name })
+            .from(schema.members)
+            .where(inArray(schema.members.id, memberIds));
+          
+          memberData.forEach(m => members.set(m.id, m.name));
+        }
+      }
+
+      // Calculate totals
+      const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount || '0'), 0);
+      const ordersCount = orders.length;
+      const avgOrderValue = ordersCount > 0 ? totalRevenue / ordersCount : 0;
+
+      // Today's revenue
+      const todayOrders = orders.filter(o => {
+        const orderDate = new Date(o.orderDate!);
+        return orderDate >= today;
+      });
+      const todayRevenue = todayOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount || '0'), 0);
+
+      // This month's revenue
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      let monthlyRevenue = 0;
+      
+      if (!isDbAvailable()) {
+        const { data: monthlyOrderData } = await supabase
+          .from('orders')
+          .select('total_amount')
+          .eq('gym_id', user.gymId)
+          .gte('order_date', startOfMonth.toISOString());
+        
+        monthlyRevenue = (monthlyOrderData || []).reduce(
+          (sum, order) => sum + parseFloat(order.total_amount || '0'), 0
+        );
+      } else {
+        const monthlyOrders = await db!.select().from(schema.orders)
+          .where(and(
+            eq(schema.orders.gymId, user.gymId),
+            gte(schema.orders.orderDate, startOfMonth)
+          ));
+        monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + parseFloat(order.totalAmount || '0'), 0);
+      }
+
+      // Group orders by date for graph data
+      const revenueByDate: Record<string, number> = {};
+      
+      // Initialize all dates in the range with 0
+      const current = new Date(startDate);
+      while (current <= now) {
+        const dateStr = current.toISOString().split('T')[0];
+        revenueByDate[dateStr] = 0;
+        current.setDate(current.getDate() + 1);
+      }
+
+      // Sum revenue for each date
+      orders.forEach(order => {
+        if (order.orderDate) {
+          const dateStr = new Date(order.orderDate).toISOString().split('T')[0];
+          if (revenueByDate[dateStr] !== undefined) {
+            revenueByDate[dateStr] += parseFloat(order.totalAmount || '0');
+          }
+        }
+      });
+
+      // Convert to array and sort by date
+      const graphData = Object.entries(revenueByDate)
+        .map(([date, revenue]) => ({
+          date,
+          revenue: Math.round(revenue * 100) / 100,
+          displayDate: new Date(date).toLocaleDateString('en-IN', { 
+            month: 'short', 
+            day: 'numeric' 
+          }),
+        }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // Get recent orders with member info from pre-fetched members map
+      const recentOrders = orders.slice(0, 10).map((order) => {
+        const memberName = order.memberId ? (members.get(order.memberId) || 'Unknown Member') : 'Unknown Member';
+        return {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          memberName,
+          totalAmount: parseFloat(order.totalAmount || '0'),
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          orderDate: order.orderDate,
+        };
+      });
+
+      res.json({
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        ordersCount,
+        todayRevenue: Math.round(todayRevenue * 100) / 100,
+        monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
+        avgOrderValue: Math.round(avgOrderValue * 100) / 100,
+        graphData,
+        recentOrders,
+        period,
+      });
+    } catch (error: any) {
+      console.error('Error fetching shop revenue:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ NOTIFICATIONS API ============
 
   // Get notifications for current user

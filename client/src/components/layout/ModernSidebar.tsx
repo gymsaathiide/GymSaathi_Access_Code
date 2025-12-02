@@ -24,6 +24,7 @@ import {
   ChevronRight,
   X,
   Menu,
+  TrendingUp,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
@@ -48,6 +49,7 @@ const adminItems = [
   { title: "Attendance", url: "/admin/attendance", icon: ClipboardCheck },
   { title: "Billing", url: "/admin/billing", icon: CreditCard },
   { title: "Shop", url: "/admin/shop", icon: ShoppingBag },
+  { title: "Shop Revenue", url: "/admin/shop-revenue", icon: TrendingUp },
 ];
 
 const trainerItems = [
@@ -57,6 +59,7 @@ const trainerItems = [
   { title: "Classes", url: "/trainer/classes", icon: Calendar },
   { title: "Attendance", url: "/trainer/attendance", icon: ClipboardCheck },
   { title: "Shop", url: "/trainer/shop", icon: ShoppingBag },
+  { title: "Shop Revenue", url: "/trainer/shop-revenue", icon: TrendingUp },
 ];
 
 const memberItems = [

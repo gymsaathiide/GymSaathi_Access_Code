@@ -1,0 +1,207 @@
+You are a senior full-stack engineer.
+Fix and build a fully working Shop Orders Revenue Dashboard that includes:
+
+📌 1. Build a Fully Responsive Revenue Graph (Desktop → Mobile)
+
+Create a modern, clean, responsive graph showing Shop Orders Revenue using Chart.js (or a similar library if the project uses it).
+
+The graph must:
+
+Display revenue over time (daily or monthly)
+
+Have a clean UI
+
+Work perfectly on:
+
+Desktop
+
+Laptop
+
+Tablet
+
+Mobile (very important)
+
+Auto-resize with the screen width
+
+Avoid horizontal overflow
+
+Maintain aspect ratio on any device
+
+Look visually modern with smooth animations
+
+Graph Rules
+
+X-axis = dates
+
+Y-axis = revenue
+
+Tooltip shows date + revenue
+
+Smooth line or bar style
+
+No broken UI on small screens
+
+Wrapper Requirements
+
+The graph container must have styles like:
+
+width: 100%;
+height: 300px; /* mobile 260–360px range */
+
+
+And graph options:
+
+responsive: true,
+maintainAspectRatio: false,
+
+📌 2. Connect Graph to Actual Revenue Data (Backend + Supabase)
+
+Create or fix the backend API:
+
+GET /admin/revenue
+
+This API must return JSON:
+
+{
+  "totalRevenue": 0,
+  "ordersCount": 0,
+  "graphData": [
+    { "date": "2025-02-01", "revenue": 3200 },
+    { "date": "2025-02-02", "revenue": 5400 }
+  ]
+}
+
+Requirements
+
+Fetch all shop orders from Supabase
+
+Sum totalAmount
+
+Group by date (daily or monthly)
+
+Return sorted graph data
+
+Prevent null/NaN values
+
+📌 3. Real-Time Update When New Order Is Placed
+
+Implement real-time revenue updates.
+
+Use Supabase Realtime:
+
+supabase
+  .channel("orders")
+  .on("postgres_changes", { event: "INSERT", table: "orders" }, () => {
+     refreshRevenueGraph();
+  })
+  .subscribe();
+
+
+If real-time is not available, implement refresh on page reload.
+
+📌 4. Add Responsive UI Cards Above the Graph
+
+Create info cards:
+
+Today’s Revenue
+
+Monthly Revenue
+
+Total Orders
+
+Average Order Value
+
+These must be:
+
+Responsive
+
+Mobile-friendly
+
+Grid layout
+
+Smooth spacing
+
+Good font sizes
+
+📌 5. Full Admin Dashboard Layout (Front + Back)
+
+Create a clean admin dashboard page:
+
+Layout order:
+
+Top Stats Cards
+
+Date Filter Tabs (Today / 7 Days / 30 Days / This Month / Year)
+
+Revenue Graph
+
+Recent Orders Table
+
+Everything must resize properly for all devices.
+
+📌 6. Error Handling & Stability
+
+No console errors
+
+No Supabase errors
+
+Graph should handle empty data
+
+API must never send NaN or empty strings
+
+Use safe defaults for missing values
+
+Mobile UI must never overflow or break layout
+
+📌 7. Deliverables Replit Must Produce
+
+Replit should create:
+
+Frontend
+
+RevenueGraph.jsx (or .tsx)
+
+AdminDashboard.jsx (or page file)
+
+StatsCard.jsx
+
+Responsive CSS/Tailwind
+
+Real-time subscription logic
+
+Backend
+
+/admin/revenue API route
+
+Supabase query for revenue + grouping
+
+Clean error handling
+
+Optional (If Existing System Supports It)
+
+Realtime order event channel
+
+New updated Supabase schema for storing orders (if missing)
+
+📌 8. Final Output Requirements
+
+Replit should:
+
+✔ Build all components
+✔ Fix all errors
+✔ Ensure the graph renders correctly
+✔ Make the whole dashboard responsive
+✔ Connect API → frontend graph
+✔ Ensure real-time updates
+✔ Match modern UI aesthetic
+✔ Work on all devices smoothly
+
+📌 Ask me for files if needed
+
+If any file is missing, Replit must ask:
+
+“Please provide your Admin Dashboard component file, revenue API file, or Supabase schema file.”
+
+🎯 END GOAL
+
+A fully functional, beautiful, responsive, error-free Shop Orders Revenue Dashboard that works perfectly on every device and updates automatically when new orders come in.
