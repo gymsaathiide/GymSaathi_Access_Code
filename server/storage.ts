@@ -716,9 +716,6 @@ class Storage {
       address: row.address,
       dateOfBirth: row.dateOfBirth,
       gender: row.gender,
-      emergencyContactName: row.emergencyContactName,
-      emergencyContactPhone: row.emergencyContactPhone,
-      medicalInfo: row.medicalInfo,
       status: row.status,
       joinDate: row.joinDate,
       createdAt: row.createdAt,
@@ -739,9 +736,6 @@ class Storage {
       address: data.address,
       dateOfBirth: data.dateOfBirth,
       gender: data.gender,
-      emergencyContactName: data.emergencyContactName,
-      emergencyContactPhone: data.emergencyContactPhone,
-      medicalInfo: data.medicalInfo,
       status: data.status,
       joinDate: data.joinDate,
       createdAt: data.createdAt,
@@ -762,9 +756,6 @@ class Storage {
       address: data.address,
       dateOfBirth: data.dateOfBirth,
       gender: data.gender,
-      emergencyContactName: data.emergencyContactName,
-      emergencyContactPhone: data.emergencyContactPhone,
-      medicalInfo: data.medicalInfo,
       status: data.status,
       joinDate: data.joinDate,
       createdAt: data.createdAt,
@@ -784,9 +775,6 @@ class Storage {
       address: result.address,
       dateOfBirth: result.dateOfBirth,
       gender: result.gender,
-      emergencyContactName: result.emergencyContactName,
-      emergencyContactPhone: result.emergencyContactPhone,
-      medicalInfo: result.medicalInfo,
       status: result.status,
       joinDate: result.joinDate,
       createdAt: result.createdAt,
@@ -807,9 +795,6 @@ class Storage {
       address: result.address,
       dateOfBirth: result.dateOfBirth,
       gender: result.gender,
-      emergencyContactName: result.emergencyContactName,
-      emergencyContactPhone: result.emergencyContactPhone,
-      medicalInfo: result.medicalInfo,
       status: result.status,
       joinDate: result.joinDate,
       createdAt: result.createdAt,
@@ -1788,7 +1773,7 @@ class Storage {
       name: row.name,
       description: row.description,
       duration: row.duration,
-      color: row.color,
+      capacity: row.capacity,
       isActive: row.isActive === 1,
       createdAt: row.createdAt,
     }));
@@ -1802,7 +1787,7 @@ class Storage {
       name: result.name,
       description: result.description,
       duration: result.duration,
-      color: result.color,
+      capacity: result.capacity,
       isActive: result.isActive === 1,
       createdAt: result.createdAt,
     };
@@ -1823,14 +1808,12 @@ class Storage {
       gymId: row.gymId,
       classTypeId: row.classTypeId,
       trainerId: row.trainerId,
-      name: row.name,
-      description: row.description,
       startTime: row.startTime,
       endTime: row.endTime,
       capacity: row.capacity,
       bookedCount: row.bookedCount,
       status: row.status,
-      location: row.location,
+      notes: row.notes,
       createdAt: row.createdAt,
     }));
   }
@@ -1843,14 +1826,12 @@ class Storage {
       gymId: row.gymId,
       classTypeId: row.classTypeId,
       trainerId: row.trainerId,
-      name: row.name,
-      description: row.description,
       startTime: row.startTime,
       endTime: row.endTime,
       capacity: row.capacity,
       bookedCount: row.bookedCount,
       status: row.status,
-      location: row.location,
+      notes: row.notes,
       createdAt: row.createdAt,
     };
   }
@@ -1862,14 +1843,12 @@ class Storage {
       gymId: result.gymId,
       classTypeId: result.classTypeId,
       trainerId: result.trainerId,
-      name: result.name,
-      description: result.description,
       startTime: result.startTime,
       endTime: result.endTime,
       capacity: result.capacity,
       bookedCount: result.bookedCount,
       status: result.status,
-      location: result.location,
+      notes: result.notes,
       createdAt: result.createdAt,
     };
   }
@@ -1882,14 +1861,12 @@ class Storage {
       gymId: result.gymId,
       classTypeId: result.classTypeId,
       trainerId: result.trainerId,
-      name: result.name,
-      description: result.description,
       startTime: result.startTime,
       endTime: result.endTime,
       capacity: result.capacity,
       bookedCount: result.bookedCount,
       status: result.status,
-      location: result.location,
+      notes: result.notes,
       createdAt: result.createdAt,
     };
   }
@@ -2386,6 +2363,7 @@ class Storage {
     if (!openSession) return null;
 
     // Check auto-checkout rule: >3 hours since check-in
+    if (!openSession.checkInTime) return null;
     const checkInTime = new Date(openSession.checkInTime);
     const diffHours = (now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
 
