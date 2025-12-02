@@ -3750,33 +3750,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const query = (req.query.q as string || '').toLowerCase().trim();
       if (!query) {
-        return res.json({ members: [], leads: [], classes: [], payments: [] });
+        return res.json({ members: [], leads: [] });
       }
 
       const gymId = user.gymId;
+      const searchPattern = `%${query}%`;
+      
+      let members: any[] = [];
+      let leads: any[] = [];
 
-      // Search members
-      const members = await db!.select()
-        .from(schema.members)
-        .where(and(
-          eq(schema.members.gymId, gymId),
-          sql`(LOWER(${schema.members.name}) LIKE ${'%' + query + '%'} OR LOWER(${schema.members.email}) LIKE ${'%' + query + '%'} OR ${schema.members.phone} LIKE ${'%' + query + '%'})`
-        ))
-        .limit(5);
+      if (!isDbAvailable()) {
+        // Use Supabase when Drizzle DB is not available
+        const { data: memberData } = await supabase
+          .from('members')
+          .select('id, name, email, phone')
+          .eq('gym_id', gymId)
+          .or(`name.ilike.${searchPattern},email.ilike.${searchPattern},phone.ilike.${searchPattern}`)
+          .limit(5);
+        
+        const { data: leadData } = await supabase
+          .from('leads')
+          .select('id, name, email, phone, status')
+          .eq('gym_id', gymId)
+          .or(`name.ilike.${searchPattern},email.ilike.${searchPattern},phone.ilike.${searchPattern}`)
+          .limit(5);
 
-      // Search leads
-      const leads = await db!.select()
-        .from(schema.leads)
-        .where(and(
-          eq(schema.leads.gymId, gymId),
-          sql`(LOWER(${schema.leads.name}) LIKE ${'%' + query + '%'} OR LOWER(${schema.leads.email}) LIKE ${'%' + query + '%'} OR ${schema.leads.phone} LIKE ${'%' + query + '%'})`
-        ))
-        .limit(5);
+        members = (memberData || []).map(m => ({ id: m.id, name: m.name, email: m.email, phone: m.phone, type: 'member' }));
+        leads = (leadData || []).map(l => ({ id: l.id, name: l.name, email: l.email, phone: l.phone, status: l.status, type: 'lead' }));
+      } else {
+        // Use Drizzle when available
+        const memberResults = await db!.select()
+          .from(schema.members)
+          .where(and(
+            eq(schema.members.gymId, gymId),
+            or(
+              like(sql`LOWER(${schema.members.name})`, searchPattern),
+              like(sql`LOWER(${schema.members.email})`, searchPattern),
+              like(schema.members.phone, searchPattern)
+            )
+          ))
+          .limit(5);
 
-      res.json({
-        members: members.map(m => ({ id: m.id, name: m.name, email: m.email, phone: m.phone, type: 'member' })),
-        leads: leads.map(l => ({ id: l.id, name: l.name, email: l.email, phone: l.phone, status: l.status, type: 'lead' }))
-      });
+        const leadResults = await db!.select()
+          .from(schema.leads)
+          .where(and(
+            eq(schema.leads.gymId, gymId),
+            or(
+              like(sql`LOWER(${schema.leads.name})`, searchPattern),
+              like(sql`LOWER(${schema.leads.email})`, searchPattern),
+              like(schema.leads.phone, searchPattern)
+            )
+          ))
+          .limit(5);
+
+        members = memberResults.map(m => ({ id: m.id, name: m.name, email: m.email, phone: m.phone, type: 'member' }));
+        leads = leadResults.map(l => ({ id: l.id, name: l.name, email: l.email, phone: l.phone, status: l.status, type: 'lead' }));
+      }
+
+      console.log(`Search query: "${query}" - Found ${members.length} members, ${leads.length} leads`);
+      res.json({ members, leads });
     } catch (error: any) {
       console.error('Error in admin search:', error);
       res.status(500).json({ error: error.message });
