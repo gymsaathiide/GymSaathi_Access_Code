@@ -95,3 +95,16 @@ The platform features a modern dark theme inspired by FitFlow for the admin pane
 - **Transformation**: Backend now parses JSON array and extracts first image as `imageUrl`
 - **Frontend**: Shop.tsx and MemberStore.tsx now use `product.imageUrl` for consistent image display
 - **Fallback**: Shows placeholder icon when no image is available
+
+## Admin Dashboard Mobile Responsiveness Audit (December 2025)
+Comprehensive mobile responsiveness overhaul for AdminDashboard.tsx:
+- **KPI Cards Grid**: Changed to 2-col mobile (grid-cols-2), 3-col tablet (md:grid-cols-3), 5-col desktop (lg:grid-cols-5). Compact padding (p-3 sm:p-4), smaller fonts (text-xs sm:text-sm), truncate overflow text
+- **Quick Actions**: Touch-friendly buttons (min-h-[44px]), horizontal scroll with snap-x on mobile, wrap on sm+ screens
+- **Today at a Glance + Chart**: Stacked on mobile, responsive chart heights (h-[120px] sm:h-[150px]), smaller axis labels with tick fontSize adjustments
+- **Renewals & Leads Cards**: Full-width TabsList, compact list items (p-2 sm:p-3), touch-sized action buttons (h-7 w-7), truncated names/status
+- **Billing & Classes Cards**: Responsive headers with stacked layout on mobile, shortened labels ("Remind" vs "Send Reminder")
+- **Shop & Alerts Cards**: Shop grid stacks on mobile (grid-cols-1 sm:grid-cols-2), alerts with proper touch targets (min-h-[48px])
+- **Dialogs**: Near full-width on mobile (w-[95vw]), reduced max-height for virtual keyboards (max-h-[85vh])
+- **Typography Scale**: Uses text-[10px] for ultra-compact mobile, text-xs/sm for regular, text-base for desktop
+- **Touch Targets**: All interactive elements minimum 44x44px on mobile per accessibility guidelines
+- **Responsive Breakpoints**: Uses sm:640px, md:768px, lg:1024px consistent with Tailwind defaults

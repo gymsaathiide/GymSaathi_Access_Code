@@ -129,12 +129,13 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-admin-title">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {user?.name || 'Admin'}! Manage your gym operations.
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header Section - Mobile Optimized */}
+      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate" data-testid="text-admin-title">Admin Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground truncate">
+            Welcome back, {user?.name || 'Admin'}!
           </p>
         </div>
         <div className="relative w-full md:w-96">
@@ -195,128 +196,131 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Members</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+      {/* KPI Cards - Mobile-first responsive grid */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <Card className="p-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Active Members</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboard.kpis.activeMembers}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{dashboard.kpis.activeMembers}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
               +{dashboard.kpis.newMembersThisMonth} this month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue This Month</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium truncate">Revenue</CardTitle>
+            <IndianRupee className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatShortCurrency(dashboard.kpis.revenueThisMonth)}</div>
-            <div className="flex items-center text-xs">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{formatShortCurrency(dashboard.kpis.revenueThisMonth)}</div>
+            <div className="flex items-center text-[10px] sm:text-xs flex-wrap">
               {dashboard.kpis.revenueChangePercent >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-500 mr-0.5 sm:mr-1 flex-shrink-0" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
+                <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500 mr-0.5 sm:mr-1 flex-shrink-0" />
               )}
               <span className={dashboard.kpis.revenueChangePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
                 {dashboard.kpis.revenueChangePercent >= 0 ? '+' : ''}{dashboard.kpis.revenueChangePercent.toFixed(1)}%
               </span>
-              <span className="text-muted-foreground ml-1">vs last month</span>
+              <span className="text-muted-foreground ml-0.5 sm:ml-1 hidden sm:inline">vs last</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Dues</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+        <Card className="p-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium truncate">Pending Dues</CardTitle>
+            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500 flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatShortCurrency(dashboard.kpis.pendingDuesAmount)}</div>
-            <p className="text-xs text-muted-foreground">
-              {dashboard.kpis.pendingDuesMembers} member{dashboard.kpis.pendingDuesMembers !== 1 ? 's' : ''} with dues
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold text-orange-600">{formatShortCurrency(dashboard.kpis.pendingDuesAmount)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+              {dashboard.kpis.pendingDuesMembers} member{dashboard.kpis.pendingDuesMembers !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leads in Pipeline</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-0">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium truncate">Leads</CardTitle>
+            <Target className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboard.kpis.leadsInPipeline}</div>
-            <p className="text-xs text-muted-foreground">
-              Follow-ups today: {dashboard.kpis.followupsToday}
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{dashboard.kpis.leadsInPipeline}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+              {dashboard.kpis.followupsToday} follow-ups
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Check-ins</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+        <Card className="p-0 col-span-2 md:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Check-ins Today</CardTitle>
+            <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboard.kpis.todaysCheckins}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{dashboard.kpis.todaysCheckins}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
               Yesterday: {dashboard.kpis.yesterdaysCheckins}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
-        <Button onClick={() => setIsMemberDialogOpen(true)} size="sm" className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white">
-          <UserPlus className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap">Add Member</span>
+      {/* Quick Actions - Horizontal scroll on mobile with touch-friendly targets */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap snap-x snap-mandatory">
+        <Button onClick={() => setIsMemberDialogOpen(true)} size="sm" className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white min-h-[44px] snap-start">
+          <UserPlus className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap text-sm">Add Member</span>
         </Button>
-        <Button onClick={() => setIsLeadDialogOpen(true)} size="sm" variant="outline" className="flex-shrink-0">
-          <Target className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap">Add Lead</span>
+        <Button onClick={() => setIsLeadDialogOpen(true)} size="sm" variant="outline" className="flex-shrink-0 min-h-[44px] snap-start">
+          <Target className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap text-sm">Add Lead</span>
         </Button>
-        <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" variant="outline" className="flex-shrink-0">
-          <CreditCard className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap">Payment</span>
+        <Button onClick={() => setIsPaymentDialogOpen(true)} size="sm" variant="outline" className="flex-shrink-0 min-h-[44px] snap-start">
+          <CreditCard className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap text-sm">Payment</span>
         </Button>
-        <Button onClick={() => navigate('/admin/classes')} size="sm" variant="outline" className="flex-shrink-0">
-          <Dumbbell className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap">Class</span>
+        <Button onClick={() => navigate('/admin/classes')} size="sm" variant="outline" className="flex-shrink-0 min-h-[44px] snap-start">
+          <Dumbbell className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap text-sm">Class</span>
         </Button>
-        <Button onClick={() => navigate('/admin/shop')} size="sm" variant="outline" className="flex-shrink-0">
-          <Store className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap">Shop</span>
+        <Button onClick={() => navigate('/admin/shop')} size="sm" variant="outline" className="flex-shrink-0 min-h-[44px] snap-start">
+          <Store className="h-4 w-4 mr-1.5" /> <span className="whitespace-nowrap text-sm">Shop</span>
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Today at a Glance + Attendance Chart - Stack on mobile */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Today at a Glance</CardTitle>
+          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2">
+            <CardTitle className="text-base sm:text-lg">Today at a Glance</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold">{dashboard.today.classesSummary.total}</div>
-                <div className="text-xs text-muted-foreground">Classes</div>
-                <div className="text-xs mt-1">
-                  <span className="text-blue-500">{dashboard.today.classesSummary.upcoming}</span> upcoming
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="text-center min-w-0">
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">{dashboard.today.classesSummary.total}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">Classes</div>
+                <div className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">
+                  <span className="text-blue-500">{dashboard.today.classesSummary.upcoming}</span> <span className="hidden sm:inline">upcoming</span>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{dashboard.today.attendanceToday.checkins}</div>
-                <div className="text-xs text-muted-foreground">Check-ins</div>
-                <div className="text-xs mt-1">
+              <div className="text-center min-w-0">
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">{dashboard.today.attendanceToday.checkins}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">Check-ins</div>
+                <div className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">
                   {dashboard.today.attendanceToday.diffFromYesterday >= 0 ? (
                     <span className="text-green-500">+{dashboard.today.attendanceToday.diffFromYesterday}</span>
                   ) : (
                     <span className="text-red-500">{dashboard.today.attendanceToday.diffFromYesterday}</span>
-                  )} vs yesterday
+                  )} <span className="hidden sm:inline">vs yesterday</span>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{formatShortCurrency(dashboard.today.collectionsToday.total)}</div>
-                <div className="text-xs text-muted-foreground">Collections</div>
-                <div className="text-xs mt-1 space-x-1">
+              <div className="text-center min-w-0">
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">{formatShortCurrency(dashboard.today.collectionsToday.total)}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">Collections</div>
+                <div className="text-[10px] sm:text-xs mt-0.5 sm:mt-1 space-x-0.5 sm:space-x-1 truncate">
                   {dashboard.today.collectionsToday.byMethod.cash > 0 && <span>Cash</span>}
                   {dashboard.today.collectionsToday.byMethod.upi > 0 && <span>UPI</span>}
                   {dashboard.today.collectionsToday.byMethod.card > 0 && <span>Card</span>}
@@ -327,23 +331,26 @@ export default function AdminDashboard() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Attendance (Last 7 Days)</CardTitle>
+          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2">
+            <CardTitle className="text-base sm:text-lg">Attendance (Last 7 Days)</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[150px]">
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+            <div className="h-[120px] sm:h-[150px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboard.classes.attendanceLast7Days}>
+                <BarChart data={dashboard.classes.attendanceLast7Days} margin={{ left: -20, right: 5, top: 5, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis 
                     dataKey="date" 
-                    tickFormatter={(d) => new Date(d).toLocaleDateString('en-IN', { weekday: 'short' })}
-                    className="text-xs"
+                    tickFormatter={(d) => new Date(d).toLocaleDateString('en-IN', { weekday: 'short' }).slice(0, 2)}
+                    className="text-[10px] sm:text-xs"
+                    tick={{ fontSize: 10 }}
+                    interval={0}
                   />
-                  <YAxis className="text-xs" />
+                  <YAxis className="text-[10px] sm:text-xs" tick={{ fontSize: 10 }} width={30} />
                   <Tooltip 
                     formatter={(value: number) => [value, 'Check-ins']}
                     labelFormatter={(d) => new Date(d).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+                    contentStyle={{ fontSize: '12px' }}
                   />
                   <Bar dataKey="checkins" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -353,33 +360,38 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Renewals & Leads Section - Mobile optimized */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Renewals & Members</CardTitle>
+          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2">
+            <CardTitle className="text-base sm:text-lg">Renewals & Members</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
             <Tabs defaultValue="expiring">
-              <TabsList className="mb-4">
-                <TabsTrigger value="expiring">Expiring Soon ({dashboard.renewals.expiringSoon.length})</TabsTrigger>
-                <TabsTrigger value="overdue">Overdue ({dashboard.renewals.overdue.length})</TabsTrigger>
+              <TabsList className="mb-3 sm:mb-4 w-full grid grid-cols-2 h-auto">
+                <TabsTrigger value="expiring" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                  Expiring ({dashboard.renewals.expiringSoon.length})
+                </TabsTrigger>
+                <TabsTrigger value="overdue" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                  Overdue ({dashboard.renewals.overdue.length})
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="expiring">
                 {dashboard.renewals.expiringSoon.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">No memberships expiring soon</div>
+                  <div className="text-center text-muted-foreground py-6 sm:py-8 text-sm">No memberships expiring soon</div>
                 ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <div className="space-y-2 max-h-[200px] sm:max-h-[300px] overflow-y-auto">
                     {dashboard.renewals.expiringSoon.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">{member.name}</div>
-                          <div className="text-sm text-muted-foreground">{member.planName}</div>
+                      <div key={member.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm sm:text-base truncate">{member.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground truncate">{member.planName}</div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant={member.daysLeft <= 3 ? 'destructive' : 'secondary'}>
-                            {member.daysLeft} day{member.daysLeft !== 1 ? 's' : ''} left
+                        <div className="text-right flex-shrink-0">
+                          <Badge variant={member.daysLeft <= 3 ? 'destructive' : 'secondary'} className="text-[10px] sm:text-xs">
+                            {member.daysLeft}d left
                           </Badge>
-                          <div className="text-xs text-muted-foreground mt-1">{formatDate(member.expiryDate)}</div>
+                          <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">{formatDate(member.expiryDate)}</div>
                         </div>
                       </div>
                     ))}
@@ -388,25 +400,25 @@ export default function AdminDashboard() {
               </TabsContent>
               <TabsContent value="overdue">
                 {dashboard.renewals.overdue.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">No overdue memberships</div>
+                  <div className="text-center text-muted-foreground py-6 sm:py-8 text-sm">No overdue memberships</div>
                 ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <div className="space-y-2 max-h-[200px] sm:max-h-[300px] overflow-y-auto">
                     {dashboard.renewals.overdue.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">{member.name}</div>
-                          <div className="text-sm text-muted-foreground">{member.planName}</div>
+                      <div key={member.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm sm:text-base truncate">{member.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground truncate">{member.planName}</div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant="destructive">
-                            Expired {Math.abs(member.daysLeft)} days ago
+                        <div className="text-right flex-shrink-0">
+                          <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                            -{Math.abs(member.daysLeft)}d
                           </Badge>
                           <div className="flex gap-1 mt-1">
-                            <Button size="sm" variant="ghost" className="h-6 px-2">
-                              <Phone className="h-3 w-3" />
+                            <Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-auto sm:px-2 p-0">
+                              <Phone className="h-4 w-4 sm:h-3 sm:w-3" />
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-6 px-2">
-                              <MessageSquare className="h-3 w-3" />
+                            <Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-auto sm:px-2 p-0">
+                              <MessageSquare className="h-4 w-4 sm:h-3 sm:w-3" />
                             </Button>
                           </div>
                         </div>
@@ -420,38 +432,39 @@ export default function AdminDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Leads & Follow-ups</CardTitle>
-              <CardDescription>
-                {dashboard.leads.newThisMonth} new this month · {dashboard.leads.conversionRate.toFixed(0)}% conversion
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 sm:p-4 md:p-6 pb-2">
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Leads & Follow-ups</CardTitle>
+              <CardDescription className="text-xs sm:text-sm truncate">
+                {dashboard.leads.newThisMonth} new · {dashboard.leads.conversionRate.toFixed(0)}% conversion
               </CardDescription>
             </div>
-            <Button size="sm" variant="outline" onClick={() => navigate('/admin/leads')}>
+            <Button size="sm" variant="outline" onClick={() => navigate('/admin/leads')} className="self-start sm:self-auto min-h-[36px] sm:min-h-0">
               View All <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
             {dashboard.leads.followupsToday.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">No follow-ups today</div>
+              <div className="text-center text-muted-foreground py-6 sm:py-8 text-sm">No follow-ups today</div>
             ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              <div className="space-y-2 max-h-[200px] sm:max-h-[300px] overflow-y-auto">
                 {dashboard.leads.followupsToday.map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{lead.name}</div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Badge variant="outline" className="text-xs">{lead.source}</Badge>
-                        <span>{lead.phone}</span>
+                  <div key={lead.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm sm:text-base truncate">{lead.name}</div>
+                      <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs">{lead.source}</Badge>
+                        <span className="truncate">{lead.phone}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       <Badge 
                         variant={lead.status === 'new' ? 'default' : lead.status === 'interested' ? 'secondary' : 'outline'}
+                        className="text-[10px] sm:text-xs hidden sm:inline-flex"
                       >
                         {lead.status}
                       </Badge>
-                      <Button size="sm" variant="ghost" className="h-8 px-2">
+                      <Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-auto sm:px-2 p-0">
                         <Phone className="h-4 w-4" />
                       </Button>
                     </div>
@@ -463,37 +476,39 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Billing & Classes Section - Mobile optimized */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Billing & Dues</CardTitle>
-              <CardDescription>
-                {formatCurrency(dashboard.billing.revenueThisMonth)} revenue · {dashboard.billing.paidInvoices} paid · {dashboard.billing.pendingInvoices} pending
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 sm:p-4 md:p-6 pb-2">
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Billing & Dues</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">{formatCurrency(dashboard.billing.revenueThisMonth)} · </span>
+                {dashboard.billing.paidInvoices} paid · {dashboard.billing.pendingInvoices} pending
               </CardDescription>
             </div>
-            <Button size="sm" variant="outline" onClick={() => navigate('/admin/billing')}>
+            <Button size="sm" variant="outline" onClick={() => navigate('/admin/billing')} className="self-start sm:self-auto min-h-[36px] sm:min-h-0">
               View All <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
-          <CardContent>
-            <div className="text-sm font-medium mb-3">Members with Dues</div>
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+            <div className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Members with Dues</div>
             {dashboard.billing.dues.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">No pending dues</div>
+              <div className="text-center text-muted-foreground py-6 sm:py-8 text-sm">No pending dues</div>
             ) : (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div className="space-y-2 max-h-[180px] sm:max-h-[200px] overflow-y-auto">
                 {dashboard.billing.dues.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{member.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Last payment: {member.lastPaymentDate ? formatDate(member.lastPaymentDate) : 'Never'}
+                  <div key={member.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm sm:text-base truncate">{member.name}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                        Last: {member.lastPaymentDate ? formatDate(member.lastPaymentDate) : 'Never'}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-red-600">{formatCurrency(member.dueAmount)}</div>
-                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs">
-                        Send Reminder
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-semibold text-red-600 text-sm sm:text-base">{formatShortCurrency(member.dueAmount)}</div>
+                      <Button size="sm" variant="ghost" className="h-6 px-1.5 sm:px-2 text-[10px] sm:text-xs">
+                        Remind
                       </Button>
                     </div>
                   </div>
@@ -504,35 +519,36 @@ export default function AdminDashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 sm:p-4 md:p-6 pb-2">
             <div>
-              <CardTitle className="text-lg">Today's Classes</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Today's Classes</CardTitle>
             </div>
-            <Button size="sm" variant="outline" onClick={() => navigate('/admin/classes')}>
+            <Button size="sm" variant="outline" onClick={() => navigate('/admin/classes')} className="self-start sm:self-auto min-h-[36px] sm:min-h-0">
               View All <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
             {dashboard.classes.todaysClasses.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">No classes scheduled today</div>
+              <div className="text-center text-muted-foreground py-6 sm:py-8 text-sm">No classes scheduled today</div>
             ) : (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div className="space-y-2 max-h-[180px] sm:max-h-[200px] overflow-y-auto">
                 {dashboard.classes.todaysClasses.map((cls) => (
-                  <div key={cls.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{cls.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                  <div key={cls.id} className="flex items-center justify-between p-2 sm:p-3 border rounded-lg gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm sm:text-base truncate">{cls.name}</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
                         {formatTime(cls.startTime)} · {cls.trainerName}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                       <Badge 
                         variant={cls.status === 'completed' ? 'secondary' : cls.status === 'ongoing' ? 'default' : 'outline'}
+                        className="text-[10px] sm:text-xs"
                       >
                         {cls.status}
                       </Badge>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {cls.booked}/{cls.capacity} booked
+                      <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                        {cls.booked}/{cls.capacity}
                       </div>
                     </div>
                   </div>
@@ -543,33 +559,34 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Shop & Alerts Section - Mobile optimized */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Shop & Inventory</CardTitle>
-              <CardDescription>
-                {formatCurrency(dashboard.shop.revenueThisMonth)} revenue · {dashboard.shop.ordersToday} orders today
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 sm:p-4 md:p-6 pb-2">
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Shop & Inventory</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                {formatShortCurrency(dashboard.shop.revenueThisMonth)} · {dashboard.shop.ordersToday} orders
               </CardDescription>
             </div>
-            <Button size="sm" variant="outline" onClick={() => navigate('/admin/shop')}>
+            <Button size="sm" variant="outline" onClick={() => navigate('/admin/shop')} className="self-start sm:self-auto min-h-[36px] sm:min-h-0">
               View All <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <div className="text-sm font-medium mb-2">Recent Orders</div>
+                <div className="text-xs sm:text-sm font-medium mb-2">Recent Orders</div>
                 {dashboard.shop.recentOrders.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No recent orders</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">No recent orders</div>
                 ) : (
                   <div className="space-y-2">
                     {dashboard.shop.recentOrders.slice(0, 3).map((order) => (
-                      <div key={order.id} className="text-sm p-2 border rounded">
-                        <div className="font-medium">{order.memberName}</div>
+                      <div key={order.id} className="text-xs sm:text-sm p-2 border rounded">
+                        <div className="font-medium truncate">{order.memberName}</div>
                         <div className="flex justify-between text-muted-foreground">
                           <span>{order.itemsCount} items</span>
-                          <span>{formatCurrency(order.amount)}</span>
+                          <span>{formatShortCurrency(order.amount)}</span>
                         </div>
                       </div>
                     ))}
@@ -577,16 +594,16 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div>
-                <div className="text-sm font-medium mb-2">Low Stock</div>
+                <div className="text-xs sm:text-sm font-medium mb-2">Low Stock</div>
                 {dashboard.shop.lowStockProducts.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">All products well stocked</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">All stocked</div>
                 ) : (
                   <div className="space-y-2">
-                    {dashboard.shop.lowStockProducts.map((product) => (
-                      <div key={product.id} className="text-sm p-2 border rounded">
-                        <div className="font-medium">{product.name}</div>
-                        <Badge variant={product.stock === 0 ? 'destructive' : 'secondary'}>
-                          {product.stock === 0 ? 'Out of Stock' : `${product.stock} left`}
+                    {dashboard.shop.lowStockProducts.slice(0, 3).map((product) => (
+                      <div key={product.id} className="text-xs sm:text-sm p-2 border rounded">
+                        <div className="font-medium truncate">{product.name}</div>
+                        <Badge variant={product.stock === 0 ? 'destructive' : 'secondary'} className="text-[10px] sm:text-xs">
+                          {product.stock === 0 ? 'Out' : `${product.stock} left`}
                         </Badge>
                       </div>
                     ))}
@@ -598,39 +615,39 @@ export default function AdminDashboard() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Bell className="h-5 w-5" /> Alerts
+          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5" /> Alerts
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
             {dashboard.alerts.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                <div>All clear! No urgent alerts.</div>
+              <div className="text-center text-muted-foreground py-6 sm:py-8">
+                <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2 text-green-500" />
+                <div className="text-sm">All clear! No urgent alerts.</div>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
                 {dashboard.alerts.map((alert) => (
                   <div 
                     key={alert.id}
                     onClick={() => navigate(alert.link)}
-                    className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                    className="flex items-center justify-between p-2 sm:p-3 border rounded-lg cursor-pointer hover:bg-muted transition-colors gap-2 min-h-[48px]"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <div className={`p-1.5 sm:p-2 rounded-full flex-shrink-0 ${
                         alert.type === 'out_of_stock' || alert.type === 'high_dues' ? 'bg-red-100 text-red-600' :
                         alert.type === 'expiring_membership' || alert.type === 'missed_followup' ? 'bg-orange-100 text-orange-600' :
                         'bg-yellow-100 text-yellow-600'
                       }`}>
-                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
                       </div>
-                      <div>
-                        <div className="font-medium">{alert.title}</div>
-                        <div className="text-sm text-muted-foreground">{alert.description}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm sm:text-base truncate">{alert.title}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground truncate">{alert.description}</div>
                       </div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   </div>
                 ))}
               </div>
@@ -639,11 +656,12 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Dialogs - Mobile optimized with full-screen on small devices */}
       <Dialog open={isMemberDialogOpen} onOpenChange={setIsMemberDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Member</DialogTitle>
-            <DialogDescription>Enter the member details below</DialogDescription>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-lg sm:text-xl">Add New Member</DialogTitle>
+            <DialogDescription className="text-sm">Enter the member details below</DialogDescription>
           </DialogHeader>
           <MemberForm
             onSuccess={() => {
@@ -657,10 +675,10 @@ export default function AdminDashboard() {
       </Dialog>
 
       <Dialog open={isLeadDialogOpen} onOpenChange={setIsLeadDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Lead</DialogTitle>
-            <DialogDescription>Enter the lead details below</DialogDescription>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-lg sm:text-xl">Add New Lead</DialogTitle>
+            <DialogDescription className="text-sm">Enter the lead details below</DialogDescription>
           </DialogHeader>
           <LeadForm
             onSuccess={() => {
@@ -674,10 +692,10 @@ export default function AdminDashboard() {
       </Dialog>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
-            <DialogDescription>Record a new payment from a member</DialogDescription>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-lg sm:text-xl">Record Payment</DialogTitle>
+            <DialogDescription className="text-sm">Record a new payment from a member</DialogDescription>
           </DialogHeader>
           <PaymentForm
             onSuccess={() => {
