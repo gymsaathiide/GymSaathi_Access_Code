@@ -1,0 +1,205 @@
+You are a senior full-stack engineer.
+I need you to fully implement and fix the following notification features in my app (Supabase + modern frontend stack):
+
+1️⃣ Member Notifications After Order Placement
+
+When a member places an order, they should automatically receive:
+
+A. WhatsApp Notification
+
+Send a WhatsApp message using the existing integration or the one you configure.
+Message must include:
+
+Member Name
+
+Order ID
+
+Product(s) ordered
+
+Total Amount
+
+A short thank-you line
+
+Example message:
+
+Hello <name>! 🎉  
+Your order (<Order ID>) has been successfully placed.  
+Total Amount: ₹<amount>  
+Thank you for shopping with us!
+
+B. Email Notification
+
+Send an email confirmation with:
+
+Subject: “Your Order Confirmation - <Order ID>”
+
+Body containing:
+
+Greeting
+
+Order details
+
+Payment summary
+
+Support contact
+
+C. In-App Notification (Toast)
+
+Immediately after order placement:
+
+Show a modern, clean success toast
+
+Slide in from the top-right or bottom
+
+Auto-hide after 2 seconds
+
+Non-blocking UI
+
+Use smooth fade-out or slide-out animation
+
+2️⃣ Improve the “Add to Cart” Notification (2 Seconds Only)
+
+When the user adds a product to the cart:
+
+UI Requirements
+
+Notification must appear from the right side
+
+Must be minimal, modern, clean
+
+Rounded corners, subtle shadow
+
+No sliding panels, no overlapping UI
+
+Auto-hide after 2 seconds
+
+Should NOT block any buttons or screen content
+
+Should be responsive on mobile and look elegant
+
+Content Example
+✔ Added to cart
+<product name>
+
+Tech Requirements
+
+Use a NotificationProvider or toast manager
+
+Add entry + exit animations
+
+Use either CSS transitions, framer-motion, or Tailwind animations
+
+Ensure no manual dismissal is required
+
+3️⃣ Backend Logic Requirements
+
+Inside the order placement backend API:
+
+Create the order in the DB
+
+After success:
+
+Send WhatsApp notification
+
+Send Email confirmation
+
+Insert an entry in the notifications table for member
+
+Return a clean JSON success response
+
+Handle errors so they NEVER crash the order flow
+
+You must provide:
+
+The full backend logic
+
+WhatsApp payload format
+
+Email sending function (Node/Nodemailer or service used)
+
+The notification DB insert code
+
+Error handling to avoid breaking the main order
+
+4️⃣ Frontend Requirements
+After clicking “Place Order”:
+
+Show a loading state
+
+When API succeeds:
+
+Show 2-second success toast
+
+Clear cart (localStorage + UI state + Supabase if applicable)
+
+Redirect to success page or show success state
+
+When adding to cart:
+
+Trigger the 2-second toast
+
+Persist cart to localStorage (immediately)
+
+Update UI state
+
+5️⃣ Deliverables You Must Provide
+
+You must provide:
+
+A. Full React code
+
+Notification/Toast provider
+
+Example usage in “Add to Cart”
+
+Example usage in “Order Placed”
+
+B. Full Backend Code
+
+API route for order placement
+
+WhatsApp sending logic
+
+Email sending logic
+
+Notification DB insert code
+
+Error handling
+
+C. Any Supabase Schema Adjustments (if needed)
+D. Final Explanation
+
+A simple explanation of:
+
+How the toast works
+
+How WhatsApp + email integrate
+
+Why this solution avoids UI blocking
+
+How data stays synced with localStorage
+
+6️⃣ First Step for You
+
+Your first response must ask me to upload:
+
+Order placement API file
+
+Cart context/state file
+
+Notification component file
+
+WhatsApp integration file (if exists)
+
+Email service file
+
+Admin and member order pages
+
+Then provide step-by-step corrected code.
+
+If you follow this spec, the app will have:
+
+✔ Smooth 2-second notifications
+✔ Professional UI
+✔ Real WhatsApp + email confirmations
+✔ A non-blocking experience across mobile, tablet, and desktop

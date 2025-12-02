@@ -1281,3 +1281,169 @@ export async function sendNewBranchNotificationEmail(payload: NewBranchNotificat
     return false;
   }
 }
+
+export interface OrderConfirmationEmailPayload {
+  memberName: string;
+  memberEmail: string;
+  orderNumber: string;
+  items: Array<{ productName: string; quantity: number; price: number }>;
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  gymName: string;
+  gymEmail?: string;
+  gymPhone?: string;
+}
+
+function getOrderConfirmationEmailHtml(payload: OrderConfirmationEmailPayload): string {
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(amount);
+
+  const itemsHtml = payload.items.map(item => `
+    <tr>
+      <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #374151;">${item.productName}</td>
+      <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #374151; text-align: center;">${item.quantity}</td>
+      <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #374151; text-align: right;">${formatCurrency(item.price * item.quantity)}</td>
+    </tr>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation - ${payload.orderNumber}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px 20px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Order Confirmed!</h1>
+        <p style="color: #ffffff; margin: 10px 0 0; opacity: 0.9; font-size: 16px;">Thank you for your purchase</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 30px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Hi <strong>${payload.memberName}</strong>,
+        </p>
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Great news! Your order has been successfully placed at <strong>${payload.gymName}</strong>.
+        </p>
+        
+        <div style="margin: 25px 0; padding: 20px; background-color: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
+          <table style="width: 100%;">
+            <tr>
+              <td style="color: #166534; font-weight: 600; font-size: 14px;">Order Number:</td>
+              <td style="color: #166534; font-weight: bold; font-size: 16px; text-align: right;">${payload.orderNumber}</td>
+            </tr>
+          </table>
+        </div>
+
+        <h3 style="color: #374151; margin: 25px 0 15px; font-size: 18px;">Order Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #f9fafb;">
+              <th style="padding: 12px 0; text-align: left; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Product</th>
+              <th style="padding: 12px 0; text-align: center; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Qty</th>
+              <th style="padding: 12px 0; text-align: right; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 20px; padding: 20px; background-color: #f9fafb; border-radius: 8px;">
+          <table style="width: 100%;">
+            <tr>
+              <td style="color: #6b7280; padding: 5px 0;">Subtotal:</td>
+              <td style="color: #374151; text-align: right; padding: 5px 0;">${formatCurrency(payload.subtotal)}</td>
+            </tr>
+            ${payload.taxAmount > 0 ? `
+            <tr>
+              <td style="color: #6b7280; padding: 5px 0;">Tax:</td>
+              <td style="color: #374151; text-align: right; padding: 5px 0;">${formatCurrency(payload.taxAmount)}</td>
+            </tr>` : ''}
+            <tr>
+              <td style="color: #374151; font-weight: bold; padding: 10px 0; border-top: 2px solid #e5e7eb;">Total:</td>
+              <td style="color: #16a34a; font-weight: bold; font-size: 20px; text-align: right; padding: 10px 0; border-top: 2px solid #e5e7eb;">${formatCurrency(payload.totalAmount)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin: 30px 0; padding: 20px; background-color: #fefce8; border-radius: 12px; border-left: 4px solid #eab308;">
+          <p style="color: #854d0e; font-size: 14px; margin: 0;">
+            <strong>What's Next?</strong><br>
+            Your order is being processed. You can collect your items at the gym or wait for delivery based on your gym's policy.
+          </p>
+        </div>
+
+        ${payload.gymPhone || payload.gymEmail ? `
+        <div style="margin: 25px 0; padding: 20px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
+          <p style="color: #6b7280; margin: 0 0 10px; font-size: 14px;"><strong>Need Help?</strong></p>
+          ${payload.gymPhone ? `<p style="color: #374151; margin: 5px 0; font-size: 14px;">📞 ${payload.gymPhone}</p>` : ''}
+          ${payload.gymEmail ? `<p style="color: #374151; margin: 5px 0; font-size: 14px;">📧 ${payload.gymEmail}</p>` : ''}
+        </div>
+        ` : ''}
+
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 25px 0 0; text-align: center;">
+          Thank you for shopping with us! 🙏
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 30px; background-color: #1f2937; text-align: center;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+          © ${new Date().getFullYear()} ${payload.gymName} via GYMSAATHI. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+export async function sendOrderConfirmationEmail(payload: OrderConfirmationEmailPayload): Promise<boolean> {
+  if (process.env.ENABLE_EMAIL_NOTIFICATIONS === 'false') {
+    console.log('[email] Email notifications disabled, skipping order confirmation email');
+    return true;
+  }
+
+  if (!payload.memberEmail) {
+    console.log('[email] No email provided for member, skipping order confirmation email');
+    return false;
+  }
+
+  if (!resend) {
+    console.log('[email] RESEND_API_KEY not configured, skipping order confirmation email');
+    return false;
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `${payload.gymName} via GYMSAATHI <${fromEmail}>`,
+      to: payload.memberEmail,
+      subject: `Order Confirmed - ${payload.orderNumber}`,
+      html: getOrderConfirmationEmailHtml(payload),
+      text: `Hi ${payload.memberName}, Your order ${payload.orderNumber} has been confirmed! Items: ${payload.items.map(i => `${i.productName} x${i.quantity}`).join(', ')}. Total: ₹${payload.totalAmount}. Thank you for shopping with ${payload.gymName}!`,
+    });
+
+    if (error) {
+      console.error('[email] ERROR sending order confirmation email:', error);
+      return false;
+    }
+
+    console.log(`[email] Sent order confirmation email to ${payload.memberEmail} (ID: ${data?.id})`);
+    return true;
+  } catch (error) {
+    console.error('[email] ERROR sending order confirmation email:', error);
+    return false;
+  }
+}

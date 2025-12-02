@@ -10,8 +10,8 @@ import { fromZodError } from "zod-validation-error";
 import { db, supabaseAdmin } from "./db";
 import { eq, and, desc, asc, sql, gte, lte, lt, or, like, isNull, inArray } from "drizzle-orm";
 import * as schema from "@shared/schema";
-import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendPaymentDetailsEmail, sendPaymentReminderEmail, sendNewBranchNotificationEmail } from "./services/emailService";
-import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber, sendPaymentDetailsWhatsApp, sendPaymentReminderWhatsApp } from "./services/whatsappService";
+import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendPaymentDetailsEmail, sendPaymentReminderEmail, sendNewBranchNotificationEmail, sendOrderConfirmationEmail } from "./services/emailService";
+import { sendGymAdminWelcomeWhatsApp, sendMemberWelcomeWhatsApp, sendInvoiceWhatsApp, sendLeadWelcomeWhatsApp, sendNewLeadNotificationWhatsApp, sendTrainerWelcomeWhatsApp, validateAndFormatPhoneNumber, sendPaymentDetailsWhatsApp, sendPaymentReminderWhatsApp, sendOrderConfirmationWhatsApp } from "./services/whatsappService";
 import { generateInvoicePdf, type InvoiceData } from "./services/invoicePdfService";
 import * as auditService from "./services/auditService";
 import { supabaseRepo } from "./supabaseRepository";
@@ -120,7 +120,7 @@ const createOrderSchema = z.object({
     quantity: z.number().int().positive(),
     price: z.coerce.number(),
     variant: z.string().optional(),
-  })),
+  })).min(1, 'At least one item is required'),
 });
 
 const createClassSchema = z.object({
@@ -5201,12 +5201,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentStatus: validationResult.data.paymentStatus || 'unpaid',
       });
 
+      // Get member and gym info for notifications (all non-blocking)
+      let memberInfo: any = null;
+      let gymInfo: any = null;
+      
+      try {
+        memberInfo = await storage.getMemberById(validationResult.data.memberId);
+      } catch (memberError) {
+        console.log('Could not fetch member info for notifications (non-critical):', memberError);
+      }
+      
+      try {
+        gymInfo = await supabaseRepo.getGymById(user.gymId);
+      } catch (gymError) {
+        console.log('Could not fetch gym info for notifications (non-critical):', gymError);
+      }
+      
+      const memberName = memberInfo?.name || 'A member';
+      const orderTotal = validationResult.data.totalAmount.toFixed(2);
+      const gymName = gymInfo?.name || 'Your Gym';
+      const orderItems = validationResult.data.items || [];
+
       // Create admin notifications for new order (non-blocking)
       try {
         const adminUserIds = await supabaseRepo.getGymAdminUserIds(user.gymId);
-        const memberInfo = await storage.getMemberById(validationResult.data.memberId);
-        const memberName = memberInfo?.name || 'A member';
-        const orderTotal = validationResult.data.totalAmount.toFixed(2);
         
         for (const adminUserId of adminUserIds) {
           await supabaseRepo.createNotification({
@@ -5218,7 +5236,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.log(`✅ Sent order notifications to ${adminUserIds.length} admin(s)`);
       } catch (notifyError) {
-        console.error('Error sending order notifications (non-critical):', notifyError);
+        console.error('Error sending admin order notifications (non-critical):', notifyError);
+      }
+
+      // Create member in-app notification (non-blocking)
+      try {
+        const memberUserId = memberInfo?.userId;
+        if (memberUserId && typeof memberUserId === 'string') {
+          await supabaseRepo.createNotification({
+            userId: memberUserId,
+            title: 'Order Confirmed!',
+            message: `Your order #${orderNumber} for ₹${orderTotal} has been placed successfully.`,
+            type: 'success',
+          });
+          console.log(`✅ Created member notification for order ${orderNumber}`);
+        }
+      } catch (notifyError) {
+        console.error('Error creating member notification (non-critical):', notifyError);
+      }
+
+      // Send WhatsApp notification to member (non-blocking)
+      try {
+        const memberPhone = memberInfo?.phone;
+        if (memberPhone && typeof memberPhone === 'string' && memberPhone.length >= 10 && orderItems.length > 0) {
+          await sendOrderConfirmationWhatsApp({
+            phoneNumber: memberPhone,
+            memberName: memberName,
+            orderNumber: orderNumber,
+            items: orderItems.map(item => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+            totalAmount: validationResult.data.totalAmount,
+            gymName: gymName,
+          });
+          console.log(`✅ Sent order WhatsApp notification to ${memberPhone}`);
+        } else {
+          console.log('Skipping WhatsApp notification - no valid phone or empty items');
+        }
+      } catch (whatsappError) {
+        console.error('Error sending order WhatsApp (non-critical):', whatsappError);
+      }
+
+      // Send Email notification to member (non-blocking)
+      try {
+        const memberEmail = memberInfo?.email;
+        if (memberEmail && typeof memberEmail === 'string' && memberEmail.includes('@') && orderItems.length > 0) {
+          await sendOrderConfirmationEmail({
+            memberName: memberName,
+            memberEmail: memberEmail,
+            orderNumber: orderNumber,
+            items: orderItems.map(item => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+            subtotal: validationResult.data.subtotal,
+            taxAmount: validationResult.data.taxAmount || 0,
+            totalAmount: validationResult.data.totalAmount,
+            gymName: gymName,
+            gymEmail: gymInfo?.email || undefined,
+            gymPhone: gymInfo?.phone || undefined,
+          });
+          console.log(`✅ Sent order email notification to ${memberEmail}`);
+        } else {
+          console.log('Skipping email notification - no valid email or empty items');
+        }
+      } catch (emailError) {
+        console.error('Error sending order email (non-critical):', emailError);
       }
 
       res.status(201).json(order);

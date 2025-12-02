@@ -170,7 +170,8 @@ export default function Shop() {
       setIsCartOpen(false);
       toast({
         title: "Order Placed Successfully!",
-        description: `Order #${response.orderNumber || 'NEW'} has been submitted for processing.`,
+        description: `Order #${response.orderNumber || 'NEW'} confirmed! Processing your order now.`,
+        variant: "success",
         duration: 5000,
       });
     },

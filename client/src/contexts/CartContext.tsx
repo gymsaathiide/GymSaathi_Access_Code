@@ -116,7 +116,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (newQuantity <= existingItem.stock) {
           toast({
             title: "Added to Cart",
-            description: `${item.productName} quantity updated to ${newQuantity}`,
+            description: `${item.productName} (${newQuantity} in cart)`,
+            variant: "success",
             duration: 2000,
           });
           return prevCart.map((i) =>
@@ -136,7 +137,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else {
         toast({
           title: "Added to Cart",
-          description: `${item.productName} added to your cart`,
+          description: item.productName,
+          variant: "success",
           duration: 2000,
         });
         return [...prevCart, {

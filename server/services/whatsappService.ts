@@ -556,3 +556,55 @@ Thank you for being a valued member!
 
   return sendWhatsAppMessage(recipientPhone, message);
 }
+
+export interface OrderConfirmationWhatsAppPayload {
+  phoneNumber: string;
+  memberName: string;
+  orderNumber: string;
+  items: Array<{ productName: string; quantity: number; price: number }>;
+  totalAmount: number;
+  gymName: string;
+}
+
+export async function sendOrderConfirmationWhatsApp(payload: OrderConfirmationWhatsAppPayload): Promise<boolean> {
+  if (process.env.ENABLE_WHATSAPP_NOTIFICATIONS === 'false') {
+    console.log('[whatsapp] WhatsApp notifications disabled, skipping order confirmation');
+    return true;
+  }
+
+  if (!payload.phoneNumber) {
+    console.log('[whatsapp] No phone number provided for member, skipping order confirmation');
+    return false;
+  }
+
+  const formattedAmount = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(payload.totalAmount);
+
+  const itemsList = payload.items
+    .map(item => `• ${item.productName} x${item.quantity}`)
+    .join('\n');
+
+  const message = `🎉 *Order Confirmed!*
+
+Hello ${payload.memberName}!
+
+Your order has been successfully placed.
+
+🛒 *Order ID:* ${payload.orderNumber}
+
+📦 *Items Ordered:*
+${itemsList}
+
+💰 *Total Amount:* ${formattedAmount}
+
+Thank you for shopping with us! 🙏
+
+For any queries, please contact your gym.
+
+- Team ${payload.gymName}`;
+
+  return sendWhatsAppMessage(payload.phoneNumber, message);
+}

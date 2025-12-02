@@ -59,7 +59,8 @@ export default function MemberStore() {
       setIsCartOpen(false);
       toast({
         title: "Order Placed Successfully!",
-        description: `Order #${response.orderNumber || 'NEW'} has been placed. Visit the gym to collect your order and pay at the counter.`,
+        description: `Order #${response.orderNumber || 'NEW'} placed! Visit the gym to collect your items.`,
+        variant: "success",
         duration: 5000,
       });
     },
