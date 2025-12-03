@@ -170,23 +170,22 @@ export function requireRole(...roles: string[]) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req, res) => {
+    const startTime = Date.now();
     try {
       const { email, password } = req.body;
 
-      console.log(`🔐 Login attempt for: ${email}`);
-
       if (!email || !password) {
-        console.log('❌ Missing email or password');
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
+      const normalizedEmail = email.toLowerCase().trim();
+
       let user: any = null;
-      let gymIds: string[] = [];
 
       if (isDbAvailable()) {
-        user = await db!.select().from(schema.users).where(eq(schema.users.email, email.toLowerCase())).limit(1).then(rows => rows[0]);
+        user = await db!.select().from(schema.users).where(eq(schema.users.email, normalizedEmail)).limit(1).then(rows => rows[0]);
       } else {
-        const supabaseUser = await supabaseRepo.getUserByEmail(email);
+        const supabaseUser = await supabaseRepo.getUserByEmail(normalizedEmail);
         if (supabaseUser) {
           user = {
             id: supabaseUser.id,
@@ -204,37 +203,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!user) {
-        console.log(`❌ User not found: ${email}`);
-        try { await auditService.logFailedLoginAttempt(req, email); } catch (e) {}
+        auditService.logFailedLoginAttempt(req, normalizedEmail).catch(() => {});
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      const bcryptModule = await import('bcrypt');
-      const validPassword = await bcryptModule.compare(password, user.passwordHash);
+      const validPassword = await bcrypt.compare(password, user.passwordHash);
 
       if (!validPassword) {
-        console.log(`❌ Invalid password for: ${email}`);
-        try { await auditService.logFailedLoginAttempt(req, email); } catch (e) {}
+        auditService.logFailedLoginAttempt(req, normalizedEmail).catch(() => {});
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
       if (!user.isActive) {
-        console.log(`❌ Account inactive: ${email}`);
         return res.status(403).json({ error: 'Account is inactive' });
       }
 
+      const gymIdsPromise = isDbAvailable() 
+        ? storage.getUserGyms(user.id, user.role)
+        : supabaseRepo.getUserGyms(user.id, user.role);
+
       if (isDbAvailable()) {
-        await db!.update(schema.users).set({ lastLogin: new Date() }).where(eq(schema.users.id, user.id));
-        gymIds = await storage.getUserGyms(user.id, user.role);
+        db!.update(schema.users).set({ lastLogin: new Date() }).where(eq(schema.users.id, user.id)).catch(() => {});
       } else {
-        await supabaseRepo.updateUserLastLogin(user.id);
-        gymIds = await supabaseRepo.getUserGyms(user.id, user.role);
+        supabaseRepo.updateUserLastLogin(user.id).catch(() => {});
       }
+
+      const gymIds = await gymIdsPromise;
+      const primaryGymId = gymIds.length > 0 ? gymIds[0] : null;
 
       req.session.userId = user.id;
       req.session.userRole = user.role;
-
-      const primaryGymId = gymIds.length > 0 ? gymIds[0] : null;
       req.session.gymId = primaryGymId;
 
       const userResponse = {
@@ -245,26 +243,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gymId: primaryGymId,
         gymIds: gymIds,
         phone: user.phone,
+        profileImageUrl: user.profileImageUrl,
         isActive: user.isActive,
         createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
+        lastLogin: new Date().toISOString(),
       };
 
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
-          if (err) {
-            console.error('❌ Session save error:', err);
-            reject(err);
-          } else {
-            console.log(`✅ Session saved for user: ${user.email}`);
-            resolve();
-          }
+          if (err) reject(err);
+          else resolve();
         });
       });
 
-      console.log(`✅ Login successful: ${email} (${user.role})`);
+      const loginTime = Date.now() - startTime;
+      console.log(`✅ Login: ${normalizedEmail} (${user.role}) in ${loginTime}ms`);
 
-      try { await auditService.logLogin(req, user.id, user.name, true); } catch (e) {}
+      auditService.logLogin(req, user.id, user.name, true).catch(() => {});
 
       res.json({
         user: userResponse,

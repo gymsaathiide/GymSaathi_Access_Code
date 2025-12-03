@@ -24,8 +24,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     queryFn: getQueryFn({ on401: 'returnNull' }),
     retry: false,
     refetchOnWindowFocus: false,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const refetchUser = () => {

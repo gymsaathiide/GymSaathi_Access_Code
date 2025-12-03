@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, Loader2 } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -63,8 +63,8 @@ export default function Login() {
       const response = await apiRequest('POST', '/api/auth/login', credentials);
       return await response.json();
     },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['/api/auth/me'], data.user);
       
       const defaultRoute = data.user.role === 'superadmin' ? '/' 
         : data.user.role === 'admin' ? '/admin'
@@ -259,11 +259,18 @@ export default function Login() {
               {/* Sign In Button */}
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25"
+                className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all duration-200"
                 disabled={isLoading}
                 data-testid="button-login"
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Signing you in...
+                  </span>
+                ) : (
+                  'Sign in'
+                )}
               </Button>
             </form>
           </Form>

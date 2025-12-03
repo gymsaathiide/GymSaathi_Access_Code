@@ -174,12 +174,23 @@ function AppContent() {
     return <ResetPassword />;
   }
 
-  // Show loading state while checking auth
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background" data-testid="status-loading">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-foreground">Loading...</h2>
+      <div className="flex h-screen items-center justify-center bg-[#0a0a0f]" data-testid="status-loading">
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <img 
+              src="/gymsaathi-logo-dark.png" 
+              alt="GYMSAATHI" 
+              className="w-10 h-10 object-contain animate-pulse"
+            />
+            <span className="text-2xl font-bold text-white tracking-wide">GYMSAATHI</span>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          </div>
         </div>
       </div>
     );
