@@ -46,6 +46,14 @@ The platform features a modern dark theme with navy backgrounds, white/5% opacit
     -   60-second auto-refresh for real-time updates
     -   Full mobile responsiveness with touch-friendly design
     -   Routes: `/admin/shop-revenue` and `/trainer/shop-revenue`
+-   **Security Audit System**: Super Admin functional error tracking with:
+    -   Tracks only user-facing errors (orders, payments, notifications)
+    -   Converts technical errors to human-readable messages
+    -   3-day auto-expiry for all logged errors
+    -   Dashboard with stats cards (Total Issues, Member/Admin/Trainer breakdown)
+    -   Role filtering and search functionality
+    -   Mobile-responsive table UI
+    -   Route: `/audit` (Super Admin only)
 
 # External Dependencies
 
