@@ -5568,7 +5568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/orders', requireRole('admin', 'trainer'), async (req, res) => {
+  app.get('/api/orders', requireRole('admin'), async (req, res) => {
     try {
       const user = await storage.getUserById(req.session!.userId!);
       if (!user || !user.gymId) {
@@ -5588,7 +5588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/orders/:id', requireRole('admin', 'trainer'), async (req, res) => {
+  app.get('/api/orders/:id', requireRole('admin'), async (req, res) => {
     try {
       const order = await storage.getOrderById(req.params.id);
 
@@ -5765,7 +5765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/orders/:id/status', requireRole('admin', 'trainer'), async (req, res) => {
+  app.patch('/api/orders/:id/status', requireRole('admin'), async (req, res) => {
     try {
       const existingOrder = await db!.select().from(schema.orders).where(eq(schema.orders.id, req.params.id)).limit(1).then(rows => rows[0]);
 
@@ -5791,7 +5791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/orders/:id/payment', requireRole('admin', 'trainer'), async (req, res) => {
+  app.patch('/api/orders/:id/payment', requireRole('admin'), async (req, res) => {
     try {
       const existingOrder = await db!.select().from(schema.orders).where(eq(schema.orders.id, req.params.id)).limit(1).then(rows => rows[0]);
 
@@ -5819,13 +5819,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/members/:id/orders', requireAuth, async (req, res) => {
     try {
+      const user = await storage.getUserById(req.session!.userId!);
+      
+      // Trainers cannot view order history
+      if (user?.role === 'trainer') {
+        return res.status(403).json({ error: 'Trainers are not allowed to access order data.' });
+      }
+
       const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.id)).limit(1).then(rows => rows[0]);
 
       if (!member) {
         return res.status(404).json({ error: 'Member not found' });
       }
 
-      const user = await storage.getUserById(req.session!.userId!);
       if (user?.role !== 'superadmin' && member.gymId !== user?.gymId) {
         return res.status(403).json({ error: 'Access denied to this member' });
       }
@@ -7089,7 +7095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Store Analytics
-  app.get('/api/store/analytics', requireRole('admin', 'trainer'), async (req, res) => {
+  app.get('/api/store/analytics', requireRole('admin'), async (req, res) => {
     try {
       const user = await storage.getUserById(req.session!.userId!);
       if (!user || !user.gymId) {
@@ -7166,8 +7172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Shop Orders Revenue Dashboard API
-  app.get('/api/admin/shop-revenue', requireRole('admin', 'trainer'), async (req, res) => {
+  // Shop Orders Revenue Dashboard API - Admins only (trainers cannot access order data)
+  app.get('/api/admin/shop-revenue', requireRole('admin'), async (req, res) => {
     try {
       const user = await storage.getUserById(req.session!.userId!);
       if (!user || !user.gymId) {

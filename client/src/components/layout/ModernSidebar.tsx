@@ -61,7 +61,6 @@ const trainerItems = [
   { title: "Classes", url: "/trainer/classes", icon: Calendar },
   { title: "Attendance", url: "/trainer/attendance", icon: ClipboardCheck },
   { title: "Shop", url: "/trainer/shop", icon: ShoppingBag },
-  { title: "Shop Revenue", url: "/trainer/shop-revenue", icon: TrendingUp },
 ];
 
 const memberItems = [

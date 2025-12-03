@@ -110,7 +110,7 @@ function ProtectedApp() {
         <Route path="/admin/attendance" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Attendance /></ProtectedRoute>} />
         <Route path="/admin/billing" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer']}><Billing /></ProtectedRoute>} />
         <Route path="/admin/shop" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Shop /></ProtectedRoute>} />
-        <Route path="/admin/shop-revenue" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer']}><ShopRevenueDashboard /></ProtectedRoute>} />
+        <Route path="/admin/shop-revenue" component={() => <ProtectedRoute allowedRoles={['admin']}><ShopRevenueDashboard /></ProtectedRoute>} />
         <Route path="/admin/more" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><AdminMore /></ProtectedRoute>} />
 
         <Route path="/trainer" component={() => <ProtectedRoute allowedRoles={['trainer']}><TrainerDashboard /></ProtectedRoute>} />
@@ -119,7 +119,6 @@ function ProtectedApp() {
         <Route path="/trainer/classes" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Classes /></ProtectedRoute>} />
         <Route path="/trainer/attendance" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Attendance /></ProtectedRoute>} />
         <Route path="/trainer/shop" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Shop /></ProtectedRoute>} />
-        <Route path="/trainer/shop-revenue" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer']}><ShopRevenueDashboard /></ProtectedRoute>} />
         <Route path="/trainer/more" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><AdminMore /></ProtectedRoute>} />
 
         <Route path="/member" component={() => <ProtectedRoute allowedRoles={['member']}><MemberDashboard /></ProtectedRoute>} />

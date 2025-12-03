@@ -101,7 +101,7 @@ export default function Shop() {
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery<any[]>({
     queryKey: ["/api/orders"],
-    enabled: user?.role === "admin" || user?.role === "trainer",
+    enabled: user?.role === "admin",
   });
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<
@@ -241,7 +241,7 @@ export default function Shop() {
 
   const { data: analytics } = useQuery<any>({
     queryKey: ["/api/store/analytics"],
-    enabled: user?.role === "admin" || user?.role === "trainer",
+    enabled: user?.role === "admin",
   });
 
   const { data: storeSettings } = useQuery<any>({
@@ -1020,7 +1020,7 @@ export default function Shop() {
               Categories
             </TabsTrigger>
           )}
-          {(user?.role === "admin" || user?.role === "trainer") && (
+          {user?.role === "admin" && (
             <TabsTrigger value="orders" data-testid="tab-orders" className="text-xs sm:text-sm py-2">
               Orders
             </TabsTrigger>
