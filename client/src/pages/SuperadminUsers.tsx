@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, UserPlus, Shield, Mail, Phone, User, Trash2, Eye, EyeOff, AlertTriangle, UserCog, Calendar } from "lucide-react";
+import { Loader2, UserPlus, Shield, Mail, Phone, User, Trash2, Eye, EyeOff, AlertTriangle, UserCog, Calendar, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 
 const newUserSchema = z.object({
@@ -53,7 +53,7 @@ export default function SuperadminUsers() {
     },
   });
 
-  const { data: superadmins, isLoading } = useQuery<SuperadminUser[]>({
+  const { data: superadmins, isLoading, isError, error, refetch } = useQuery<SuperadminUser[]>({
     queryKey: ["/api/superadmin/users"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/superadmin/users");
@@ -319,6 +319,20 @@ export default function SuperadminUsers() {
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
+              </div>
+            ) : isError ? (
+              <div className="text-center py-12">
+                <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                <p className="text-gray-400 mb-2">Failed to load superadmin accounts</p>
+                <p className="text-gray-500 text-sm mb-4">{(error as Error)?.message || "Please try again"}</p>
+                <Button
+                  onClick={() => refetch()}
+                  variant="outline"
+                  className="border-white/10 text-gray-300 hover:bg-white/5"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
               </div>
             ) : superadmins && superadmins.length > 0 ? (
               <>

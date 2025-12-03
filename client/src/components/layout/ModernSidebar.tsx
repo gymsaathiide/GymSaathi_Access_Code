@@ -239,6 +239,7 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
 
   return (
     <>
+      {/* Desktop Sidebar - Always visible on md and up */}
       <aside
         className={cn(
           "hidden md:flex flex-col relative transition-all duration-300 ease-in-out bg-[hsl(220,26%,14%)]",
@@ -248,27 +249,26 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
         {sidebarContent}
       </aside>
 
+      {/* Mobile Sidebar - Only render when open and on mobile */}
       {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] md:hidden"
-          onClick={onMobileClose}
-        />
+        <>
+          <div 
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] md:hidden"
+            onClick={onMobileClose}
+          />
+          <aside
+            className="fixed inset-y-0 left-0 z-[70] w-72 md:hidden bg-[hsl(220,26%,14%)] shadow-2xl"
+          >
+            <button
+              onClick={onMobileClose}
+              className="absolute top-4 right-4 p-2 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white z-10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {sidebarContent}
+          </aside>
+        </>
       )}
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-[70] w-72 transform transition-transform duration-300 ease-in-out md:hidden bg-[hsl(220,26%,14%)] shadow-2xl",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <button
-          onClick={onMobileClose}
-          className="absolute top-4 right-4 p-2 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white"
-        >
-          <X className="h-5 w-5" />
-        </button>
-        {sidebarContent}
-      </aside>
     </>
   );
 }
