@@ -62,6 +62,14 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   Role filtering and search functionality
     -   Mobile-responsive table UI
     -   Route: `/audit` (Super Admin only)
+-   **Superadmin Profile & User Management**: Comprehensive account management with:
+    -   Profile settings to update name, email, and phone
+    -   Password change with current password verification
+    -   User management dashboard to view all superadmins
+    -   Add new superadmin accounts with email and temporary password
+    -   Delete superadmin accounts (with self-deletion and last-admin protections)
+    -   Mobile-responsive card view for small screens, table view for desktop
+    -   Routes: `/settings` and `/users` (Super Admin only)
 
 # External Dependencies
 

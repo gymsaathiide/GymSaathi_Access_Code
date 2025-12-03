@@ -250,14 +250,14 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
 
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] md:hidden"
           onClick={onMobileClose}
         />
       )}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:hidden bg-[hsl(220,26%,14%)]",
+          "fixed inset-y-0 left-0 z-[70] w-72 transform transition-transform duration-300 ease-in-out md:hidden bg-[hsl(220,26%,14%)] shadow-2xl",
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

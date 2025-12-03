@@ -113,9 +113,9 @@ export default function SuperadminSettings() {
   return (
     <ModernLayout>
       <div className="p-6 md:p-8 max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Account Settings</h1>
-          <p className="text-gray-400">Manage your superadmin account details and security</p>
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Account Settings</h1>
+          <p className="text-gray-400 text-sm md:text-base">Manage your superadmin account details and security</p>
         </div>
 
         <div className="space-y-6">
@@ -348,25 +348,25 @@ export default function SuperadminSettings() {
 
           {/* Account Info */}
           <Card className="bg-[#1a1a2e]/50 border-white/5">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-white text-sm">Account Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500">Role</p>
+                  <p className="text-gray-500 text-xs">Role</p>
                   <p className="text-white font-medium capitalize">{user?.role}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Account ID</p>
-                  <p className="text-white font-mono text-xs">{user?.id?.slice(0, 8)}...</p>
+                  <p className="text-gray-500 text-xs">Account ID</p>
+                  <p className="text-white font-mono text-xs truncate">{user?.id?.slice(0, 8)}...</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Email Verified</p>
+                  <p className="text-gray-500 text-xs">Email Verified</p>
                   <p className="text-green-400 font-medium">Verified</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Status</p>
+                  <p className="text-gray-500 text-xs">Status</p>
                   <p className="text-green-400 font-medium">Active</p>
                 </div>
               </div>

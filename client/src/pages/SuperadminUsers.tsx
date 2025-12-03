@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, UserPlus, Shield, Mail, Phone, User, Trash2, Eye, EyeOff, AlertTriangle, UserCog } from "lucide-react";
+import { Loader2, UserPlus, Shield, Mail, Phone, User, Trash2, Eye, EyeOff, AlertTriangle, UserCog, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 const newUserSchema = z.object({
@@ -307,95 +307,179 @@ export default function SuperadminUsers() {
           </Card>
         </div>
 
-        {/* Users Table */}
+        {/* Users List */}
         <Card className="bg-[#1a1a2e]/50 border-white/5">
-          <CardHeader>
-            <CardTitle className="text-white">Superadmin Accounts</CardTitle>
-            <CardDescription className="text-gray-400">
+          <CardHeader className="px-4 md:px-6">
+            <CardTitle className="text-white text-lg md:text-xl">Superadmin Accounts</CardTitle>
+            <CardDescription className="text-gray-400 text-sm">
               All users with superadmin privileges
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
               </div>
             ) : superadmins && superadmins.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/5">
-                      <TableHead className="text-gray-400">Name</TableHead>
-                      <TableHead className="text-gray-400">Email</TableHead>
-                      <TableHead className="text-gray-400">Phone</TableHead>
-                      <TableHead className="text-gray-400">Status</TableHead>
-                      <TableHead className="text-gray-400">Created</TableHead>
-                      <TableHead className="text-gray-400 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {superadmins.map((user) => (
-                      <TableRow key={user.id} className="border-white/5">
-                        <TableCell className="text-white font-medium">{user.name}</TableCell>
-                        <TableCell className="text-gray-300">{user.email}</TableCell>
-                        <TableCell className="text-gray-300">{user.phone || "-"}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              user.isOtpVerified === 1
-                                ? "border-green-500/30 text-green-400 bg-green-500/10"
-                                : "border-yellow-500/30 text-yellow-400 bg-yellow-500/10"
-                            }
-                          >
-                            {user.isOtpVerified === 1 ? "Verified" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-gray-400 text-sm">
-                          {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {deleteUserId === user.id ? (
-                            <div className="flex items-center gap-2 justify-end">
-                              <span className="text-red-400 text-xs">Confirm?</span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => deleteUserMutation.mutate(user.id)}
-                                disabled={deleteUserMutation.isPending}
-                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2"
-                              >
-                                {deleteUserMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  "Yes"
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setDeleteUserId(null)}
-                                className="text-gray-400 hover:text-white hover:bg-white/5 h-8 px-2"
-                              >
-                                No
-                              </Button>
-                            </div>
-                          ) : (
+              <>
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {superadmins.map((user) => (
+                    <div 
+                      key={user.id} 
+                      className="bg-white/5 rounded-xl p-4 border border-white/5"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-semibold text-sm">
+                            {user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                          </div>
+                          <div>
+                            <p className="text-white font-medium">{user.name}</p>
+                            <Badge
+                              variant="outline"
+                              className={`text-xs mt-1 ${
+                                user.isOtpVerified === 1
+                                  ? "border-green-500/30 text-green-400 bg-green-500/10"
+                                  : "border-yellow-500/30 text-yellow-400 bg-yellow-500/10"
+                              }`}
+                            >
+                              {user.isOtpVerified === 1 ? "Verified" : "Pending"}
+                            </Badge>
+                          </div>
+                        </div>
+                        {deleteUserId === user.id ? (
+                          <div className="flex items-center gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => setDeleteUserId(user.id)}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2"
+                              onClick={() => deleteUserMutation.mutate(user.id)}
+                              disabled={deleteUserMutation.isPending}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2 text-xs"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {deleteUserMutation.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                "Delete"
+                              )}
                             </Button>
-                          )}
-                        </TableCell>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDeleteUserId(null)}
+                              className="text-gray-400 hover:text-white hover:bg-white/5 h-8 px-2 text-xs"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeleteUserId(user.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-gray-400">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span className="truncate">{user.email}</span>
+                        </div>
+                        {user.phone && (
+                          <div className="flex items-center gap-2 text-gray-400">
+                            <Phone className="h-3.5 w-3.5" />
+                            <span>{user.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-gray-500 text-xs">
+                          <Calendar className="h-3 w-3" />
+                          <span>Created {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "-"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/5">
+                        <TableHead className="text-gray-400">Name</TableHead>
+                        <TableHead className="text-gray-400">Email</TableHead>
+                        <TableHead className="text-gray-400">Phone</TableHead>
+                        <TableHead className="text-gray-400">Status</TableHead>
+                        <TableHead className="text-gray-400">Created</TableHead>
+                        <TableHead className="text-gray-400 text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {superadmins.map((user) => (
+                        <TableRow key={user.id} className="border-white/5">
+                          <TableCell className="text-white font-medium">{user.name}</TableCell>
+                          <TableCell className="text-gray-300">{user.email}</TableCell>
+                          <TableCell className="text-gray-300">{user.phone || "-"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                user.isOtpVerified === 1
+                                  ? "border-green-500/30 text-green-400 bg-green-500/10"
+                                  : "border-yellow-500/30 text-yellow-400 bg-yellow-500/10"
+                              }
+                            >
+                              {user.isOtpVerified === 1 ? "Verified" : "Pending"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-400 text-sm">
+                            {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {deleteUserId === user.id ? (
+                              <div className="flex items-center gap-2 justify-end">
+                                <span className="text-red-400 text-xs">Confirm?</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deleteUserMutation.mutate(user.id)}
+                                  disabled={deleteUserMutation.isPending}
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2"
+                                >
+                                  {deleteUserMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    "Yes"
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setDeleteUserId(null)}
+                                  className="text-gray-400 hover:text-white hover:bg-white/5 h-8 px-2"
+                                >
+                                  No
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setDeleteUserId(user.id)}
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             ) : (
               <div className="text-center py-12">
                 <UserCog className="h-12 w-12 text-gray-600 mx-auto mb-4" />
