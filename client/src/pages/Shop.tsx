@@ -195,19 +195,12 @@ export default function Shop() {
       return;
     }
 
-    // Trainers cannot create orders
-    if (user?.role === "trainer") {
-      toast({
-        title: "Not Allowed",
-        description: "Trainers cannot place orders. Please contact an admin.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Get member ID from member data or user context
+    // For trainers, memberId may be null - backend will auto-create a member record
     const memberId = memberData?.member?.id;
-    if (!memberId) {
+    
+    // Members need a memberId, trainers can proceed without (backend handles it)
+    if (!memberId && user?.role !== "trainer") {
       toast({
         title: "Error",
         description: "Unable to identify member. Please log in again.",
@@ -758,10 +751,9 @@ export default function Shop() {
                     className="w-full" 
                     size="lg" 
                     onClick={handleCheckout} 
-                    disabled={createOrderFromCartMutation.isPending || user?.role === "trainer"}
+                    disabled={createOrderFromCartMutation.isPending}
                   >
-                    {createOrderFromCartMutation.isPending ? "Placing Order..." : 
-                     user?.role === "trainer" ? "Trainers Cannot Place Orders" : "Place Order"}
+                    {createOrderFromCartMutation.isPending ? "Placing Order..." : "Place Order"}
                   </Button>
                 </div>
               </div>

@@ -1154,7 +1154,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (isDbAvailable()) {
         user = await db!.select().from(schema.users).where(eq(schema.users.id, req.session!.userId!)).limit(1).then(rows => rows[0]);
-        if (user && user.role === 'member') {
+        // Get member info for members AND trainers (trainers may have a linked member record for purchases)
+        if (user && (user.role === 'member' || user.role === 'trainer')) {
           member = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
         }
       } else {
@@ -5615,12 +5616,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User must be associated with a gym' });
       }
 
-      // Trainers cannot create orders - only admins and members can
+      // Handle trainer orders - they can only order for themselves
+      let orderData = req.body;
       if (user.role === 'trainer') {
-        return res.status(403).json({ error: 'Trainers are not allowed to create orders. Please contact an admin.' });
+        // Get trainer info
+        const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+        if (!trainer) {
+          return res.status(400).json({ error: 'Trainer profile not found' });
+        }
+        
+        // Check if trainer has a linked member record
+        let trainerMember = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+        
+        // If no member record exists, auto-create one for the trainer
+        if (!trainerMember) {
+          const [newMember] = await db!.insert(schema.members).values({
+            userId: user.id,
+            gymId: trainer.gymId,
+            name: trainer.name,
+            email: trainer.email,
+            phone: trainer.phone || 'N/A',
+            status: 'active',
+          }).returning();
+          trainerMember = newMember;
+          console.log(`✅ Auto-created member record for trainer ${trainer.name} (${trainer.id})`);
+        }
+        
+        // Force the memberId to be the trainer's own member record
+        orderData = { ...req.body, memberId: trainerMember.id };
       }
 
-      const validationResult = createOrderSchema.safeParse(req.body);
+      const validationResult = createOrderSchema.safeParse(orderData);
       if (!validationResult.success) {
         const validationError = fromZodError(validationResult.error);
         return res.status(400).json({ error: validationError.message });
