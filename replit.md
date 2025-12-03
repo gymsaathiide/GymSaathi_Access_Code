@@ -22,7 +22,14 @@ The primary database is **Supabase PostgreSQL**, accessed via the `pg` driver an
 
 ## Authentication & Authorization
 
-**Session-based authentication** uses Express sessions with a PostgreSQL store. Security features include CORS, raw body capture for webhook verification, and an audit logging system. A "Forgot Password" flow with secure, time-limited tokens and bcrypt hashing is implemented. Trainer RBAC restricts order creation for trainers.
+**Session-based authentication** uses Express sessions with a PostgreSQL store. Security features include CORS, raw body capture for webhook verification, and an audit logging system. A "Forgot Password" flow with secure, time-limited tokens and bcrypt hashing is implemented.
+
+**Trainer RBAC (Role-Based Access Control)**: Trainers have strict isolation from all order-related data:
+-   Cannot view, create, update, or access any orders
+-   Cannot access order analytics, shop revenue dashboards, or order history
+-   Can only browse products and view the shop (like members)
+-   Backend enforces 403 Forbidden on all order-related API endpoints for trainers
+-   Frontend hides Orders tab, Shop Revenue link, and all order-related UI components
 
 **OTP Verification System**: Mandatory email verification for first-time login across all roles (superadmin, admin, trainer, member). Features include:
 -   6-digit OTP sent via Resend email API
@@ -53,7 +60,7 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   Recent orders table with status badges
     -   60-second auto-refresh for real-time updates
     -   Full mobile responsiveness with touch-friendly design
-    -   Routes: `/admin/shop-revenue` and `/trainer/shop-revenue`
+    -   Route: `/admin/shop-revenue` (Admin only - trainers do not have access)
 -   **Security Audit System**: Super Admin functional error tracking with:
     -   Tracks only user-facing errors (orders, payments, notifications)
     -   Converts technical errors to human-readable messages
