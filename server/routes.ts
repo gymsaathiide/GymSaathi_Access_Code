@@ -2812,6 +2812,259 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // SUPERADMIN PROFILE & USER MANAGEMENT
+  // ==========================================
+
+  // Update superadmin profile
+  app.put('/api/superadmin/profile', requireRole('superadmin'), async (req, res) => {
+    try {
+      const userId = req.session!.userId!;
+      const { name, email, phone } = req.body;
+
+      if (!name || name.length < 2) {
+        return res.status(400).json({ error: 'Name must be at least 2 characters' });
+      }
+
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'Please enter a valid email' });
+      }
+
+      // Check if email is taken by another user
+      const existingUser = await supabaseRepo.getUserByEmail(email);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).json({ error: 'Email is already in use by another account' });
+      }
+
+      // Update user in database
+      const { error } = await supabase
+        .from('users')
+        .update({ name, email, phone: phone || null })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        return res.status(500).json({ error: 'Failed to update profile' });
+      }
+
+      const updatedUser = await supabaseRepo.getUserById(userId);
+      res.json({ 
+        message: 'Profile updated successfully',
+        user: {
+          id: updatedUser?.id,
+          name: updatedUser?.name,
+          email: updatedUser?.email,
+          phone: updatedUser?.phone,
+          role: updatedUser?.role,
+        }
+      });
+    } catch (error: any) {
+      console.error('Error updating superadmin profile:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update superadmin password
+  app.put('/api/superadmin/password', requireRole('superadmin'), async (req, res) => {
+    try {
+      const userId = req.session!.userId!;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current password and new password are required' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters' });
+      }
+
+      // Get current user
+      const user = await supabaseRepo.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!isValidPassword) {
+        return res.status(400).json({ error: 'Current password is incorrect' });
+      }
+
+      // Hash new password
+      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      const { error } = await supabase
+        .from('users')
+        .update({ password_hash: newPasswordHash })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating password:', error);
+        return res.status(500).json({ error: 'Failed to update password' });
+      }
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (error: any) {
+      console.error('Error updating superadmin password:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all superadmin users
+  app.get('/api/superadmin/users', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { data: superadmins, error } = await supabase
+        .from('users')
+        .select('id, name, email, phone, is_active, is_otp_verified, created_at, last_login')
+        .eq('role', 'superadmin')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching superadmins:', error);
+        return res.status(500).json({ error: 'Failed to fetch superadmins' });
+      }
+
+      const formattedSuperadmins = superadmins.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        isActive: u.is_active,
+        isOtpVerified: u.is_otp_verified,
+        createdAt: u.created_at,
+        lastLogin: u.last_login,
+      }));
+
+      res.json(formattedSuperadmins);
+    } catch (error: any) {
+      console.error('Error fetching superadmin users:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new superadmin user
+  app.post('/api/superadmin/users', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { name, email, phone, password } = req.body;
+
+      if (!name || name.length < 2) {
+        return res.status(400).json({ error: 'Name must be at least 2 characters' });
+      }
+
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'Please enter a valid email' });
+      }
+
+      if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+
+      // Check if email is already taken
+      const existingUser = await supabaseRepo.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email is already registered' });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Create new superadmin user
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert({
+          id: crypto.randomUUID(),
+          name,
+          email,
+          phone: phone || null,
+          password_hash: passwordHash,
+          role: 'superadmin',
+          is_active: 1,
+          is_otp_verified: 0,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating superadmin:', error);
+        return res.status(500).json({ error: 'Failed to create superadmin' });
+      }
+
+      res.json({ 
+        message: 'Superadmin created successfully',
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          phone: newUser.phone,
+        }
+      });
+    } catch (error: any) {
+      console.error('Error creating superadmin user:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete superadmin user
+  app.delete('/api/superadmin/users/:id', requireRole('superadmin'), async (req, res) => {
+    try {
+      const userIdToDelete = req.params.id;
+      const currentUserId = req.session!.userId!;
+
+      // Prevent self-deletion
+      if (userIdToDelete === currentUserId) {
+        return res.status(400).json({ error: 'You cannot delete your own account' });
+      }
+
+      // Check if user exists and is a superadmin
+      const userToDelete = await supabaseRepo.getUserById(userIdToDelete);
+      if (!userToDelete) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (userToDelete.role !== 'superadmin') {
+        return res.status(400).json({ error: 'This user is not a superadmin' });
+      }
+
+      // Check if there would be at least one superadmin left
+      const { data: superadmins, error: countError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'superadmin');
+
+      if (countError) {
+        console.error('Error counting superadmins:', countError);
+        return res.status(500).json({ error: 'Failed to verify superadmin count' });
+      }
+
+      const superadminCount = superadmins?.length || 0;
+      if (superadminCount <= 1) {
+        return res.status(400).json({ error: 'Cannot delete the last superadmin account' });
+      }
+
+      // Delete the user
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userIdToDelete);
+
+      if (error) {
+        console.error('Error deleting superadmin:', error);
+        return res.status(500).json({ error: 'Failed to delete superadmin' });
+      }
+
+      res.json({ message: 'Superadmin deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting superadmin user:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==========================================
+  // END SUPERADMIN PROFILE & USER MANAGEMENT
+  // ==========================================
+
   app.get('/api/members', requireRole('admin', 'trainer'), async (req, res) => {
     try {
       const user = await userAccess.getUserById(req.session!.userId!);

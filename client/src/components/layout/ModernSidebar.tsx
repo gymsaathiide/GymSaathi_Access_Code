@@ -24,6 +24,7 @@ import {
   X,
   Menu,
   TrendingUp,
+  UserCog,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
@@ -36,6 +37,8 @@ const superadminItems = [
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Security Audit", url: "/audit", icon: Shield },
   { title: "Integrations", url: "/integrations", icon: Plug },
+  { title: "User Management", url: "/users", icon: UserCog },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 const adminItems = [

@@ -21,6 +21,8 @@ import Analytics from './pages/Analytics';
 import Audit from './pages/Audit';
 import Integrations from './pages/Integrations';
 import SecurityAuditDashboard from './pages/SecurityAuditDashboard';
+import SuperadminSettings from './pages/SuperadminSettings';
+import SuperadminUsers from './pages/SuperadminUsers';
 import AdminDashboard from './pages/AdminDashboardNew';
 import TrainerDashboard from './pages/TrainerDashboard';
 import MemberDashboard from './pages/MemberDashboard';
@@ -96,6 +98,8 @@ function ProtectedApp() {
         <Route path="/analytics" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Analytics /></ProtectedRoute>} />
         <Route path="/audit" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SecurityAuditDashboard /></ProtectedRoute>} />
         <Route path="/integrations" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Integrations /></ProtectedRoute>} />
+        <Route path="/users" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SuperadminUsers /></ProtectedRoute>} />
+        <Route path="/settings" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SuperadminSettings /></ProtectedRoute>} />
 
         <Route path="/admin" component={() => <ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/members" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer']}><Members /></ProtectedRoute>} />
