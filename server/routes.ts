@@ -2865,6 +2865,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload superadmin profile image
+  app.post('/api/superadmin/profile/upload-image', requireRole('superadmin'), async (req, res) => {
+    try {
+      const userId = req.session!.userId!;
+      const { base64Image } = req.body;
+
+      if (!base64Image) {
+        return res.status(400).json({ error: 'Base64 image data is required' });
+      }
+
+      // Validate base64 image format
+      if (!base64Image.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Invalid image format. Please upload a valid image file.' });
+      }
+
+      // Check image size (max 2MB)
+      const sizeInBytes = (base64Image.length * 3) / 4;
+      if (sizeInBytes > 2 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Image too large. Please upload an image smaller than 2MB.' });
+      }
+
+      // Extract base64 data and image type
+      const matches = base64Image.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (!matches) {
+        return res.status(400).json({ error: 'Invalid base64 image format' });
+      }
+
+      const [, imageType, base64Data] = matches;
+      const buffer = Buffer.from(base64Data, 'base64');
+      const fileName = `profile-${userId}-${Date.now()}.${imageType}`;
+
+      let profileImageUrl: string;
+
+      // Try to upload to Supabase storage using admin client
+      if (supabaseAdmin) {
+        try {
+          const { data, error } = await supabaseAdmin.storage
+            .from('profile-images')
+            .upload(fileName, buffer, {
+              contentType: `image/${imageType}`,
+              upsert: true,
+            });
+
+          if (error) {
+            // If bucket doesn't exist, create it and retry
+            if (error.message.includes('Bucket not found') || error.message.includes('not found')) {
+              console.log('[profile-upload] Bucket not found, creating...');
+              const { error: createError } = await supabaseAdmin.storage.createBucket('profile-images', {
+                public: true,
+                fileSizeLimit: 2 * 1024 * 1024,
+              });
+              
+              if (createError && !createError.message.includes('already exists')) {
+                console.error('[profile-upload] Failed to create bucket:', createError);
+                throw createError;
+              }
+
+              // Retry upload
+              const { data: retryData, error: retryError } = await supabaseAdmin.storage
+                .from('profile-images')
+                .upload(fileName, buffer, {
+                  contentType: `image/${imageType}`,
+                  upsert: true,
+                });
+
+              if (retryError) {
+                console.error('[profile-upload] Retry upload failed:', retryError);
+                throw retryError;
+              }
+            } else {
+              throw error;
+            }
+          }
+
+          // Get public URL
+          const { data: urlData } = supabaseAdmin.storage
+            .from('profile-images')
+            .getPublicUrl(fileName);
+
+          profileImageUrl = urlData.publicUrl;
+          console.log(`[profile-upload] ✅ Uploaded to Supabase storage: ${profileImageUrl}`);
+        } catch (storageError: any) {
+          console.error('[profile-upload] ❌ Supabase storage failed, using base64:', storageError.message);
+          profileImageUrl = base64Image;
+        }
+      } else {
+        console.log('[profile-upload] ⚠️ No Supabase admin client, using base64 storage');
+        profileImageUrl = base64Image;
+      }
+
+      // Update user profile with new image URL
+      const { error } = await supabase
+        .from('users')
+        .update({ profile_image_url: profileImageUrl })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating profile image:', error);
+        return res.status(500).json({ error: 'Failed to update profile image' });
+      }
+
+      const updatedUser = await supabaseRepo.getUserById(userId);
+      res.json({ 
+        message: 'Profile image uploaded successfully',
+        profileImageUrl,
+        user: {
+          id: updatedUser?.id,
+          name: updatedUser?.name,
+          email: updatedUser?.email,
+          phone: updatedUser?.phone,
+          role: updatedUser?.role,
+          profileImageUrl: updatedUser?.profile_image_url,
+        }
+      });
+    } catch (error: any) {
+      console.error('Error uploading profile image:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Update superadmin password
   app.put('/api/superadmin/password', requireRole('superadmin'), async (req, res) => {
     try {

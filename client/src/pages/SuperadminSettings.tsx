@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Mail, Phone, Lock, Eye, EyeOff, Save, ShieldCheck } from "lucide-react";
+import { Loader2, User, Mail, Phone, Lock, Eye, EyeOff, Save, ShieldCheck, Camera, Upload } from "lucide-react";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -37,6 +37,8 @@ export default function SuperadminSettings() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -101,6 +103,64 @@ export default function SuperadminSettings() {
     },
   });
 
+  const uploadImageMutation = useMutation({
+    mutationFn: async (base64Image: string) => {
+      const response = await apiRequest("POST", "/api/superadmin/profile/upload-image", { base64Image });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      setImagePreview(null);
+      toast({
+        title: "Image uploaded",
+        description: "Your profile image has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload image",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file (JPG, PNG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setImagePreview(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadImage = () => {
+    if (imagePreview) {
+      uploadImageMutation.mutate(imagePreview);
+    }
+  };
+
   const onProfileSubmit = (data: ProfileForm) => {
     updateProfileMutation.mutate(data);
   };
@@ -117,6 +177,88 @@ export default function SuperadminSettings() {
         </div>
 
         <div className="space-y-6">
+          {/* Profile Image */}
+          <Card className="bg-[#1a1a2e]/50 border-white/5">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center">
+                  <Camera className="h-5 w-5 text-orange-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-white">Profile Image</CardTitle>
+                  <CardDescription className="text-gray-400">Upload or change your profile picture</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-[#0a0a0f] border-2 border-white/10 flex items-center justify-center">
+                    {imagePreview || (user as any)?.profileImageUrl ? (
+                      <img 
+                        src={imagePreview || (user as any)?.profileImageUrl} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-12 h-12 text-gray-500" />
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center transition-colors"
+                  >
+                    <Camera className="w-4 h-4 text-white" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="text-sm text-gray-400 mb-3">
+                    Recommended: Square image, at least 200x200 pixels. Max size: 2MB.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-white/10 text-gray-300 hover:bg-white/5"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Choose Image
+                    </Button>
+                    {imagePreview && (
+                      <Button
+                        type="button"
+                        onClick={handleUploadImage}
+                        disabled={uploadImageMutation.isPending}
+                        className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                      >
+                        {uploadImageMutation.isPending ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Uploading...
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <Save className="h-4 w-4" />
+                            Save Image
+                          </span>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Profile Information */}
           <Card className="bg-[#1a1a2e]/50 border-white/5">
             <CardHeader>
