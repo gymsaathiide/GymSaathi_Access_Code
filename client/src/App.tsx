@@ -20,6 +20,7 @@ import Branding from './pages/Branding';
 import Analytics from './pages/Analytics';
 import Audit from './pages/Audit';
 import Integrations from './pages/Integrations';
+import SecurityAuditDashboard from './pages/SecurityAuditDashboard';
 import AdminDashboard from './pages/AdminDashboardNew';
 import TrainerDashboard from './pages/TrainerDashboard';
 import MemberDashboard from './pages/MemberDashboard';
@@ -93,7 +94,7 @@ function ProtectedApp() {
         <Route path="/billing" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SuperadminBilling /></ProtectedRoute>} />
         <Route path="/branding" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Branding /></ProtectedRoute>} />
         <Route path="/analytics" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Analytics /></ProtectedRoute>} />
-        <Route path="/audit" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Audit /></ProtectedRoute>} />
+        <Route path="/audit" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SecurityAuditDashboard /></ProtectedRoute>} />
         <Route path="/integrations" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Integrations /></ProtectedRoute>} />
 
         <Route path="/admin" component={() => <ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
