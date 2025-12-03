@@ -109,6 +109,22 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: tru
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 
+// Security Audit table - for functional user errors only (auto-expires after 3 days)
+export const securityAudit = pgTable("security_audit", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id"),
+  userName: text("user_name").notNull(),
+  role: text("role").notNull(),
+  errorMessage: text("error_message").notNull(),
+  action: text("action").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const insertSecurityAuditSchema = createInsertSchema(securityAudit).omit({ id: true, createdAt: true });
+export type InsertSecurityAudit = z.infer<typeof insertSecurityAuditSchema>;
+export type SecurityAudit = typeof securityAudit.$inferSelect;
+
 // Integrations table
 export const integrations = pgTable("integrations", {
   id: uuid("id").primaryKey().defaultRandom(),
