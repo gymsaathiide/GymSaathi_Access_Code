@@ -10,7 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Frontend
 
-The frontend uses **React 18**, **TypeScript**, and **Vite**. UI components are built with **Radix UI primitives** and **shadcn/ui** (new-york style), optimized for enterprise data density. Styling is managed by **TailwindCSS** with CSS variables for light/dark modes and custom typography. **TanStack Query** handles server state, **Wouter** for client-side routing, and **Recharts** for data visualization. The layout features a fixed sidebar and flexible main content area.
+The frontend uses **React 18**, **TypeScript**, and **Vite**. UI components are built with **Radix UI primitives** and **shadcn/ui** (new-york style), optimized for enterprise data density. Styling is managed by **TailwindCSS** with CSS variables (dark mode only) and custom typography. **TanStack Query** handles server state, **Wouter** for client-side routing, and **Recharts** for data visualization. The layout features a fixed sidebar and flexible main content area.
 
 ## Backend
 
@@ -26,7 +26,7 @@ The primary database is **Supabase PostgreSQL**, accessed via the `pg` driver an
 
 ## UI/UX Decisions
 
-The platform features a modern dark theme with navy backgrounds, white/5% opacity cards, and orange accents. Consistent layout components like `ModernLayout`, `ModernSidebar`, and `ModernHeader` are used. Dashboard visualizations include `MemberActivityChart`, `MembershipPieChart`, and `TargetGauge`. The system includes comprehensive mobile responsiveness across various dashboards and transactional flows, utilizing Tailwind's responsive utilities and touch-friendly designs.
+The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26%,10%)), white/5% opacity cards, and orange accents. No light theme or theme toggle is available. Consistent layout components like `ModernLayout`, `ModernSidebar`, and `ModernHeader` are used. Dashboard visualizations include `MemberActivityChart`, `MembershipPieChart`, and `TargetGauge`. The system includes comprehensive mobile responsiveness across various dashboards and transactional flows, utilizing Tailwind's responsive utilities and touch-friendly designs.
 
 ## Key Features
 
