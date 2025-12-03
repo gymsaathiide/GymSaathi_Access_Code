@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ModernLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,8 +110,7 @@ export default function SuperadminUsers() {
   };
 
   return (
-    <ModernLayout>
-      <div className="p-6 md:p-8">
+    <div className="p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">User Management</h1>
@@ -503,7 +501,6 @@ export default function SuperadminUsers() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </ModernLayout>
+    </div>
   );
 }

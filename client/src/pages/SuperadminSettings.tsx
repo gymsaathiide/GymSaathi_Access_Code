@@ -5,7 +5,6 @@ import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
-import { ModernLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,8 +110,7 @@ export default function SuperadminSettings() {
   };
 
   return (
-    <ModernLayout>
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
+    <div className="p-6 md:p-8 max-w-4xl mx-auto">
         <div className="mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Account Settings</h1>
           <p className="text-gray-400 text-sm md:text-base">Manage your superadmin account details and security</p>
@@ -374,6 +372,5 @@ export default function SuperadminSettings() {
           </Card>
         </div>
       </div>
-    </ModernLayout>
   );
 }
