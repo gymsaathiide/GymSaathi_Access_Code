@@ -1,0 +1,369 @@
+You are a senior full-stack engineer.
+I want you to implement a complete, secure, and error-free Super Admin Dashboard user management system with OTP verification and strict validation.
+
+The stack uses:
+
+Supabase (or similar) for auth & DB
+
+Modern frontend (React/Next or SPA)
+Adapt the code to the existing project structure.
+
+1️⃣ Super Admin Login Management
+Goal
+
+The Super Admin should be able to create additional Super Admin accounts directly from the Super Admin Dashboard.
+
+Requirements
+
+Create New Super Admin User
+
+From the Super Admin Dashboard, allow existing Super Admin to:
+
+Enter email and password for a new Super Admin.
+
+Optionally set name and basic profile info.
+
+On save:
+
+Create a new user in auth system.
+
+Assign role = "super_admin" in DB/auth metadata.
+
+Secure OTP Setup for New Super Admin
+
+After creating a new Super Admin:
+
+Generate a one-time OTP (e.g., 6-digit code).
+
+Store OTP in DB with:
+
+user_id
+
+otp_code (hashed if possible)
+
+expires_at (e.g., 10–15 minutes)
+
+used flag = false
+
+Send OTP to the registered email (use existing email service or set one up).
+
+The new Super Admin must verify this OTP on first login before gaining full access.
+
+Validation
+
+Validate email format, password strength, and uniqueness.
+
+Protect against duplicate Super Admin accounts with same email.
+
+Never store plain text passwords or OTPs (hash/safely store where possible).
+
+2️⃣ Mandatory OTP Verification for First-Time Login (All Roles)
+Goal
+
+All roles — Super Admin, Admin, Member, Trainer — must verify an OTP on their first login using email + password.
+
+Requirements
+
+First-Time Login Detection
+
+Add a flag in DB, e.g. is_first_login or is_otp_verified.
+
+For every user:
+
+When created, set is_otp_verified = false.
+
+On login:
+
+If is_otp_verified === false, require OTP verification before allowing access.
+
+OTP Generation Flow
+
+On first successful email/password login:
+
+Generate OTP (6-digit numeric).
+
+Save it in otp_verifications (or similar) with:
+
+user_id
+
+otp_code (hashed or securely stored)
+
+expires_at
+
+used flag
+
+Send OTP via email (and optionally WhatsApp/SMS if already integrated).
+
+Show an OTP input screen where user must enter the OTP.
+
+OTP Verification
+
+On OTP submit:
+
+Check:
+
+Correct code
+
+Not expired
+
+Not already used
+
+If valid:
+
+Mark is_otp_verified = true for that user.
+
+Mark OTP row as used = true.
+
+Allow access to dashboard based on role.
+
+If invalid:
+
+Show simple error in plain language:
+
+e.g., “The code is incorrect or expired. Please try again.”
+
+Security
+
+Rate limit OTP requests / retry attempts.
+
+Don’t expose internal error messages to users.
+
+Always log failures internally for Security Audit (if implemented).
+
+3️⃣ Member Management (Super Admin Only)
+Goal
+
+Super Admin should have full control over Member records.
+
+Functionalities
+
+Add New Member
+
+Super Admin can:
+
+Enter member details: name, email, phone, plan, start date, etc.
+
+Create login credentials (if required) or trigger invite.
+
+Backend:
+
+Create member in auth (if needed).
+
+Insert member profile row in members table.
+
+Validate:
+
+Required fields
+
+Unique email
+
+Correct formats (phone, email)
+
+Delete Existing Member
+
+Provide a Delete Member option.
+
+Confirm with dialog: “Are you sure you want to delete this member?”
+
+Backend:
+
+Soft delete (recommended) by marking is_active = false, or
+
+Hard delete if the architecture requires it (but ensure foreign keys are handled).
+
+Ensure deletion does not break related data (orders, classes, payments).
+
+Edit/Update Member Details
+
+Super Admin can:
+
+Edit basic details (name, contact, status, plan, etc.)
+
+Backend:
+
+Update member row with strong validation.
+
+Frontend:
+
+Show success/failure notifications in simple language.
+
+Validation:
+
+Prevent invalid transitions or bad data formats.
+
+Permissions
+
+Only users with role "super_admin" can:
+
+Add / Delete / Edit members from this panel.
+
+4️⃣ Super Admin Account Management
+Goal
+
+Super Admin can edit their own account details directly from the dashboard.
+
+Requirements
+
+Editable Fields
+
+Name
+
+Email (with change verification if email changes)
+
+Password (with current password confirmation and strength validation)
+
+Optional profile fields
+
+Security
+
+Require current password for password change.
+
+If email is changed:
+
+Send confirmation to both old and new email addresses if possible.
+
+Require re-login if email or password is changed.
+
+Frontend UX
+
+Simple and clear form.
+
+Clear error messages (no technical jargon).
+
+Show success toast like: “Your account details have been updated successfully.”
+
+5️⃣ Error-Free System Integration
+Goal
+
+The entire flow — frontend, backend, and database — must work with zero errors, with strict validation and data integrity.
+
+Requirements
+
+Validation & Error Handling
+
+Validate all inputs server-side (not only client-side).
+
+Use schemas for:
+
+Creating Super Admin
+
+Creating Member
+
+Updating profiles
+
+OTP verification
+
+Return human-readable error messages:
+
+e.g., “This email is already in use.”
+
+e.g., “Password must be at least 8 characters.”
+
+No raw stack traces in responses.
+
+Data Integrity
+
+Use transactions where multiple related operations occur:
+
+Example: Create user + profile + OTP.
+
+Ensure role-based access control:
+
+Only Super Admin can:
+
+Create other Super Admins
+
+Manage members
+
+Other roles should never see these controls.
+
+Testing
+
+Test flows:
+
+New Super Admin creation + OTP verification + first login
+
+New Member addition, edit, deletion
+
+Existing Super Admin updating own details
+
+First login OTP for Admin, Member, Trainer
+
+Confirm:
+
+No 500 errors
+
+No undefined/null crashes
+
+No missing fields in DB
+
+6️⃣ Deliverables You Must Provide
+
+You must provide complete, working code for:
+
+Backend
+
+Endpoints for:
+
+Create Super Admin
+
+Generate & verify OTP (first-time login)
+
+Member add/edit/delete
+
+Super Admin profile updates
+
+Database schema or migrations for:
+
+OTP table
+
+Role/metadata fields
+
+Role-based access control checks.
+
+Frontend
+
+Super Admin Dashboard UI sections for:
+
+Super Admin Management (create new Super Admin)
+
+Member Management (add/edit/delete)
+
+Own Account Settings (edit profile/password)
+
+First-time login OTP verification screen (shared across roles)
+
+Proper validation and user-friendly messages.
+
+Security
+
+OTP expiry logic
+
+Rate limiting for OTP attempts
+
+Validation utilities
+
+No sensitive details in UI error messages.
+
+7️⃣ If You Need Files
+
+If needed, ask me for:
+
+Auth setup files (Supabase client or auth handler)
+
+User models / tables
+
+Existing Super Admin dashboard files
+
+Routing structure (pages/routes)
+
+🎯 Final Goal:
+A secure, robust, and user-friendly Super Admin Dashboard where:
+
+Super Admin can safely create and manage Super Admins and Members.
+
+All roles must verify OTP on first login.
+
+Super Admin can update their own account details.
+
+Everything is validated, secure, and error-free across frontend, backend, and database.

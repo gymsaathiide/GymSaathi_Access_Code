@@ -29,6 +29,14 @@ export interface PasswordResetEmailPayload {
   expiryMinutes: number;
 }
 
+export interface OtpEmailPayload {
+  recipientEmail: string;
+  recipientName: string;
+  otpCode: string;
+  purpose: string;
+  expiryMinutes: number;
+}
+
 function getGymAdminWelcomeEmailHtml(payload: GymAdminWelcomeEmailPayload): string {
   return `
 <!DOCTYPE html>
@@ -1336,6 +1344,108 @@ export async function sendOrderConfirmationEmail(payload: OrderConfirmationEmail
     return true;
   } catch (error) {
     console.error('[email] ERROR sending order confirmation email:', error);
+    return false;
+  }
+}
+
+function getOtpEmailHtml(payload: OtpEmailPayload): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="padding: 40px 30px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🔐 Verification Code</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 30px;">
+        <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Hi <strong>${payload.recipientName}</strong>,
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+          Your verification code to ${payload.purpose} is:
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; border-radius: 12px; margin: 30px 0;">
+          <tr>
+            <td style="padding: 30px; text-align: center;">
+              <p style="color: #f97316; font-size: 42px; font-weight: bold; letter-spacing: 12px; margin: 0; font-family: 'Courier New', monospace;">
+                ${payload.otpCode}
+              </p>
+            </td>
+          </tr>
+        </table>
+        <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 20px 0; text-align: center;">
+          This code will expire in <strong>${payload.expiryMinutes} minutes</strong>.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border-radius: 8px; margin: 20px 0;">
+          <tr>
+            <td style="padding: 15px 20px;">
+              <p style="color: #92400e; font-size: 14px; margin: 0;">
+                ⚠️ <strong>Security Notice:</strong> Never share this code with anyone. GYMSAATHI staff will never ask for this code.
+              </p>
+            </td>
+          </tr>
+        </table>
+        <p style="color: #999; font-size: 12px; line-height: 1.6; margin: 20px 0 0;">
+          If you didn't request this code, please ignore this email or contact support if you have concerns.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 30px; background-color: #1f2937; text-align: center;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+          © ${new Date().getFullYear()} GYMSAATHI. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+export async function sendOtpEmail(payload: OtpEmailPayload): Promise<boolean> {
+  if (process.env.ENABLE_EMAIL_NOTIFICATIONS === 'false') {
+    console.log('[email] Email notifications disabled, skipping OTP email');
+    console.log(`[email] OTP for ${payload.recipientEmail}: ${payload.otpCode}`);
+    return true;
+  }
+
+  if (!payload.recipientEmail) {
+    console.log('[email] No email provided, skipping OTP email');
+    return false;
+  }
+
+  if (!resend) {
+    console.log('[email] RESEND_API_KEY not configured, skipping OTP email');
+    console.log(`[email] OTP for ${payload.recipientEmail}: ${payload.otpCode}`);
+    return false;
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `GYMSAATHI <${fromEmail}>`,
+      to: payload.recipientEmail,
+      subject: `${payload.otpCode} is your GYMSAATHI verification code`,
+      html: getOtpEmailHtml(payload),
+      text: `Hi ${payload.recipientName}, Your verification code to ${payload.purpose} is: ${payload.otpCode}. This code expires in ${payload.expiryMinutes} minutes. Never share this code with anyone.`,
+    });
+
+    if (error) {
+      console.error('[email] ERROR sending OTP email:', error);
+      return false;
+    }
+
+    console.log(`[email] Sent OTP email to ${payload.recipientEmail} (ID: ${data?.id})`);
+    return true;
+  } catch (error) {
+    console.error('[email] ERROR sending OTP email:', error);
     return false;
   }
 }

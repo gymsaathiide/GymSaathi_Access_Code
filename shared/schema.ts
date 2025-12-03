@@ -163,6 +163,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   profileImageUrl: text("profile_image_url"),
   isActive: integer("is_active").default(1), // 1 = active, 0 = inactive
+  isOtpVerified: integer("is_otp_verified").default(0), // 0 = not verified, 1 = verified (first-time login OTP)
   createdAt: timestamp("created_at").defaultNow(),
   lastLogin: timestamp("last_login"),
 });
@@ -170,6 +171,22 @@ export const users = pgTable("users", {
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// OTP Verifications table (for first-time login and secure operations)
+export const otpVerifications = pgTable("otp_verifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  otpHash: text("otp_hash").notNull(), // Hashed OTP for security
+  purpose: text("purpose").notNull().default('first_login'), // first_login, email_change, etc.
+  expiresAt: timestamp("expires_at").notNull(),
+  used: integer("used").default(0), // 0 = not used, 1 = used
+  attempts: integer("attempts").default(0), // Track failed attempts for rate limiting
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOtpVerificationSchema = createInsertSchema(otpVerifications).omit({ id: true, createdAt: true });
+export type InsertOtpVerification = z.infer<typeof insertOtpVerificationSchema>;
+export type OtpVerification = typeof otpVerifications.$inferSelect;
 
 // Password Reset Tokens table (for forgot password functionality)
 export const passwordResetTokens = pgTable("password_reset_tokens", {

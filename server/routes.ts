@@ -18,6 +18,7 @@ import { supabaseRepo } from "./supabaseRepository";
 import * as userAccess from "./services/userAccess";
 import { supabase } from "./supabase";
 import { logFunctionalError, getSecurityAuditLogs, cleanupExpiredLogs, createErrorResponse } from "./services/errorLoggingService";
+import * as otpService from "./services/otpService";
 
 function isDbAvailable(): boolean {
   return db !== null;
@@ -196,6 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             phone: supabaseUser.phone,
             profileImageUrl: supabaseUser.profile_image_url,
             isActive: supabaseUser.is_active,
+            isOtpVerified: supabaseUser.is_otp_verified,
             createdAt: supabaseUser.created_at,
             lastLogin: supabaseUser.last_login,
           };
@@ -216,6 +218,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!user.isActive) {
         return res.status(403).json({ error: 'Account is inactive' });
+      }
+
+      const isOtpVerified = (user.isOtpVerified || 0) === 1;
+      
+      if (!isOtpVerified) {
+        const otpResult = await otpService.sendOtpToUser(user.id, 'first_login');
+        
+        req.session.pendingOtpUserId = user.id;
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        console.log(`🔐 OTP required for first-time login: ${normalizedEmail}`);
+        
+        return res.json({
+          requiresOtp: true,
+          userId: user.id,
+          message: otpResult.message,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          }
+        });
       }
 
       const gymIdsPromise = isDbAvailable() 
@@ -285,6 +315,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ message: 'Logout successful' });
     });
+  });
+
+  // ==========================================
+  // OTP VERIFICATION
+  // ==========================================
+  app.post('/api/auth/verify-otp', async (req, res) => {
+    try {
+      const { userId, otpCode } = req.body;
+
+      if (!userId || !otpCode) {
+        return res.status(400).json({ error: 'User ID and OTP code are required' });
+      }
+
+      const result = await otpService.verifyOtp(userId, otpCode, 'first_login');
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      let user: any = null;
+      if (isDbAvailable()) {
+        user = await db!.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1).then(rows => rows[0]);
+      } else {
+        const supabaseUser = await supabaseRepo.getUserById(userId);
+        if (supabaseUser) {
+          user = {
+            id: supabaseUser.id,
+            email: supabaseUser.email,
+            role: supabaseUser.role,
+            name: supabaseUser.name,
+            phone: supabaseUser.phone,
+            profileImageUrl: supabaseUser.profile_image_url,
+            isActive: supabaseUser.is_active,
+          };
+        }
+      }
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const gymIds = isDbAvailable()
+        ? await storage.getUserGyms(user.id, user.role)
+        : await supabaseRepo.getUserGyms(user.id, user.role);
+      const primaryGymId = gymIds.length > 0 ? gymIds[0] : null;
+
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.gymId = primaryGymId;
+      delete req.session.pendingOtpUserId;
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      if (isDbAvailable()) {
+        db!.update(schema.users).set({ lastLogin: new Date() }).where(eq(schema.users.id, user.id)).catch(() => {});
+      }
+
+      auditService.logLogin(req, user.id, user.name, true).catch(() => {});
+      console.log(`✅ OTP verified for first-time login: ${user.email}`);
+
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          gymId: primaryGymId,
+          gymIds: gymIds,
+          phone: user.phone,
+          profileImageUrl: user.profileImageUrl,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          lastLogin: new Date().toISOString(),
+        },
+        message: 'Verification successful! Welcome to GYMSAATHI.'
+      });
+    } catch (error: any) {
+      console.error('❌ OTP verification error:', error);
+      res.status(500).json({ error: 'Failed to verify code. Please try again.' });
+    }
+  });
+
+  app.post('/api/auth/resend-otp', async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+
+      const result = await otpService.sendOtpToUser(userId, 'first_login');
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      res.json({ message: result.message });
+    } catch (error: any) {
+      console.error('❌ Resend OTP error:', error);
+      res.status(500).json({ error: 'Failed to send code. Please try again.' });
+    }
   });
 
   // ==========================================

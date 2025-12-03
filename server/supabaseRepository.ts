@@ -9,6 +9,7 @@ export interface SupabaseUser {
   phone: string | null;
   profile_image_url: string | null;
   is_active: number;
+  is_otp_verified: number;
   created_at: string;
   last_login: string | null;
 }

@@ -5,6 +5,7 @@ declare module "express-session" {
     userId: string;
     userRole: string;
     gymId: string | null;
+    pendingOtpUserId?: string;
   }
 }
 

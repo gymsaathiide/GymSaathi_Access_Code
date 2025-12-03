@@ -24,6 +24,14 @@ The primary database is **Supabase PostgreSQL**, accessed via the `pg` driver an
 
 **Session-based authentication** uses Express sessions with a PostgreSQL store. Security features include CORS, raw body capture for webhook verification, and an audit logging system. A "Forgot Password" flow with secure, time-limited tokens and bcrypt hashing is implemented. Trainer RBAC restricts order creation for trainers.
 
+**OTP Verification System**: Mandatory email verification for first-time login across all roles (superadmin, admin, trainer, member). Features include:
+-   6-digit OTP sent via Resend email API
+-   10-minute expiry with automatic cleanup
+-   60-second resend cooldown
+-   User-friendly verification UI with paste support
+-   `is_otp_verified` flag tracks verification status in users table
+-   `otpVerifications` table stores pending codes
+
 ## UI/UX Decisions
 
 The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26%,10%)), white/5% opacity cards, and orange accents. No light theme or theme toggle is available. Consistent layout components like `ModernLayout`, `ModernSidebar`, and `ModernHeader` are used. Dashboard visualizations include `MemberActivityChart`, `MembershipPieChart`, and `TargetGauge`. The system includes comprehensive mobile responsiveness across various dashboards and transactional flows, utilizing Tailwind's responsive utilities and touch-friendly designs.
