@@ -24,12 +24,13 @@ The primary database is **Supabase PostgreSQL**, accessed via the `pg` driver an
 
 **Session-based authentication** uses Express sessions with a PostgreSQL store. Security features include CORS, raw body capture for webhook verification, and an audit logging system. A "Forgot Password" flow with secure, time-limited tokens and bcrypt hashing is implemented.
 
-**Trainer RBAC (Role-Based Access Control)**: Trainers have strict isolation from all order-related data:
--   Cannot view, create, update, or access any orders
--   Cannot access order analytics, shop revenue dashboards, or order history
--   Can only browse products and view the shop (like members)
--   Backend enforces 403 Forbidden on all order-related API endpoints for trainers
--   Frontend hides Orders tab, Shop Revenue link, and all order-related UI components
+**Trainer RBAC (Role-Based Access Control)**: Trainers have strict isolation from order management while retaining purchase capability:
+-   CAN browse products in the shop and place orders for themselves
+-   CAN checkout using the standard cart flow (backend auto-creates linked member record if needed)
+-   CANNOT view, update, or manage any orders (theirs or others)
+-   CANNOT access order analytics, shop revenue dashboards, or order history
+-   Backend enforces 403 Forbidden on all order viewing/management API endpoints for trainers
+-   Frontend hides Orders tab, Shop Revenue link, and all order management UI components
 
 **OTP Verification System**: Mandatory email verification for first-time login across all roles (superadmin, admin, trainer, member). Features include:
 -   6-digit OTP sent via Resend email API
