@@ -17,6 +17,7 @@ import * as auditService from "./services/auditService";
 import { supabaseRepo } from "./supabaseRepository";
 import * as userAccess from "./services/userAccess";
 import { supabase } from "./supabase";
+import { logFunctionalError, getSecurityAuditLogs, cleanupExpiredLogs, createErrorResponse } from "./services/errorLoggingService";
 
 function isDbAvailable(): boolean {
   return db !== null;
@@ -2658,6 +2659,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // END SUPERADMIN KPI ENDPOINTS
   // ==========================================
 
+  // Security Audit for Super Admin - functional user errors only
+  app.get('/api/superadmin/security-audit', requireRole('superadmin'), async (req, res) => {
+    try {
+      const logs = await getSecurityAuditLogs();
+      res.json(logs);
+    } catch (error: any) {
+      console.error('Error fetching security audit logs:', error);
+      res.status(500).json({ error: 'Failed to fetch security audit logs' });
+    }
+  });
+
+  // Manual cleanup of expired security audit logs
+  app.post('/api/superadmin/security-audit/cleanup', requireRole('superadmin'), async (req, res) => {
+    try {
+      const deletedCount = await cleanupExpiredLogs();
+      res.json({ success: true, deletedCount });
+    } catch (error: any) {
+      console.error('Error cleaning up security audit logs:', error);
+      res.status(500).json({ error: 'Failed to cleanup logs' });
+    }
+  });
+
   app.get('/api/members', requireRole('admin', 'trainer'), async (req, res) => {
     try {
       const user = await userAccess.getUserById(req.session!.userId!);
@@ -4021,7 +4044,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(payment);
     } catch (error: any) {
       console.error('Error creating payment:', error);
-      res.status(500).json({ error: error.message });
+      // Log functional error
+      const user = await storage.getUserById(req.session?.userId || '');
+      if (user) {
+        await logFunctionalError(error.message, {
+          userId: user.id,
+          userName: user.name,
+          role: user.role,
+          action: 'Processing a payment',
+        });
+      }
+      res.status(500).json(createErrorResponse(error.message));
     }
   });
 
@@ -5334,7 +5367,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(order);
     } catch (error: any) {
       console.error('Error creating order:', error);
-      res.status(500).json({ error: error.message });
+      // Log functional error
+      const user = await storage.getUserById(req.session?.userId || '');
+      if (user) {
+        await logFunctionalError(error.message, {
+          userId: user.id,
+          userName: user.name,
+          role: user.role,
+          action: 'Creating an order',
+        });
+      }
+      res.status(500).json(createErrorResponse(error.message));
     }
   });
 
