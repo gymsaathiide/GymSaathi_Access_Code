@@ -197,7 +197,7 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider>
         <AuthProvider>
           <CartProvider>
             <AppContent />

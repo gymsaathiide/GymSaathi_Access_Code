@@ -5637,14 +5637,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         memberId = member.id;
       } else {
         const { memberId: providedMemberId } = req.body;
-        if (!providedMemberId) {
-          return res.status(400).json({ error: 'memberId is required for non-member users' });
+        if (providedMemberId) {
+          const memberToCheck = await db!.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
+          if (!memberToCheck || memberToCheck.gymId !== user.gymId) {
+            return res.status(403).json({ error: 'Member not found or does not belong to your gym.' });
+          }
+          memberId = providedMemberId;
+        } else {
+          const linkedMember = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+          if (linkedMember) {
+            memberId = linkedMember.id;
+          } else {
+            return res.status(400).json({ error: 'No member profile found. Please select a member to book this class for.' });
+          }
         }
-        const memberToCheck = await db!.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
-        if (!memberToCheck || memberToCheck.gymId !== user.gymId) {
-          return res.status(403).json({ error: 'Member not found or does not belong to your gym.' });
-        }
-        memberId = providedMemberId;
       }
 
       const booking = await storage.bookClass(req.params.id, memberId);
@@ -5672,14 +5678,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         memberId = member.id;
       } else {
         const { memberId: providedMemberId } = req.body;
-        if (!providedMemberId) {
-          return res.status(400).json({ error: 'memberId is required for non-member users' });
+        if (providedMemberId) {
+          const memberToCheck = await db!.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
+          if (!memberToCheck || memberToCheck.gymId !== user.gymId) {
+            return res.status(403).json({ error: 'Member not found or does not belong to your gym.' });
+          }
+          memberId = providedMemberId;
+        } else {
+          const linkedMember = await db!.select().from(schema.members).where(eq(schema.members.userId, user.id)).limit(1).then(rows => rows[0]);
+          if (linkedMember) {
+            memberId = linkedMember.id;
+          } else {
+            return res.status(400).json({ error: 'No member profile found. Please select a member to cancel this booking for.' });
+          }
         }
-        const memberToCheck = await db!.select().from(schema.members).where(eq(schema.members.id, providedMemberId)).limit(1).then(rows => rows[0]);
-        if (!memberToCheck || memberToCheck.gymId !== user.gymId) {
-          return res.status(403).json({ error: 'Member not found or does not belong to your gym.' });
-        }
-        memberId = providedMemberId;
       }
 
       await storage.cancelClassBooking(req.params.id, memberId);

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -79,10 +78,7 @@ interface ModernSidebarProps {
 export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }: ModernSidebarProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
-  const { theme } = useTheme();
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
-  
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const getInitials = (name: string) => {
     return name
@@ -120,19 +116,18 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
   const sidebarContent = (
     <div className="flex flex-col h-full">
       <div className={cn(
-        "flex items-center gap-3 px-4 py-6 border-b",
-        isDark ? "border-white/5" : "border-gray-200",
+        "flex items-center gap-3 px-4 py-6 border-b border-white/5",
         !isOpen && "justify-center px-2"
       )}>
         <img 
-          src={isDark ? "/gymsaathi-logo-dark.png" : "/gymsaathi-logo.png"}
+          src="/gymsaathi-logo-dark.png"
           alt="GYMSAATHI" 
           className="w-10 h-10 object-contain flex-shrink-0"
         />
         {isOpen && (
           <div className="flex flex-col">
-            <span className={`font-bold text-lg tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>GYMSAATHI</span>
-            <span className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-500'}`}>Gym Management</span>
+            <span className="font-bold text-lg tracking-tight text-white">GYMSAATHI</span>
+            <span className="text-xs text-white/40">Gym Management</span>
           </div>
         )}
       </div>
@@ -152,9 +147,7 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
                   "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group",
                   isActive
                     ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/25"
-                    : isDark 
-                      ? "text-white/60 hover:text-white hover:bg-white/5" 
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+                    : "text-white/60 hover:text-white hover:bg-white/5",
                   !isOpen && "justify-center px-2"
                 )}
                 data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
@@ -173,13 +166,11 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
       </nav>
 
       <div className={cn(
-        "p-4 border-t",
-        isDark ? "border-white/5" : "border-gray-200",
+        "p-4 border-t border-white/5",
         !isOpen && "px-2"
       )}>
         <div className={cn(
-          "flex items-center gap-3 p-3 rounded-xl mb-3",
-          isDark ? "bg-white/5" : "bg-gray-100",
+          "flex items-center gap-3 p-3 rounded-xl mb-3 bg-white/5",
           !isOpen && "justify-center p-2"
         )}>
           <Avatar className="h-10 w-10 border-2 border-orange-500/30 flex-shrink-0">
@@ -190,14 +181,14 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
           </Avatar>
           {isOpen && (
             <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.name}</p>
-              <p className={`text-xs capitalize ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{user?.role}</p>
+              <p className="text-sm font-medium truncate text-white">{user?.name}</p>
+              <p className="text-xs capitalize text-white/40">{user?.role}</p>
             </div>
           )}
           {isOpen && user?.role !== "superadmin" && (
             <button
               onClick={() => setIsProfileDialogOpen(true)}
-              className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-gray-900'}`}
+              className="p-2 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white"
               title="Edit Profile"
             >
               <Settings className="h-4 w-4" />
@@ -208,9 +199,7 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
         <button
           onClick={logout}
           className={cn(
-            "flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-all duration-200",
-            isDark ? "text-white/60 hover:text-white" : "text-gray-600 hover:text-gray-900",
-            "hover:bg-red-500/10",
+            "flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-all duration-200 text-white/60 hover:text-white hover:bg-red-500/10",
             !isOpen && "justify-center px-2"
           )}
           data-testid="button-logout"
@@ -223,7 +212,7 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
       {isOpen && (
         <button
           onClick={onToggle}
-          className={`hidden md:flex absolute -right-3 top-20 w-6 h-6 border rounded-full items-center justify-center hover:bg-orange-500 hover:text-white transition-all z-50 ${isDark ? 'bg-[hsl(220,26%,14%)] border-white/10 text-white/60' : 'bg-white border-gray-300 text-gray-500'}`}
+          className="hidden md:flex absolute -right-3 top-20 w-6 h-6 border rounded-full items-center justify-center hover:bg-orange-500 hover:text-white transition-all z-50 bg-[hsl(220,26%,14%)] border-white/10 text-white/60"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -232,7 +221,7 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
       {!isOpen && (
         <button
           onClick={onToggle}
-          className={`hidden md:flex absolute -right-3 top-20 w-6 h-6 border rounded-full items-center justify-center hover:bg-orange-500 hover:text-white transition-all z-50 ${isDark ? 'bg-[hsl(220,26%,14%)] border-white/10 text-white/60' : 'bg-white border-gray-300 text-gray-500'}`}
+          className="hidden md:flex absolute -right-3 top-20 w-6 h-6 border rounded-full items-center justify-center hover:bg-orange-500 hover:text-white transition-all z-50 bg-[hsl(220,26%,14%)] border-white/10 text-white/60"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -249,8 +238,7 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
     <>
       <aside
         className={cn(
-          "hidden md:flex flex-col relative transition-all duration-300 ease-in-out",
-          isDark ? "bg-[hsl(220,26%,14%)]" : "bg-white border-r border-gray-200",
+          "hidden md:flex flex-col relative transition-all duration-300 ease-in-out bg-[hsl(220,26%,14%)]",
           isOpen ? "w-64" : "w-20"
         )}
       >
@@ -266,14 +254,13 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:hidden",
-          isDark ? "bg-[hsl(220,26%,14%)]" : "bg-white",
+          "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:hidden bg-[hsl(220,26%,14%)]",
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <button
           onClick={onMobileClose}
-          className={`absolute top-4 right-4 p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
+          className="absolute top-4 right-4 p-2 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white"
         >
           <X className="h-5 w-5" />
         </button>

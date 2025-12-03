@@ -7,10 +7,7 @@ import {
   Search,
   Bell,
   ChevronDown,
-  Sun,
-  Moon,
   Menu,
-  Check,
   Info,
   AlertTriangle,
   CheckCircle,
@@ -25,7 +22,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTheme } from "@/components/theme-provider";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -54,7 +50,6 @@ interface ModernHeaderProps {
 
 export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeaderProps) {
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
@@ -177,23 +172,21 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
     return `${diffDays}d ago`;
   };
 
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
   return (
-    <header className={`h-16 border-b px-4 md:px-6 flex items-center justify-between gap-4 ${isDark ? 'bg-[hsl(220,26%,12%)] border-white/5' : 'bg-white border-gray-200'}`}>
+    <header className="h-16 border-b px-4 md:px-6 flex items-center justify-between gap-4 bg-[hsl(220,26%,12%)] border-white/5">
       <div className="flex items-center gap-4">
         {showMenuButton && (
           <button
             onClick={onMenuClick}
-            className={`md:hidden p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
+            className="md:hidden p-2 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white"
           >
             <Menu className="h-5 w-5" />
           </button>
         )}
 
         <div className="hidden md:block">
-          <p className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{formattedDate}</p>
-          <h1 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <p className="text-xs text-white/40">{formattedDate}</p>
+          <h1 className="font-semibold text-white">
             {getGreeting()}, <span className="text-orange-500">{user?.name?.split(' ')[0]}</span>
           </h1>
         </div>
@@ -201,56 +194,56 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
 
       <div className="flex-1 max-w-md hidden lg:block">
         <div className="relative">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
           <Input
             type="text"
             placeholder="Search members, leads..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            className={`w-full pl-10 ${isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/40' : 'bg-gray-100 border-gray-200 text-gray-900 placeholder:text-gray-400'} focus:border-orange-500/50 focus:ring-orange-500/20`}
+            className="w-full pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-orange-500/50 focus:ring-orange-500/20"
           />
           {showSearchResults && searchResults && (
-            <div className={`absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto ${isDark ? 'bg-[hsl(220,26%,16%)] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div className="absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto bg-[hsl(220,26%,16%)] border-white/10">
               {searchResults.members.length === 0 && searchResults.leads.length === 0 ? (
-                <div className={`p-4 text-center ${isDark ? 'text-white/50' : 'text-gray-500'}`}>No results found</div>
+                <div className="p-4 text-center text-white/50">No results found</div>
               ) : (
                 <>
                   {searchResults.members.length > 0 && (
                     <div className="p-2">
-                      <div className={`text-xs font-semibold px-2 py-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Members</div>
+                      <div className="text-xs font-semibold px-2 py-1 text-white/50">Members</div>
                       {searchResults.members.map((m) => (
                         <button
                           key={m.id}
                           onClick={() => navigateToResult(m)}
-                          className={`w-full px-2 py-2 rounded flex items-center gap-3 text-left ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
+                          className="w-full px-2 py-2 rounded flex items-center gap-3 text-left hover:bg-white/10"
                         >
                           <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 text-xs font-medium">
                             {m.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{m.name}</div>
-                            <div className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{m.email}</div>
+                            <div className="font-medium text-white">{m.name}</div>
+                            <div className="text-xs text-white/50">{m.email}</div>
                           </div>
                         </button>
                       ))}
                     </div>
                   )}
                   {searchResults.leads.length > 0 && (
-                    <div className={`p-2 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-                      <div className={`text-xs font-semibold px-2 py-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>Leads</div>
+                    <div className="p-2 border-t border-white/10">
+                      <div className="text-xs font-semibold px-2 py-1 text-white/50">Leads</div>
                       {searchResults.leads.map((l) => (
                         <button
                           key={l.id}
                           onClick={() => navigateToResult(l)}
-                          className={`w-full px-2 py-2 rounded flex items-center gap-3 text-left ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
+                          className="w-full px-2 py-2 rounded flex items-center gap-3 text-left hover:bg-white/10"
                         >
                           <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 text-xs font-medium">
                             {l.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{l.name}</div>
-                            <div className={`text-xs ${isDark ? 'text-white/50' : 'text-gray-500'}`}>{l.status}</div>
+                            <div className="font-medium text-white">{l.name}</div>
+                            <div className="text-xs text-white/50">{l.status}</div>
                           </div>
                         </button>
                       ))}
@@ -264,17 +257,9 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
-          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className={`relative p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10 text-white/60 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}>
+            <button className="relative p-2 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white">
               <Bell className="h-5 w-5" />
               {(unreadCount?.count ?? 0) > 0 && (
                 <span className="absolute top-1 right-1 min-w-[14px] h-[14px] flex items-center justify-center bg-orange-500 rounded-full text-[10px] text-white font-bold px-1">
@@ -283,9 +268,9 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={`w-80 p-0 ${isDark ? 'bg-[hsl(220,26%,16%)] border-white/10' : 'bg-white border-gray-200'}`}>
-            <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-              <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Notifications</span>
+          <DropdownMenuContent align="end" className="w-80 p-0 bg-[hsl(220,26%,16%)] border-white/10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <span className="font-semibold text-white">Notifications</span>
               {(unreadCount?.count ?? 0) > 0 && (
                 <button
                   onClick={() => markAllReadMutation.mutate()}
@@ -297,27 +282,26 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
             </div>
             <ScrollArea className="max-h-80">
               {notifications.length === 0 ? (
-                <div className={`p-6 text-center ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+                <div className="p-6 text-center text-white/50">
                   <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No notifications yet</p>
                 </div>
               ) : (
-                <div className={`divide-y ${isDark ? 'divide-white/5' : 'divide-gray-100'}`}>
+                <div className="divide-y divide-white/5">
                   {notifications.slice(0, 10).map((notification) => (
                     <div
                       key={notification.id}
                       className={cn(
-                        "px-4 py-3 cursor-pointer",
-                        isDark ? "hover:bg-white/5" : "hover:bg-gray-50",
+                        "px-4 py-3 cursor-pointer hover:bg-white/5",
                         notification.isRead === 0 && "bg-orange-500/5"
                       )}
                     >
                       <div className="flex gap-3">
                         {getNotificationIcon(notification.type)}
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{notification.title}</p>
-                          <p className={`text-xs line-clamp-2 ${isDark ? 'text-white/60' : 'text-gray-600'}`}>{notification.message}</p>
-                          <p className={`text-xs mt-1 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>{formatTimeAgo(notification.createdAt)}</p>
+                          <p className="text-sm font-medium truncate text-white">{notification.title}</p>
+                          <p className="text-xs line-clamp-2 text-white/60">{notification.message}</p>
+                          <p className="text-xs mt-1 text-white/40">{formatTimeAgo(notification.createdAt)}</p>
                         </div>
                         {notification.isRead === 0 && (
                           <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1.5"></span>
@@ -333,7 +317,7 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className={`flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}>
+            <button className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-xl transition-colors hover:bg-white/5">
               <Avatar className="h-8 w-8 md:h-9 md:w-9 border-2 border-orange-500/30">
                 <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.name || ""} />
                 <AvatarFallback className="bg-gradient-to-br from-orange-500 to-orange-600 text-white text-xs md:text-sm font-semibold">
@@ -341,27 +325,27 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block text-left">
-                <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.name}</p>
-                <p className={`text-xs capitalize ${isDark ? 'text-white/40' : 'text-gray-500'}`}>{user?.role}</p>
+                <p className="text-sm font-medium text-white">{user?.name}</p>
+                <p className="text-xs capitalize text-white/40">{user?.role}</p>
               </div>
-              <ChevronDown className={`hidden md:block h-4 w-4 ${isDark ? 'text-white/40' : 'text-gray-400'}`} />
+              <ChevronDown className="hidden md:block h-4 w-4 text-white/40" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={`w-56 ${isDark ? 'bg-[hsl(220,26%,16%)] border-white/10' : 'bg-white border-gray-200'}`}>
+          <DropdownMenuContent align="end" className="w-56 bg-[hsl(220,26%,16%)] border-white/10">
             <div className="px-3 py-2 md:hidden">
-              <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.name}</p>
-              <p className={`text-sm capitalize ${isDark ? 'text-white/60' : 'text-gray-500'}`}>{user?.role}</p>
+              <p className="font-medium text-white">{user?.name}</p>
+              <p className="text-sm capitalize text-white/60">{user?.role}</p>
             </div>
-            <DropdownMenuSeparator className={`md:hidden ${isDark ? 'bg-white/10' : 'bg-gray-200'}`} />
+            <DropdownMenuSeparator className="md:hidden bg-white/10" />
             {user?.role !== "superadmin" && (
               <>
                 <DropdownMenuItem 
                   onClick={() => setIsProfileDialogOpen(true)}
-                  className={`cursor-pointer ${isDark ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'}`}
+                  className="cursor-pointer text-white/80 hover:text-white hover:bg-white/10"
                 >
                   Edit Profile
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className={isDark ? 'bg-white/10' : 'bg-gray-200'} />
+                <DropdownMenuSeparator className="bg-white/10" />
               </>
             )}
             <DropdownMenuItem 
