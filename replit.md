@@ -32,13 +32,7 @@ The primary database is **Supabase PostgreSQL**, accessed via the `pg` driver an
 -   Backend enforces 403 Forbidden on all order viewing/management API endpoints for trainers
 -   Frontend hides Orders tab, Shop Revenue link, and all order management UI components
 
-**OTP Verification System**: Mandatory email verification for first-time login across all roles (superadmin, admin, trainer, member). Features include:
--   6-digit OTP sent via Resend email API
--   10-minute expiry with automatic cleanup
--   60-second resend cooldown
--   User-friendly verification UI with paste support
--   `is_otp_verified` flag tracks verification status in users table
--   `otpVerifications` table stores pending codes
+**Note**: OTP verification for first-time login has been disabled. Users can now log in directly without email verification.
 
 ## UI/UX Decisions
 

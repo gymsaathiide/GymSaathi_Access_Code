@@ -220,33 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Account is inactive' });
       }
 
-      const isOtpVerified = (user.isOtpVerified || 0) === 1;
-      
-      if (!isOtpVerified) {
-        const otpResult = await otpService.sendOtpToUser(user.id, 'first_login');
-        
-        req.session.pendingOtpUserId = user.id;
-        await new Promise<void>((resolve, reject) => {
-          req.session.save((err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-
-        console.log(`🔐 OTP required for first-time login: ${normalizedEmail}`);
-        
-        return res.json({
-          requiresOtp: true,
-          userId: user.id,
-          message: otpResult.message,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          }
-        });
-      }
+      // OTP verification removed - users can log in directly without email verification
 
       const gymIdsPromise = isDbAvailable() 
         ? storage.getUserGyms(user.id, user.role)
