@@ -8545,12 +8545,12 @@ Return ONLY the JSON object, no other text.`;
     }
 
     try {
-      // Get latest body composition report
+      // Get latest body composition report (order by created_at to get most recent)
       const bodyCompResult = await db!.execute(sql`
         SELECT weight, bmi, bmr, lifestyle, body_fat_percentage
         FROM body_composition_reports
         WHERE user_id = ${req.session.userId}
-        ORDER BY report_date DESC
+        ORDER BY created_at DESC
         LIMIT 1
       `);
 
