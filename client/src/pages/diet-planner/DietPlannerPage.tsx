@@ -103,6 +103,24 @@ export default function DietPlannerPage() {
 
   useEffect(() => {
     loadInitialData();
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadInitialData();
+      }
+    };
+    
+    const handleFocus = () => {
+      loadInitialData();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -353,6 +371,45 @@ export default function DietPlannerPage() {
           </div>
         </div>
       </div>
+
+      {bodyComp && bodyComp.bmi && !selectedPlan && (
+        <Card className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-cyan-500 flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                Your Body Metrics
+              </h3>
+              <Link href="/member/diet-planner/body-report">
+                <Button variant="ghost" size="sm" className="text-cyan-500 hover:text-cyan-400 gap-1">
+                  <Target className="w-4 h-4" />
+                  Update
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 rounded-lg bg-background/50">
+                <p className="text-2xl font-bold text-cyan-500">{bodyComp.weight?.toFixed(1) || '--'}</p>
+                <p className="text-xs text-muted-foreground">Weight (kg)</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-background/50">
+                <p className="text-2xl font-bold text-orange-500">{bodyComp.bmi?.toFixed(1) || '--'}</p>
+                <p className="text-xs text-muted-foreground">BMI</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-background/50">
+                <p className="text-2xl font-bold text-green-500">{bodyComp.bmr || '--'}</p>
+                <p className="text-xs text-muted-foreground">BMR (kcal)</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-background/50">
+                <p className="text-2xl font-bold text-purple-500">
+                  {bodyComp.lifestyle === 'sedentary' ? 'Low' : bodyComp.lifestyle === 'moderately_active' ? 'Moderate' : 'High'}
+                </p>
+                <p className="text-xs text-muted-foreground">Activity Level</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {(!bodyComp || !bodyComp.bmr) && !selectedPlan && (
         <Card className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-orange-500/30">

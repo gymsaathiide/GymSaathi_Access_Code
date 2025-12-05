@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 type LifestyleType = 'sedentary' | 'moderately_active' | 'super_active';
 type StatusLevel = 'low' | 'standard' | 'high' | 'excellent';
@@ -192,6 +192,7 @@ function MetricCard({ label, value, unit, type = 'number', onChange, showStatus 
 export default function BodyCompositionPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -345,10 +346,12 @@ export default function BodyCompositionPage() {
       const lifestyleLabel = LIFESTYLE_OPTIONS.find(o => o.value === formData.lifestyle)?.label || 'Moderately Active';
       toast({
         title: "Saved!",
-        description: `Body report saved! Your lifestyle is set to ${lifestyleLabel}. This will be used to calculate your calories and macros.`,
+        description: `Body report saved! Redirecting to Diet Planner...`,
       });
       
-      setShowSuccess(true);
+      setTimeout(() => {
+        navigate('/member/diet-planner');
+      }, 1000);
     } catch (error: any) {
       console.error('Error saving:', error);
       toast({
