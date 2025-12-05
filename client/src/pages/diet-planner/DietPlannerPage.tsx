@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Calendar, Target, Loader2, ChefHat, Clock, Download, ChevronDown, ChevronUp, Sparkles, RotateCw, Check, Trash2, Activity } from "lucide-react";
+import { ArrowLeft, Calendar, Target, Loader2, ChefHat, Clock, ChevronDown, ChevronUp, Sparkles, RotateCw, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -74,12 +73,29 @@ export default function DietPlannerPage() {
   const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set());
   const [bodyComp, setBodyComp] = useState<BodyComposition | null>(null);
   const [eatenMeals, setEatenMeals] = useState<string[]>([]);
-  const [isVegetarian, setIsVegetarian] = useState(true);
 
   const goals = [
-    { id: "Fat Loss", icon: "🔥", desc: "TDEE - 200 kcal", color: "from-red-500 to-orange-500" },
-    { id: "Muscle Gain", icon: "💪", desc: "TDEE + 200 kcal", color: "from-blue-500 to-cyan-500" },
-    { id: "Trim & Tone", icon: "✨", desc: "TDEE (Maintenance)", color: "from-purple-500 to-pink-500" }
+    { 
+      id: "Fat Loss", 
+      icon: "🔥", 
+      desc: "TDEE - 200 kcal", 
+      gradient: "from-orange-500 to-red-500",
+      selectedColor: "border-orange-500 bg-orange-500/10"
+    },
+    { 
+      id: "Muscle Gain", 
+      icon: "💪", 
+      desc: "TDEE + 200 kcal", 
+      gradient: "from-yellow-400 to-orange-400",
+      selectedColor: "border-yellow-500 bg-yellow-500/10"
+    },
+    { 
+      id: "Trim & Tone", 
+      icon: "⭐", 
+      desc: "TDEE (Maintenance)", 
+      gradient: "from-amber-400 to-yellow-300",
+      selectedColor: "border-amber-500 bg-amber-500/10"
+    }
   ];
 
   useEffect(() => {
@@ -208,7 +224,7 @@ export default function DietPlannerPage() {
           bmr: bodyComp.bmr,
           bodyWeight: bodyComp.weight || 70,
           lifestyle: bodyComp.lifestyle || 'moderately_active',
-          isVegetarian,
+          isVegetarian: true,
         })
       });
 
@@ -320,60 +336,19 @@ export default function DietPlannerPage() {
         </div>
       </div>
 
-      {bodyComp && bodyComp.bmr && (
-        <Card className="bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <Activity className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Using Latest Body Report</h3>
-                <p className="text-xs text-muted-foreground">Your personalized calorie and macro targets</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-card/50 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Weight</p>
-                <p className="text-lg font-bold">{bodyComp.weight || 70} kg</p>
-              </div>
-              <div className="bg-card/50 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">BMR</p>
-                <p className="text-lg font-bold">{bodyComp.bmr} kcal</p>
-              </div>
-              <div className="bg-card/50 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Lifestyle</p>
-                <p className="text-lg font-bold text-orange-500">
-                  {LIFESTYLE_LABELS[bodyComp.lifestyle as LifestyleType]?.label || 'Moderately Active'}
-                </p>
-              </div>
-              <div className="bg-card/50 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Daily Target (TDEE)</p>
-                <p className="text-lg font-bold text-green-500">
-                  {calculateTDEE(bodyComp.bmr, bodyComp.lifestyle || 'moderately_active')} kcal
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {(!bodyComp || !bodyComp.bmr) && !selectedPlan && (
-        <Card className="bg-orange-500/10 border-orange-500/30">
+        <Card className="bg-card border border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <Target className="w-5 h-5 text-orange-500" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center">
+                <Target className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold">Body Composition Required</h3>
+                <h3 className="font-semibold text-orange-500">Body Composition Required</h3>
                 <p className="text-sm text-muted-foreground">
                   Please upload a body composition report and select your lifestyle to generate a personalized diet plan.
                 </p>
               </div>
-              <Link href="/member/diet-planner/body-composition">
-                <Button>Add Report</Button>
-              </Link>
             </div>
           </CardContent>
         </Card>
@@ -382,71 +357,85 @@ export default function DietPlannerPage() {
       {!selectedPlan ? (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {goals.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => setGoal(g.id)}
-                className={`relative overflow-hidden rounded-xl p-6 transition-all duration-300 border-2 ${
-                  goal === g.id
-                    ? 'border-orange-500 scale-105 shadow-lg shadow-orange-500/20'
-                    : 'border-border hover:border-orange-500/50'
-                }`}
-              >
-                <div className="text-center space-y-2">
-                  <div className="text-4xl">{g.icon}</div>
-                  <h3 className="text-lg font-bold">{g.id}</h3>
-                  <p className="text-sm text-muted-foreground">{g.desc}</p>
-                </div>
-              </button>
-            ))}
+            {goals.map((g) => {
+              const isSelected = goal === g.id;
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => setGoal(g.id)}
+                  className={`relative overflow-hidden rounded-xl p-6 transition-all duration-300 border-2 ${
+                    isSelected
+                      ? g.selectedColor
+                      : 'border-border bg-card hover:border-orange-500/50'
+                  }`}
+                >
+                  <div className="text-center space-y-3">
+                    <div className="text-5xl">{g.icon}</div>
+                    <h3 className="text-lg font-bold">{g.id}</h3>
+                    <p className="text-sm text-muted-foreground">{g.desc}</p>
+                    {isSelected && (
+                      <div className="flex items-center justify-center gap-1 text-orange-500 text-sm">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Selected</span>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex flex-wrap gap-4 justify-center">
-            {(['7-day', '30-day'] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setPlanType(type)}
-                className={`px-6 py-3 rounded-full font-medium transition-all ${
-                  planType === type
-                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                    : 'bg-card border border-border hover:border-orange-500/50'
-                }`}
-              >
-                {type === '7-day' ? '7 Day Plan' : '30 Day Plan'}
-              </button>
-            ))}
-          </div>
+          <Card className="border border-border">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-muted-foreground" />
+                <h3 className="font-semibold">Plan Duration / प्लान अवधि</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setPlanType('7-day')}
+                  className={`p-6 rounded-xl font-medium transition-all text-center ${
+                    planType === '7-day'
+                      ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-lg'
+                      : 'bg-card border border-border hover:border-cyan-500/50'
+                  }`}
+                >
+                  <div className="text-3xl font-bold">7</div>
+                  <div className="text-sm">दिन</div>
+                </button>
+                <button
+                  onClick={() => setPlanType('30-day')}
+                  className={`p-6 rounded-xl font-medium transition-all text-center ${
+                    planType === '30-day'
+                      ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-lg'
+                      : 'bg-card border border-border hover:border-cyan-500/50'
+                  }`}
+                >
+                  <div className="text-3xl font-bold">30</div>
+                  <div className="text-sm">दिन</div>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center justify-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={isVegetarian}
-                onCheckedChange={(checked) => setIsVegetarian(checked as boolean)}
-              />
-              <span>Vegetarian Only 🥬</span>
-            </label>
-          </div>
-
-          <div className="flex justify-center">
-            <Button
-              onClick={handleGeneratePlan}
-              disabled={generating || !bodyComp?.bmr}
-              size="lg"
-              className="px-8 py-6 text-lg rounded-xl bg-gradient-to-r from-orange-500 to-orange-600"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Generating Your Plan...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Generate {planType} Diet Plan
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleGeneratePlan}
+            disabled={generating || !bodyComp?.bmr}
+            size="lg"
+            className="w-full py-6 text-lg rounded-xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:opacity-90 transition-opacity"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Generating Your Plan...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 mr-2" />
+                Generate {planType === '7-day' ? '7' : '30'}-day Plan
+              </>
+            )}
+          </Button>
         </div>
       ) : (
         <div className="space-y-6">
