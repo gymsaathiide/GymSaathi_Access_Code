@@ -144,8 +144,20 @@ export function ModernSidebar({ isOpen, onToggle, isMobileOpen, onMobileClose }:
       <nav className="flex-1 px-3 py-4 overflow-y-auto custom-scrollbar">
         <div className="space-y-1">
           {navigation.map((item) => {
-            const isActive = location === item.url || 
-              (item.url !== "/" && item.url !== "/admin" && item.url !== "/trainer" && item.url !== "/member" && location.startsWith(item.url));
+            // Check if any other item is an exact match for the current location
+            const hasExactMatch = navigation.some(navItem => navItem.url === location);
+            
+            // For active state: exact match takes priority, startsWith only if no exact match exists
+            const isExactMatch = location === item.url;
+            const isParentRoute = !isExactMatch && 
+              item.url !== "/" && 
+              item.url !== "/admin" && 
+              item.url !== "/trainer" && 
+              item.url !== "/member" && 
+              location.startsWith(item.url + "/");
+            
+            // Only use parent route matching if there's no exact match in the navigation
+            const isActive = isExactMatch || (!hasExactMatch && isParentRoute);
             
             return (
               <Link
