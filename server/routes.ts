@@ -8640,6 +8640,86 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // Get body composition history
+  app.get('/api/diet-planner/body-composition/history', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const result = await db!.execute(sql`
+        SELECT id, user_name, report_date, weight, bmi, body_fat_percentage,
+               muscle_mass, bmr, body_age, lifestyle, created_at
+        FROM body_composition_reports
+        WHERE user_id = ${req.session.userId}
+        ORDER BY created_at DESC
+      `);
+
+      res.json({ reports: result.rows || [] });
+    } catch (error: any) {
+      console.error('Error fetching body composition history:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete single body composition report
+  app.delete('/api/diet-planner/body-composition/:id', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { id } = req.params;
+      
+      const result = await db!.execute(sql`
+        DELETE FROM body_composition_reports
+        WHERE id = ${id} AND user_id = ${req.session.userId}
+        RETURNING id
+      `);
+
+      if (!result.rows?.length) {
+        return res.status(404).json({ error: 'Report not found' });
+      }
+
+      res.json({ success: true, deleted: id });
+    } catch (error: any) {
+      console.error('Error deleting body composition report:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete multiple body composition reports
+  app.post('/api/diet-planner/body-composition/delete-multiple', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { ids } = req.body;
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'No report IDs provided' });
+      }
+
+      let deletedCount = 0;
+      for (const id of ids) {
+        const result = await db!.execute(sql`
+          DELETE FROM body_composition_reports
+          WHERE id = ${id} AND user_id = ${req.session.userId}
+          RETURNING id
+        `);
+        if (result.rows?.length) {
+          deletedCount++;
+        }
+      }
+
+      res.json({ success: true, deletedCount });
+    } catch (error: any) {
+      console.error('Error deleting body composition reports:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get nutrition targets based on body composition
   app.get('/api/diet-planner/nutrition-targets', async (req, res) => {
     if (!req.session?.userId) {
