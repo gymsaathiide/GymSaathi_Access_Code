@@ -4,7 +4,6 @@ import "./types";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { z } from "zod";
-import OpenAI from "openai";
 import { storage } from "./storage";
 import { insertMemberSchema, insertPaymentSchema, insertInvoiceSchema, insertLeadSchema, insertProductSchema, insertOrderSchema, insertClassSchema, insertClassTypeSchema, insertClassBookingSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
@@ -8391,13 +8390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Diet Planner API Routes
 
-  // Initialize OpenAI client for body composition parsing
-  const openai = new OpenAI({
-    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  });
-
-  // Parse body composition report from image using AI
+  // Parse body composition report from image using Gemini AI
   app.post('/api/diet-planner/parse-body-composition', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -8410,24 +8403,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No image data provided' });
       }
 
-      // Check if OpenAI is configured
-      if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+      // Check if Gemini API key is configured
+      if (!process.env.GEMINI_API_KEY) {
         return res.status(503).json({ 
           error: 'AI service not configured',
-          message: 'Please configure OpenAI integration'
+          message: 'Please configure Gemini API key'
         });
       }
 
-      // Parse the image using OpenAI Vision
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analyze this body composition report image and extract the following metrics. Return ONLY a valid JSON object with these fields (use null for any values not found):
+      // Extract base64 data and mime type from data URL
+      let base64Data = imageData;
+      let mimeType = 'image/jpeg';
+      
+      if (imageData.startsWith('data:')) {
+        const matches = imageData.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          mimeType = matches[1];
+          base64Data = matches[2];
+        }
+      }
+
+      const prompt = `Analyze this body composition report image and extract the following metrics. Return ONLY a valid JSON object with these fields (use null for any values not found):
 
 {
   "user_name": "string or null",
@@ -8452,21 +8448,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   "ideal_body_weight": "number in kg or null"
 }
 
-Return ONLY the JSON object, no other text.`
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`
-                }
-              }
-            ]
-          }
-        ],
-        max_tokens: 1000,
-      });
+Return ONLY the JSON object, no other text.`;
 
-      const content = response.choices[0]?.message?.content;
+      // Call Gemini API
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  {
+                    inline_data: {
+                      mime_type: mimeType,
+                      data: base64Data
+                    }
+                  }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 1000,
+            }
+          }),
+        }
+      );
+
+      if (!geminiResponse.ok) {
+        const errorData = await geminiResponse.json();
+        console.error('Gemini API error:', errorData);
+        return res.status(500).json({ 
+          error: 'AI service error',
+          message: errorData.error?.message || 'Failed to process image'
+        });
+      }
+
+      const geminiData = await geminiResponse.json();
+      const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (!content) {
         return res.status(500).json({ error: 'No response from AI service' });
