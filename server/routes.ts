@@ -8738,7 +8738,7 @@ Return ONLY the JSON object, no other text.`;
       const trackingDate = date || new Date().toISOString().split('T')[0];
       
       const result = await db!.execute(sql`
-        SELECT eaten_meals, completed_exercises, water_intake, notes
+        SELECT eaten_meals, completed_exercises, water_glasses, steps, calories_burned
         FROM daily_tracking
         WHERE user_id = ${req.session.userId} AND tracking_date = ${trackingDate}
       `);
@@ -8757,17 +8757,18 @@ Return ONLY the JSON object, no other text.`;
     }
 
     try {
-      const { tracking_date, eaten_meals, completed_exercises, water_intake, notes } = req.body;
+      const { tracking_date, eaten_meals, completed_exercises, water_glasses, steps, calories_burned } = req.body;
       
       const result = await db!.execute(sql`
-        INSERT INTO daily_tracking (user_id, tracking_date, eaten_meals, completed_exercises, water_intake, notes)
-        VALUES (${req.session.userId}, ${tracking_date}, ${JSON.stringify(eaten_meals || [])}, ${JSON.stringify(completed_exercises || [])}, ${water_intake || 0}, ${notes || null})
+        INSERT INTO daily_tracking (user_id, tracking_date, eaten_meals, completed_exercises, water_glasses, steps, calories_burned)
+        VALUES (${req.session.userId}, ${tracking_date}, ${JSON.stringify(eaten_meals || [])}, ${JSON.stringify(completed_exercises || [])}, ${water_glasses || 0}, ${steps || 0}, ${calories_burned || 0})
         ON CONFLICT (user_id, tracking_date)
         DO UPDATE SET 
           eaten_meals = ${JSON.stringify(eaten_meals || [])},
           completed_exercises = ${JSON.stringify(completed_exercises || [])},
-          water_intake = COALESCE(${water_intake}, daily_tracking.water_intake),
-          notes = COALESCE(${notes}, daily_tracking.notes),
+          water_glasses = COALESCE(${water_glasses}, daily_tracking.water_glasses),
+          steps = COALESCE(${steps}, daily_tracking.steps),
+          calories_burned = COALESCE(${calories_burned}, daily_tracking.calories_burned),
           updated_at = now()
         RETURNING *
       `);
