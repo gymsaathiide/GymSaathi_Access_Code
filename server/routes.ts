@@ -8830,14 +8830,24 @@ Return ONLY the JSON object, no other text.`;
       const numDays = planType === '7-day' ? 7 : 30;
       const mealTemplates = getSampleMeals(isVegetarian);
       
+      // Helper to convert JS array to PostgreSQL array format
+      const toPgArray = (arr: string[]): string => {
+        if (!arr || arr.length === 0) return '{}';
+        const escaped = arr.map(item => `"${item.replace(/"/g, '\\"')}"`);
+        return `{${escaped.join(',')}}`;
+      };
+      
       for (let day = 1; day <= numDays; day++) {
         for (const template of mealTemplates) {
+          const ingredientsArr = toPgArray(template.ingredients || []);
+          const instructionsArr = toPgArray(template.recipe_instructions || []);
+          
           await db!.execute(sql`
             INSERT INTO meals (diet_plan_id, day_number, meal_type, meal_name, name_hindi, 
               ingredients, recipe_instructions, prep_time_minutes, cook_time_minutes,
               calories, protein, carbs, fats, portion_size, meal_timing)
             VALUES (${plan.id}, ${day}, ${template.meal_type}, ${template.meal_name}, ${template.name_hindi || null},
-              ${JSON.stringify(template.ingredients || [])}, ${JSON.stringify(template.recipe_instructions || [])},
+              ${ingredientsArr}::text[], ${instructionsArr}::text[],
               ${template.prep_time_minutes || null}, ${template.cook_time_minutes || null},
               ${template.calories}, ${template.protein}, ${template.carbs}, ${template.fats},
               ${template.portion_size || null}, ${template.meal_timing || null})
