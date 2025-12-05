@@ -7354,7 +7354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Fetch member names for recent orders
-        const memberIds = [...new Set(orders.slice(0, 10).map(o => o.memberId).filter(Boolean))];
+        const memberIds = Array.from(new Set(orders.slice(0, 10).map(o => o.memberId).filter(Boolean)));
         if (memberIds.length > 0) {
           const { data: memberData } = await supabase
             .from('members')
@@ -7375,7 +7375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .orderBy(desc(schema.orders.orderDate));
 
         // Fetch member names for recent orders
-        const memberIds = [...new Set(orders.slice(0, 10).map(o => o.memberId).filter(Boolean))];
+        const memberIds = Array.from(new Set(orders.slice(0, 10).map(o => o.memberId).filter(Boolean)));
         if (memberIds.length > 0 && db) {
           const memberData = await db.select({ id: schema.members.id, name: schema.members.name })
             .from(schema.members)
@@ -8603,6 +8603,18 @@ Return ONLY the JSON object, no other text.`;
         lifestyle
       } = req.body;
 
+      // Calculate BMR if not provided using Mifflin-St Jeor equation (estimate)
+      // For adult average: BMR = 10 × weight(kg) + 6.25 × height(cm) − 5 × age + 5
+      // Without height/age, use simplified estimate: BMR ≈ 24 × weight (kcal/day)
+      let calculatedBmr = bmr;
+      if (!bmr && weight) {
+        const weightNum = parseFloat(weight);
+        if (!isNaN(weightNum)) {
+          // Simplified BMR estimate: ~22-24 kcal per kg body weight per day
+          calculatedBmr = Math.round(weightNum * 22);
+        }
+      }
+
       const result = await db!.execute(sql`
         INSERT INTO body_composition_reports (
           user_id, user_name, report_date, weight, bmi, body_fat_percentage,
@@ -8616,7 +8628,7 @@ Return ONLY the JSON object, no other text.`;
           ${muscle_rate || null}, ${skeletal_muscle || null}, ${bone_mass || null},
           ${protein_mass || null}, ${protein || null}, ${water_weight || null},
           ${body_water || null}, ${subcutaneous_fat || null}, ${visceral_fat || null},
-          ${bmr || null}, ${body_age || null}, ${ideal_body_weight || null}, ${lifestyle || 'moderately_active'}
+          ${calculatedBmr || null}, ${body_age || null}, ${ideal_body_weight || null}, ${lifestyle || 'moderately_active'}
         )
         RETURNING *
       `);
