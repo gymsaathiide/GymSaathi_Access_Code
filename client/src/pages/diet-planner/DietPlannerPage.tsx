@@ -1,0 +1,602 @@
+import { useState, useEffect } from "react";
+import { ArrowLeft, Calendar, Target, Loader2, ChefHat, Clock, Download, ChevronDown, ChevronUp, Sparkles, RotateCw, Check, Trash2, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "wouter";
+
+interface Meal {
+  id: string;
+  day_number: number;
+  meal_type: string;
+  meal_name: string;
+  name_hindi?: string;
+  ingredients: string[];
+  recipe_instructions?: string[];
+  prep_time_minutes?: number;
+  cook_time_minutes?: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  portion_size?: string;
+  meal_timing?: string;
+}
+
+interface DietPlan {
+  id: string;
+  plan_type: string;
+  goal: string;
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fats: number;
+  created_at: string;
+}
+
+interface BodyComposition {
+  weight?: number;
+  bmi?: number;
+  bmr?: number;
+  lifestyle?: string;
+}
+
+type LifestyleType = 'sedentary' | 'moderately_active' | 'super_active';
+
+const LIFESTYLE_LABELS: Record<LifestyleType, { label: string; factor: number }> = {
+  sedentary: { label: 'Sedentary', factor: 1.2 },
+  moderately_active: { label: 'Moderately Active', factor: 1.55 },
+  super_active: { label: 'Super Active', factor: 1.75 }
+};
+
+const calculateTDEE = (bmr: number, lifestyle: string): number => {
+  const factor = LIFESTYLE_LABELS[lifestyle as LifestyleType]?.factor || 1.55;
+  return Math.round(bmr * factor);
+};
+
+export default function DietPlannerPage() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
+  const [planType, setPlanType] = useState<"7-day" | "30-day">("7-day");
+  const [goal, setGoal] = useState<string>("Fat Loss");
+  const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<DietPlan | null>(null);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [selectedDay, setSelectedDay] = useState(1);
+  const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set());
+  const [bodyComp, setBodyComp] = useState<BodyComposition | null>(null);
+  const [eatenMeals, setEatenMeals] = useState<string[]>([]);
+  const [isVegetarian, setIsVegetarian] = useState(true);
+
+  const goals = [
+    { id: "Fat Loss", icon: "🔥", desc: "TDEE - 200 kcal", color: "from-red-500 to-orange-500" },
+    { id: "Muscle Gain", icon: "💪", desc: "TDEE + 200 kcal", color: "from-blue-500 to-cyan-500" },
+    { id: "Trim & Tone", icon: "✨", desc: "TDEE (Maintenance)", color: "from-purple-500 to-pink-500" }
+  ];
+
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPlan) {
+      loadMeals(selectedPlan.id);
+      loadEatenMeals();
+    }
+  }, [selectedPlan, selectedDay]);
+
+  const loadInitialData = async () => {
+    try {
+      const response = await fetch('/api/diet-planner/initial-data', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setBodyComp(data.bodyComposition);
+        setDietPlans(data.dietPlans || []);
+        if (data.dietPlans?.length > 0) {
+          setSelectedPlan(data.dietPlans[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMeals = async (planId: string) => {
+    try {
+      const response = await fetch(`/api/diet-planner/meals/${planId}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMeals(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading meals:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load meals",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadEatenMeals = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/diet-planner/daily-tracking?date=${today}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.eaten_meals && Array.isArray(data.eaten_meals)) {
+          setEatenMeals(data.eaten_meals);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading eaten meals:', error);
+    }
+  };
+
+  const toggleMealEaten = async (mealId: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const isEaten = eatenMeals.includes(mealId);
+      const updatedEatenMeals = isEaten
+        ? eatenMeals.filter(id => id !== mealId)
+        : [...eatenMeals, mealId];
+
+      const response = await fetch('/api/diet-planner/daily-tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          tracking_date: today,
+          eaten_meals: updatedEatenMeals,
+        })
+      });
+
+      if (response.ok) {
+        setEatenMeals(updatedEatenMeals);
+        toast({
+          title: isEaten ? 'Meal unmarked' : 'Meal marked as eaten!',
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling meal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update meal status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleGeneratePlan = async () => {
+    if (!bodyComp || !bodyComp.bmr) {
+      toast({
+        title: "Body Composition Required",
+        description: "Please upload a body composition report first to generate a diet plan",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/diet-planner/generate-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          planType,
+          goal,
+          bmr: bodyComp.bmr,
+          bodyWeight: bodyComp.weight || 70,
+          lifestyle: bodyComp.lifestyle || 'moderately_active',
+          isVegetarian,
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to generate diet plan');
+      }
+
+      toast({
+        title: "Diet Plan Generated!",
+        description: `Your ${planType} diet plan is ready`,
+      });
+      
+      await loadInitialData();
+    } catch (error: any) {
+      console.error('Error generating plan:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || 'Failed to generate diet plan',
+        variant: "destructive"
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const resetDietPlan = async () => {
+    try {
+      const response = await fetch('/api/diet-planner/reset-plan', {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        setDietPlans([]);
+        setSelectedPlan(null);
+        setMeals([]);
+        setSelectedDay(1);
+        setExpandedMeals(new Set());
+        setEatenMeals([]);
+
+        toast({
+          title: "Plan Reset",
+          description: "You can now create a new diet plan",
+        });
+      }
+    } catch (error) {
+      console.error('Error resetting diet plan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset diet plan",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleMealExpanded = (mealId: string) => {
+    setExpandedMeals(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(mealId)) {
+        newSet.delete(mealId);
+      } else {
+        newSet.add(mealId);
+      }
+      return newSet;
+    });
+  };
+
+  const getMealTypeIcon = (type: string) => {
+    const icons: Record<string, string> = {
+      breakfast: "🌅",
+      lunch: "☀️",
+      dinner: "🌙",
+      snack: "🍎"
+    };
+    return icons[type] || "🍽️";
+  };
+
+  const dayMeals = meals.filter(m => m.day_number === selectedDay);
+  const dailyCalories = dayMeals.reduce((sum, m) => sum + m.calories, 0);
+  const dailyProtein = dayMeals.reduce((sum, m) => sum + Number(m.protein), 0);
+  const dailyCarbs = dayMeals.reduce((sum, m) => sum + Number(m.carbs), 0);
+  const dailyFats = dayMeals.reduce((sum, m) => sum + Number(m.fats), 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-20">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/member">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+              AI Diet Planner
+            </h1>
+            <p className="text-muted-foreground text-sm">Personalized meal plans powered by AI</p>
+          </div>
+        </div>
+      </div>
+
+      {bodyComp && bodyComp.bmr && (
+        <Card className="bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                <Activity className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Using Latest Body Report</h3>
+                <p className="text-xs text-muted-foreground">Your personalized calorie and macro targets</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-card/50 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Weight</p>
+                <p className="text-lg font-bold">{bodyComp.weight || 70} kg</p>
+              </div>
+              <div className="bg-card/50 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground mb-1">BMR</p>
+                <p className="text-lg font-bold">{bodyComp.bmr} kcal</p>
+              </div>
+              <div className="bg-card/50 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Lifestyle</p>
+                <p className="text-lg font-bold text-orange-500">
+                  {LIFESTYLE_LABELS[bodyComp.lifestyle as LifestyleType]?.label || 'Moderately Active'}
+                </p>
+              </div>
+              <div className="bg-card/50 rounded-lg p-3 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Daily Target (TDEE)</p>
+                <p className="text-lg font-bold text-green-500">
+                  {calculateTDEE(bodyComp.bmr, bodyComp.lifestyle || 'moderately_active')} kcal
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(!bodyComp || !bodyComp.bmr) && !selectedPlan && (
+        <Card className="bg-orange-500/10 border-orange-500/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                <Target className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Body Composition Required</h3>
+                <p className="text-sm text-muted-foreground">
+                  Please upload a body composition report and select your lifestyle to generate a personalized diet plan.
+                </p>
+              </div>
+              <Link href="/member/diet-planner/body-composition">
+                <Button>Add Report</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!selectedPlan ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {goals.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGoal(g.id)}
+                className={`relative overflow-hidden rounded-xl p-6 transition-all duration-300 border-2 ${
+                  goal === g.id
+                    ? 'border-orange-500 scale-105 shadow-lg shadow-orange-500/20'
+                    : 'border-border hover:border-orange-500/50'
+                }`}
+              >
+                <div className="text-center space-y-2">
+                  <div className="text-4xl">{g.icon}</div>
+                  <h3 className="text-lg font-bold">{g.id}</h3>
+                  <p className="text-sm text-muted-foreground">{g.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-4 justify-center">
+            {(['7-day', '30-day'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setPlanType(type)}
+                className={`px-6 py-3 rounded-full font-medium transition-all ${
+                  planType === type
+                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                    : 'bg-card border border-border hover:border-orange-500/50'
+                }`}
+              >
+                {type === '7-day' ? '7 Day Plan' : '30 Day Plan'}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={isVegetarian}
+                onCheckedChange={(checked) => setIsVegetarian(checked as boolean)}
+              />
+              <span>Vegetarian Only 🥬</span>
+            </label>
+          </div>
+
+          <div className="flex justify-center">
+            <Button
+              onClick={handleGeneratePlan}
+              disabled={generating || !bodyComp?.bmr}
+              size="lg"
+              className="px-8 py-6 text-lg rounded-xl bg-gradient-to-r from-orange-500 to-orange-600"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Generating Your Plan...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Generate {planType} Diet Plan
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold">{selectedPlan.plan_type} Plan</h2>
+              <p className="text-muted-foreground">Goal: {selectedPlan.goal}</p>
+            </div>
+            <Button variant="outline" onClick={resetDietPlan} className="gap-2">
+              <RotateCw className="w-4 h-4" />
+              Reset & Regenerate
+            </Button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {Array.from({ length: selectedPlan.plan_type === '7-day' ? 7 : 30 }, (_, i) => i + 1).map((day) => (
+              <button
+                key={day}
+                onClick={() => setSelectedDay(day)}
+                className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-all ${
+                  selectedDay === day
+                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                    : 'bg-card border border-border hover:border-orange-500/50'
+                }`}
+              >
+                Day {day}
+              </button>
+            ))}
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Day {selectedDay} Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-500">{dailyCalories}</p>
+                  <p className="text-sm text-muted-foreground">Calories</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-500">{dailyProtein}g</p>
+                  <p className="text-sm text-muted-foreground">Protein</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-500">{dailyCarbs}g</p>
+                  <p className="text-sm text-muted-foreground">Carbs</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-yellow-500">{dailyFats}g</p>
+                  <p className="text-sm text-muted-foreground">Fats</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-4">
+            {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => {
+              const typeMeals = dayMeals.filter(m => m.meal_type === mealType);
+              if (typeMeals.length === 0) return null;
+
+              return (
+                <div key={mealType} className="space-y-2">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <span>{getMealTypeIcon(mealType)}</span>
+                    <span className="capitalize">{mealType}</span>
+                  </h3>
+                  
+                  {typeMeals.map((meal) => {
+                    const isEaten = eatenMeals.includes(meal.id);
+                    const isExpanded = expandedMeals.has(meal.id);
+                    
+                    return (
+                      <Collapsible key={meal.id} open={isExpanded} onOpenChange={() => toggleMealExpanded(meal.id)}>
+                        <Card className={`transition-all ${isEaten ? 'bg-green-500/10 border-green-500/30' : ''}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={isEaten}
+                                  onCheckedChange={() => toggleMealEaten(meal.id)}
+                                />
+                                <div>
+                                  <p className={`font-medium ${isEaten ? 'line-through text-muted-foreground' : ''}`}>
+                                    {meal.meal_name}
+                                  </p>
+                                  <div className="flex gap-3 text-sm text-muted-foreground">
+                                    <span>{meal.calories} kcal</span>
+                                    <span>P: {meal.protein}g</span>
+                                    <span>C: {meal.carbs}g</span>
+                                    <span>F: {meal.fats}g</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </Button>
+                              </CollapsibleTrigger>
+                            </div>
+                            
+                            <CollapsibleContent className="mt-4 space-y-3">
+                              {meal.ingredients && meal.ingredients.length > 0 && (
+                                <div>
+                                  <p className="text-sm font-medium mb-2">Ingredients:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {meal.ingredients.map((ing, idx) => (
+                                      <Badge key={idx} variant="secondary">{ing}</Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {meal.recipe_instructions && meal.recipe_instructions.length > 0 && (
+                                <div>
+                                  <p className="text-sm font-medium mb-2">Instructions:</p>
+                                  <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
+                                    {meal.recipe_instructions.map((step, idx) => (
+                                      <li key={idx}>{step}</li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              )}
+                              {(meal.prep_time_minutes || meal.cook_time_minutes) && (
+                                <div className="flex gap-4 text-sm text-muted-foreground">
+                                  {meal.prep_time_minutes && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="w-4 h-4" />
+                                      Prep: {meal.prep_time_minutes} min
+                                    </span>
+                                  )}
+                                  {meal.cook_time_minutes && (
+                                    <span className="flex items-center gap-1">
+                                      <ChefHat className="w-4 h-4" />
+                                      Cook: {meal.cook_time_minutes} min
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </CollapsibleContent>
+                          </CardContent>
+                        </Card>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

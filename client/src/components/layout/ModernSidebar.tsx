@@ -25,6 +25,9 @@ import {
   Menu,
   TrendingUp,
   UserCog,
+  Apple,
+  Target,
+  Activity,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
@@ -65,6 +68,10 @@ const trainerItems = [
 
 const memberItems = [
   { title: "Dashboard", url: "/member", icon: LayoutDashboard },
+  { title: "Body Report", url: "/member/diet-planner/body-composition", icon: Activity },
+  { title: "Diet Planner", url: "/member/diet-planner", icon: Apple },
+  { title: "Daily Nutrition", url: "/member/diet-planner/daily-nutrition", icon: Target },
+  { title: "Workout Planner", url: "/member/diet-planner/workout", icon: Dumbbell },
   { title: "Classes", url: "/member/classes", icon: Calendar },
   { title: "Attendance", url: "/member/attendance", icon: ClipboardCheck },
   { title: "Shop", url: "/member-store", icon: ShoppingBag },

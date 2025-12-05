@@ -8388,8 +8388,846 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diet Planner API Routes
+  
+  // Get initial data for diet planner (body composition, diet plans)
+  app.get('/api/diet-planner/initial-data', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Get latest body composition report
+      const bodyCompResult = await db!.execute(sql`
+        SELECT weight, bmi, bmr, lifestyle, body_fat_percentage
+        FROM body_composition_reports
+        WHERE user_id = ${req.session.userId}
+        ORDER BY report_date DESC
+        LIMIT 1
+      `);
+
+      // Get active diet plans
+      const dietPlansResult = await db!.execute(sql`
+        SELECT id, plan_type, goal, total_calories, total_protein, total_carbs, total_fats, created_at
+        FROM diet_plans
+        WHERE user_id = ${req.session.userId} AND is_active = true
+        ORDER BY created_at DESC
+      `);
+
+      res.json({
+        bodyComposition: bodyCompResult.rows?.[0] || null,
+        dietPlans: dietPlansResult.rows || [],
+      });
+    } catch (error: any) {
+      console.error('Error fetching diet planner initial data:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Save body composition report
+  app.post('/api/diet-planner/body-composition', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const {
+        user_name,
+        report_date,
+        weight,
+        bmi,
+        body_fat_percentage,
+        fat_mass,
+        fat_free_body_weight,
+        muscle_mass,
+        muscle_rate,
+        skeletal_muscle,
+        bone_mass,
+        protein_mass,
+        protein,
+        water_weight,
+        body_water,
+        subcutaneous_fat,
+        visceral_fat,
+        bmr,
+        body_age,
+        ideal_body_weight,
+        lifestyle
+      } = req.body;
+
+      const result = await db!.execute(sql`
+        INSERT INTO body_composition_reports (
+          user_id, user_name, report_date, weight, bmi, body_fat_percentage,
+          fat_mass, fat_free_body_weight, muscle_mass, muscle_rate, skeletal_muscle,
+          bone_mass, protein_mass, protein, water_weight, body_water,
+          subcutaneous_fat, visceral_fat, bmr, body_age, ideal_body_weight, lifestyle
+        ) VALUES (
+          ${req.session.userId}, ${user_name || null}, ${report_date ? new Date(report_date) : new Date()},
+          ${weight || null}, ${bmi || null}, ${body_fat_percentage || null},
+          ${fat_mass || null}, ${fat_free_body_weight || null}, ${muscle_mass || null},
+          ${muscle_rate || null}, ${skeletal_muscle || null}, ${bone_mass || null},
+          ${protein_mass || null}, ${protein || null}, ${water_weight || null},
+          ${body_water || null}, ${subcutaneous_fat || null}, ${visceral_fat || null},
+          ${bmr || null}, ${body_age || null}, ${ideal_body_weight || null}, ${lifestyle || 'moderately_active'}
+        )
+        RETURNING *
+      `);
+
+      res.json({ success: true, report: result.rows?.[0] });
+    } catch (error: any) {
+      console.error('Error saving body composition:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get nutrition targets based on body composition
+  app.get('/api/diet-planner/nutrition-targets', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Get latest body composition
+      const bodyCompResult = await db!.execute(sql`
+        SELECT weight, bmr, lifestyle
+        FROM body_composition_reports
+        WHERE user_id = ${req.session.userId}
+        ORDER BY report_date DESC
+        LIMIT 1
+      `);
+
+      const bodyComp = bodyCompResult.rows?.[0];
+      
+      if (!bodyComp || !bodyComp.bmr) {
+        // Return default targets if no body composition
+        return res.json({
+          calories: 2000,
+          protein: 120,
+          carbs: 200,
+          fats: 65
+        });
+      }
+
+      // Calculate TDEE based on lifestyle
+      const lifestyleFactors: Record<string, number> = {
+        sedentary: 1.2,
+        moderately_active: 1.55,
+        super_active: 1.75
+      };
+      
+      const factor = lifestyleFactors[bodyComp.lifestyle as string] || 1.55;
+      const tdee = Math.round(Number(bodyComp.bmr) * factor);
+      const weight = Number(bodyComp.weight) || 70;
+
+      // Calculate macros (balanced approach)
+      const protein = Math.round(weight * 1.8); // 1.8g per kg bodyweight
+      const fats = Math.round(tdee * 0.25 / 9); // 25% of calories from fats
+      const carbs = Math.round((tdee - (protein * 4) - (fats * 9)) / 4);
+
+      res.json({
+        calories: tdee,
+        protein,
+        carbs,
+        fats
+      });
+    } catch (error: any) {
+      console.error('Error calculating nutrition targets:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get meals for a diet plan
+  app.get('/api/diet-planner/meals/:planId', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId } = req.params;
+      
+      const result = await db!.execute(sql`
+        SELECT id, day_number, meal_type, meal_name, name_hindi, ingredients, 
+               recipe_instructions, prep_time_minutes, cook_time_minutes,
+               calories, protein, carbs, fats, portion_size, meal_timing
+        FROM meals
+        WHERE diet_plan_id = ${planId}
+        ORDER BY day_number, 
+          CASE meal_type
+            WHEN 'breakfast' THEN 1
+            WHEN 'lunch' THEN 2
+            WHEN 'snack' THEN 3
+            WHEN 'dinner' THEN 4
+          END
+      `);
+
+      res.json(result.rows || []);
+    } catch (error: any) {
+      console.error('Error fetching meals:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get daily tracking
+  app.get('/api/diet-planner/daily-tracking', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { date } = req.query;
+      const trackingDate = date || new Date().toISOString().split('T')[0];
+      
+      const result = await db!.execute(sql`
+        SELECT eaten_meals, completed_exercises, water_intake, notes
+        FROM daily_tracking
+        WHERE user_id = ${req.session.userId} AND tracking_date = ${trackingDate}
+      `);
+
+      res.json(result.rows?.[0] || { eaten_meals: [], completed_exercises: [] });
+    } catch (error: any) {
+      console.error('Error fetching daily tracking:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update daily tracking
+  app.post('/api/diet-planner/daily-tracking', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { tracking_date, eaten_meals, completed_exercises, water_intake, notes } = req.body;
+      
+      const result = await db!.execute(sql`
+        INSERT INTO daily_tracking (user_id, tracking_date, eaten_meals, completed_exercises, water_intake, notes)
+        VALUES (${req.session.userId}, ${tracking_date}, ${JSON.stringify(eaten_meals || [])}, ${JSON.stringify(completed_exercises || [])}, ${water_intake || 0}, ${notes || null})
+        ON CONFLICT (user_id, tracking_date)
+        DO UPDATE SET 
+          eaten_meals = ${JSON.stringify(eaten_meals || [])},
+          completed_exercises = ${JSON.stringify(completed_exercises || [])},
+          water_intake = COALESCE(${water_intake}, daily_tracking.water_intake),
+          notes = COALESCE(${notes}, daily_tracking.notes),
+          updated_at = now()
+        RETURNING *
+      `);
+
+      res.json(result.rows?.[0]);
+    } catch (error: any) {
+      console.error('Error updating daily tracking:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate diet plan (simplified - no AI integration for now)
+  app.post('/api/diet-planner/generate-plan', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planType, goal, bmr, bodyWeight, lifestyle, isVegetarian } = req.body;
+      
+      // Calculate target calories based on goal
+      const lifestyleFactors: Record<string, number> = {
+        sedentary: 1.2,
+        moderately_active: 1.55,
+        super_active: 1.75
+      };
+      
+      const factor = lifestyleFactors[lifestyle] || 1.55;
+      let targetCalories = Math.round(bmr * factor);
+      
+      if (goal === 'Fat Loss') {
+        targetCalories -= 200;
+      } else if (goal === 'Muscle Gain') {
+        targetCalories += 200;
+      }
+      
+      // Calculate macros
+      const protein = Math.round(bodyWeight * 2); // 2g per kg for muscle building
+      const fats = Math.round(targetCalories * 0.25 / 9);
+      const carbs = Math.round((targetCalories - (protein * 4) - (fats * 9)) / 4);
+
+      // Deactivate existing plans
+      await db!.execute(sql`
+        UPDATE diet_plans SET is_active = false WHERE user_id = ${req.session.userId}
+      `);
+
+      // Create new diet plan
+      const planResult = await db!.execute(sql`
+        INSERT INTO diet_plans (user_id, plan_type, goal, total_calories, total_protein, total_carbs, total_fats, is_active)
+        VALUES (${req.session.userId}, ${planType}, ${goal}, ${targetCalories}, ${protein}, ${carbs}, ${fats}, true)
+        RETURNING *
+      `);
+
+      const plan = planResult.rows?.[0];
+      if (!plan) {
+        throw new Error('Failed to create diet plan');
+      }
+
+      // Generate sample meals for the plan
+      const numDays = planType === '7-day' ? 7 : 30;
+      const mealTemplates = getSampleMeals(isVegetarian);
+      
+      for (let day = 1; day <= numDays; day++) {
+        for (const template of mealTemplates) {
+          await db!.execute(sql`
+            INSERT INTO meals (diet_plan_id, day_number, meal_type, meal_name, name_hindi, 
+              ingredients, recipe_instructions, prep_time_minutes, cook_time_minutes,
+              calories, protein, carbs, fats, portion_size, meal_timing)
+            VALUES (${plan.id}, ${day}, ${template.meal_type}, ${template.meal_name}, ${template.name_hindi || null},
+              ${JSON.stringify(template.ingredients || [])}, ${JSON.stringify(template.recipe_instructions || [])},
+              ${template.prep_time_minutes || null}, ${template.cook_time_minutes || null},
+              ${template.calories}, ${template.protein}, ${template.carbs}, ${template.fats},
+              ${template.portion_size || null}, ${template.meal_timing || null})
+          `);
+        }
+      }
+
+      res.json({ success: true, plan });
+    } catch (error: any) {
+      console.error('Error generating diet plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reset diet plan
+  app.delete('/api/diet-planner/reset-plan', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Get all plan IDs for user
+      const plansResult = await db!.execute(sql`
+        SELECT id FROM diet_plans WHERE user_id = ${req.session.userId}
+      `);
+
+      const planIds = plansResult.rows?.map((p: any) => p.id) || [];
+      
+      if (planIds.length > 0) {
+        // Delete meals first
+        for (const planId of planIds) {
+          await db!.execute(sql`DELETE FROM meals WHERE diet_plan_id = ${planId}`);
+        }
+        // Delete plans
+        await db!.execute(sql`DELETE FROM diet_plans WHERE user_id = ${req.session.userId}`);
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error resetting diet plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get meal logs for a date
+  app.get('/api/diet-planner/meal-logs', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { date } = req.query;
+      const logDate = date || new Date().toISOString().split('T')[0];
+
+      const result = await db!.execute(sql`
+        SELECT ml.id, ml.user_food_id, ml.meal_type, ml.quantity, ml.calories, 
+               ml.protein, ml.carbs, ml.fat, ml.notes, ml.created_at,
+               uf.name, uf.name_hindi, uf.brand, uf.serving_description, uf.fatsecret_food_id
+        FROM meal_logs ml
+        LEFT JOIN user_foods uf ON ml.user_food_id = uf.id
+        WHERE ml.user_id = ${req.session.userId} AND ml.date = ${logDate}
+        ORDER BY ml.created_at ASC
+      `);
+
+      const mealLogs = result.rows || [];
+      
+      // Calculate totals by meal
+      const byMeal: Record<string, any> = {
+        breakfast: { calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+        lunch: { calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+        dinner: { calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+        snack: { calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+      };
+
+      const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+      mealLogs.forEach((log: any) => {
+        const mealType = log.meal_type;
+        if (byMeal[mealType]) {
+          const item = {
+            id: log.id,
+            user_food_id: log.user_food_id,
+            meal_type: mealType,
+            quantity: log.quantity,
+            calories: Number(log.calories),
+            protein: Number(log.protein),
+            carbs: Number(log.carbs),
+            fat: Number(log.fat),
+            notes: log.notes,
+            created_at: log.created_at,
+            user_food: {
+              id: log.user_food_id,
+              name: log.name,
+              name_hindi: log.name_hindi,
+              brand: log.brand,
+              serving_description: log.serving_description,
+              fatsecret_food_id: log.fatsecret_food_id,
+            }
+          };
+
+          byMeal[mealType].items.push(item);
+          byMeal[mealType].calories += Number(log.calories);
+          byMeal[mealType].protein += Number(log.protein);
+          byMeal[mealType].carbs += Number(log.carbs);
+          byMeal[mealType].fat += Number(log.fat);
+
+          totals.calories += Number(log.calories);
+          totals.protein += Number(log.protein);
+          totals.carbs += Number(log.carbs);
+          totals.fat += Number(log.fat);
+        }
+      });
+
+      res.json({
+        date: logDate,
+        totals,
+        byMeal
+      });
+    } catch (error: any) {
+      console.error('Error fetching meal logs:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Log food
+  app.post('/api/diet-planner/log-food', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const {
+        mealType,
+        logDate,
+        source,
+        fatsecretFoodId,
+        servingId,
+        foodName,
+        nameHindi,
+        brand,
+        servingDescription,
+        macros,
+        quantity,
+        notes,
+        isVegetarian,
+        isVegan,
+        imageUrl
+      } = req.body;
+
+      // First create or find user food
+      let userFoodId: string;
+      
+      if (source === 'fatsecret' && fatsecretFoodId) {
+        // Check for existing food
+        const existingResult = await db!.execute(sql`
+          SELECT id FROM user_foods 
+          WHERE user_id = ${req.session.userId} 
+            AND fatsecret_food_id = ${fatsecretFoodId}
+            AND serving_id = ${servingId || ''}
+          LIMIT 1
+        `);
+
+        if (existingResult.rows && existingResult.rows.length > 0) {
+          userFoodId = (existingResult.rows[0] as any).id;
+        } else {
+          // Create new user food
+          const foodResult = await db!.execute(sql`
+            INSERT INTO user_foods (user_id, fatsecret_food_id, serving_id, name, name_hindi, 
+              brand, serving_description, calories, protein, carbs, fat, fiber,
+              is_vegetarian, is_vegan, is_custom, image_url)
+            VALUES (${req.session.userId}, ${fatsecretFoodId}, ${servingId || null}, ${foodName}, ${nameHindi || null},
+              ${brand || null}, ${servingDescription}, ${macros.calories}, ${macros.protein},
+              ${macros.carbs}, ${macros.fat}, ${macros.fiber || 0},
+              ${isVegetarian || false}, ${isVegan || false}, false, ${imageUrl || null})
+            RETURNING id
+          `);
+          userFoodId = (foodResult.rows?.[0] as any)?.id;
+        }
+      } else {
+        // Manual entry
+        const foodResult = await db!.execute(sql`
+          INSERT INTO user_foods (user_id, name, name_hindi, brand, serving_description,
+            calories, protein, carbs, fat, fiber, is_vegetarian, is_vegan, is_custom, image_url)
+          VALUES (${req.session.userId}, ${foodName}, ${nameHindi || null}, ${brand || null},
+            ${servingDescription}, ${macros.calories}, ${macros.protein}, ${macros.carbs},
+            ${macros.fat}, ${macros.fiber || 0}, ${isVegetarian || false}, ${isVegan || false},
+            ${source === 'manual'}, ${imageUrl || null})
+          RETURNING id
+        `);
+        userFoodId = (foodResult.rows?.[0] as any)?.id;
+      }
+
+      if (!userFoodId) {
+        throw new Error('Failed to create user food');
+      }
+
+      // Calculate totals
+      const totalCalories = Math.round(macros.calories * quantity);
+      const totalProtein = Math.round(macros.protein * quantity * 10) / 10;
+      const totalCarbs = Math.round(macros.carbs * quantity * 10) / 10;
+      const totalFat = Math.round(macros.fat * quantity * 10) / 10;
+
+      // Create meal log
+      const logResult = await db!.execute(sql`
+        INSERT INTO meal_logs (user_id, date, meal_type, user_food_id, quantity,
+          calories, protein, carbs, fat, notes)
+        VALUES (${req.session.userId}, ${logDate}, ${mealType}, ${userFoodId}, ${quantity},
+          ${totalCalories}, ${totalProtein}, ${totalCarbs}, ${totalFat}, ${notes || null})
+        RETURNING id
+      `);
+
+      res.json({
+        success: true,
+        logId: (logResult.rows?.[0] as any)?.id,
+        userFoodId,
+        mealType,
+        logDate,
+        foodName,
+        macros: { calories: totalCalories, protein: totalProtein, carbs: totalCarbs, fat: totalFat },
+        quantity
+      });
+    } catch (error: any) {
+      console.error('Error logging food:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete meal log
+  app.delete('/api/diet-planner/meal-logs/:logId', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { logId } = req.params;
+      
+      await db!.execute(sql`
+        DELETE FROM meal_logs
+        WHERE id = ${logId} AND user_id = ${req.session.userId}
+      `);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting meal log:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Food search (mock for now - can integrate FatSecret later)
+  app.get('/api/diet-planner/food-search', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { query } = req.query;
+      
+      // Return sample foods for now
+      const sampleFoods = [
+        { food_id: '1', food_name: 'Chapati / Roti', food_description: 'Per 1 medium (40g) - Calories: 104, Fat: 3.3g, Carbs: 15.3g, Protein: 2.7g' },
+        { food_id: '2', food_name: 'Dal (Yellow Lentil)', food_description: 'Per 1 cup - Calories: 180, Fat: 0.8g, Carbs: 32g, Protein: 12g' },
+        { food_id: '3', food_name: 'Paneer', food_description: 'Per 100g - Calories: 265, Fat: 20g, Carbs: 1.2g, Protein: 18g' },
+        { food_id: '4', food_name: 'Rice (Cooked)', food_description: 'Per 1 cup - Calories: 206, Fat: 0.4g, Carbs: 45g, Protein: 4.3g' },
+        { food_id: '5', food_name: 'Chicken Breast', food_description: 'Per 100g - Calories: 165, Fat: 3.6g, Carbs: 0g, Protein: 31g' },
+        { food_id: '6', food_name: 'Egg (Boiled)', food_description: 'Per 1 large - Calories: 78, Fat: 5.3g, Carbs: 0.6g, Protein: 6.3g' },
+        { food_id: '7', food_name: 'Oats', food_description: 'Per 100g - Calories: 389, Fat: 6.9g, Carbs: 66g, Protein: 16.9g' },
+        { food_id: '8', food_name: 'Banana', food_description: 'Per 1 medium - Calories: 105, Fat: 0.4g, Carbs: 27g, Protein: 1.3g' },
+      ];
+
+      const searchQuery = (query as string || '').toLowerCase();
+      const filteredFoods = sampleFoods.filter(f => 
+        f.food_name.toLowerCase().includes(searchQuery)
+      );
+
+      res.json({ foods: filteredFoods });
+    } catch (error: any) {
+      console.error('Error searching foods:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get food details
+  app.get('/api/diet-planner/food-details/:foodId', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { foodId } = req.params;
+      
+      // Sample food details
+      const foodDetails: Record<string, any> = {
+        '1': { food_id: '1', food_name: 'Chapati / Roti', servings: [
+          { serving_id: '1', serving_description: '1 medium (40g)', calories: 104, protein: 2.7, carbohydrate: 15.3, fat: 3.3 },
+          { serving_id: '2', serving_description: '1 large (60g)', calories: 156, protein: 4.1, carbohydrate: 23, fat: 5 }
+        ]},
+        '2': { food_id: '2', food_name: 'Dal (Yellow Lentil)', servings: [
+          { serving_id: '1', serving_description: '1 cup cooked', calories: 180, protein: 12, carbohydrate: 32, fat: 0.8 },
+          { serving_id: '2', serving_description: '1/2 cup cooked', calories: 90, protein: 6, carbohydrate: 16, fat: 0.4 }
+        ]},
+        '3': { food_id: '3', food_name: 'Paneer', servings: [
+          { serving_id: '1', serving_description: '100g', calories: 265, protein: 18, carbohydrate: 1.2, fat: 20 },
+          { serving_id: '2', serving_description: '50g (small piece)', calories: 133, protein: 9, carbohydrate: 0.6, fat: 10 }
+        ]},
+        '4': { food_id: '4', food_name: 'Rice (Cooked)', servings: [
+          { serving_id: '1', serving_description: '1 cup', calories: 206, protein: 4.3, carbohydrate: 45, fat: 0.4 },
+          { serving_id: '2', serving_description: '1/2 cup', calories: 103, protein: 2.2, carbohydrate: 22.5, fat: 0.2 }
+        ]},
+        '5': { food_id: '5', food_name: 'Chicken Breast', servings: [
+          { serving_id: '1', serving_description: '100g cooked', calories: 165, protein: 31, carbohydrate: 0, fat: 3.6 },
+          { serving_id: '2', serving_description: '150g cooked', calories: 248, protein: 46.5, carbohydrate: 0, fat: 5.4 }
+        ]},
+        '6': { food_id: '6', food_name: 'Egg (Boiled)', servings: [
+          { serving_id: '1', serving_description: '1 large', calories: 78, protein: 6.3, carbohydrate: 0.6, fat: 5.3 },
+          { serving_id: '2', serving_description: '2 eggs', calories: 156, protein: 12.6, carbohydrate: 1.2, fat: 10.6 }
+        ]},
+        '7': { food_id: '7', food_name: 'Oats', servings: [
+          { serving_id: '1', serving_description: '50g dry', calories: 195, protein: 8.5, carbohydrate: 33, fat: 3.5 },
+          { serving_id: '2', serving_description: '30g dry (1 serving)', calories: 117, protein: 5.1, carbohydrate: 19.8, fat: 2.1 }
+        ]},
+        '8': { food_id: '8', food_name: 'Banana', servings: [
+          { serving_id: '1', serving_description: '1 medium', calories: 105, protein: 1.3, carbohydrate: 27, fat: 0.4 },
+          { serving_id: '2', serving_description: '1 large', calories: 121, protein: 1.5, carbohydrate: 31, fat: 0.5 }
+        ]},
+      };
+
+      const food = foodDetails[foodId] || { food_id: foodId, food_name: 'Unknown Food', servings: [] };
+      res.json(food);
+    } catch (error: any) {
+      console.error('Error fetching food details:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Workout Plan APIs
+  
+  // Get existing workout plan
+  app.get('/api/diet-planner/workout-plan', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const planResult = await db!.execute(sql`
+        SELECT id, level, equipment, duration_days
+        FROM workout_plans
+        WHERE user_id = ${req.session.userId} AND is_active = true
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+
+      const plan = planResult.rows?.[0];
+      
+      if (!plan) {
+        return res.json({ plan: null, exercises: [] });
+      }
+
+      const exercisesResult = await db!.execute(sql`
+        SELECT id, day_number, session_type, exercise_name, sets, reps,
+               duration_minutes, rest_seconds, muscles_targeted, 
+               form_instructions, mistakes_to_avoid, tips
+        FROM workout_exercises
+        WHERE workout_plan_id = ${(plan as any).id}
+        ORDER BY day_number, 
+          CASE session_type
+            WHEN 'warm-up' THEN 1
+            WHEN 'strength' THEN 2
+            WHEN 'hiit' THEN 3
+            WHEN 'cardio' THEN 4
+            WHEN 'core' THEN 5
+            WHEN 'mobility' THEN 6
+            WHEN 'stretching' THEN 7
+          END
+      `);
+
+      res.json({
+        plan,
+        exercises: exercisesResult.rows || []
+      });
+    } catch (error: any) {
+      console.error('Error fetching workout plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate workout plan
+  app.post('/api/diet-planner/generate-workout', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { level, equipment, durationDays } = req.body;
+
+      // Deactivate existing plans
+      await db!.execute(sql`
+        UPDATE workout_plans SET is_active = false WHERE user_id = ${req.session.userId}
+      `);
+
+      // Create new workout plan
+      const planResult = await db!.execute(sql`
+        INSERT INTO workout_plans (user_id, level, equipment, duration_days, is_active)
+        VALUES (${req.session.userId}, ${level}, ${JSON.stringify(equipment)}, ${durationDays}, true)
+        RETURNING *
+      `);
+
+      const plan = planResult.rows?.[0];
+      if (!plan) {
+        throw new Error('Failed to create workout plan');
+      }
+
+      // Generate sample exercises
+      const workoutTemplates = getSampleWorkouts(level, equipment);
+      
+      for (let day = 1; day <= durationDays; day++) {
+        const dayWorkouts = workoutTemplates[day % workoutTemplates.length] || workoutTemplates[0];
+        
+        for (const exercise of dayWorkouts) {
+          await db!.execute(sql`
+            INSERT INTO workout_exercises (workout_plan_id, day_number, session_type, exercise_name,
+              sets, reps, duration_minutes, rest_seconds, muscles_targeted, 
+              form_instructions, mistakes_to_avoid, tips)
+            VALUES (${(plan as any).id}, ${day}, ${exercise.session_type}, ${exercise.exercise_name},
+              ${exercise.sets || null}, ${exercise.reps || null}, ${exercise.duration_minutes || null},
+              ${exercise.rest_seconds || null}, ${JSON.stringify(exercise.muscles_targeted || [])},
+              ${exercise.form_instructions || null}, ${JSON.stringify(exercise.mistakes_to_avoid || [])},
+              ${JSON.stringify(exercise.tips || [])})
+          `);
+        }
+      }
+
+      res.json({ success: true, plan });
+    } catch (error: any) {
+      console.error('Error generating workout plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get recommendations for today (stub - can be enhanced with AI later)
+  app.post('/api/diet-planner/recommend-today', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { date, consumedCalories, consumedProtein } = req.body;
+      
+      // Return empty recommendations for now (can be enhanced with AI later)
+      res.json({
+        ok: true,
+        date: date || new Date().toISOString().split('T')[0],
+        remainingCalories: 2000 - (consumedCalories || 0),
+        remainingProtein: 120 - (consumedProtein || 0),
+        recommendations: []
+      });
+    } catch (error: any) {
+      console.error('Error getting recommendations:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Delete workout plan
+  app.delete('/api/diet-planner/workout-plan', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Get all plan IDs for user
+      const plansResult = await db!.execute(sql`
+        SELECT id FROM workout_plans WHERE user_id = ${req.session.userId}
+      `);
+
+      const planIds = plansResult.rows?.map((p: any) => p.id) || [];
+      
+      if (planIds.length > 0) {
+        // Delete exercises first
+        for (const planId of planIds) {
+          await db!.execute(sql`DELETE FROM workout_exercises WHERE workout_plan_id = ${planId}`);
+        }
+        // Delete plans
+        await db!.execute(sql`DELETE FROM workout_plans WHERE user_id = ${req.session.userId}`);
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting workout plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+// Helper function to get sample meals
+function getSampleMeals(isVegetarian: boolean) {
+  if (isVegetarian) {
+    return [
+      { meal_type: 'breakfast', meal_name: 'Oats with Banana and Almonds', name_hindi: 'केले और बादाम के साथ ओट्स', ingredients: ['Oats 50g', 'Banana 1', 'Almonds 10', 'Milk 200ml', 'Honey 1 tsp'], recipe_instructions: ['Boil milk', 'Add oats and cook for 5 mins', 'Top with banana slices and almonds'], prep_time_minutes: 5, cook_time_minutes: 10, calories: 380, protein: 14, carbs: 55, fats: 12, portion_size: '1 bowl', meal_timing: '7:00 AM - 8:00 AM' },
+      { meal_type: 'lunch', meal_name: 'Rajma Rice with Salad', name_hindi: 'राजमा चावल और सलाद', ingredients: ['Rajma 1 cup cooked', 'Rice 1 cup', 'Onion', 'Tomato', 'Cucumber'], recipe_instructions: ['Cook rajma in pressure cooker', 'Serve with rice and fresh salad'], prep_time_minutes: 10, cook_time_minutes: 30, calories: 520, protein: 20, carbs: 78, fats: 8, portion_size: '1 plate', meal_timing: '12:30 PM - 1:30 PM' },
+      { meal_type: 'snack', meal_name: 'Greek Yogurt with Fruit', name_hindi: 'फल के साथ दही', ingredients: ['Greek Yogurt 150g', 'Mixed fruits', 'Honey'], recipe_instructions: ['Mix yogurt with chopped fruits'], prep_time_minutes: 5, cook_time_minutes: 0, calories: 180, protein: 12, carbs: 24, fats: 4, portion_size: '1 bowl', meal_timing: '4:00 PM - 5:00 PM' },
+      { meal_type: 'dinner', meal_name: 'Paneer Bhurji with Chapati', name_hindi: 'पनीर भुर्जी और रोटी', ingredients: ['Paneer 150g', 'Onion', 'Tomato', 'Green chili', 'Chapati 2'], recipe_instructions: ['Crumble paneer', 'Sauté with onion and tomato', 'Serve with chapati'], prep_time_minutes: 10, cook_time_minutes: 15, calories: 480, protein: 28, carbs: 35, fats: 25, portion_size: '1 plate', meal_timing: '7:30 PM - 8:30 PM' },
+    ];
+  } else {
+    return [
+      { meal_type: 'breakfast', meal_name: 'Egg Omelette with Toast', name_hindi: 'अंडा आमलेट और टोस्ट', ingredients: ['Eggs 3', 'Toast 2 slices', 'Butter', 'Onion', 'Green chili'], recipe_instructions: ['Beat eggs with onion and chili', 'Cook in pan', 'Serve with buttered toast'], prep_time_minutes: 5, cook_time_minutes: 10, calories: 420, protein: 24, carbs: 30, fats: 22, portion_size: '1 plate', meal_timing: '7:00 AM - 8:00 AM' },
+      { meal_type: 'lunch', meal_name: 'Chicken Rice Bowl', name_hindi: 'चिकन राइस बाउल', ingredients: ['Chicken breast 150g', 'Rice 1 cup', 'Vegetables', 'Soy sauce'], recipe_instructions: ['Grill chicken', 'Serve with rice and vegetables'], prep_time_minutes: 10, cook_time_minutes: 25, calories: 550, protein: 40, carbs: 55, fats: 12, portion_size: '1 bowl', meal_timing: '12:30 PM - 1:30 PM' },
+      { meal_type: 'snack', meal_name: 'Protein Shake with Banana', name_hindi: 'प्रोटीन शेक', ingredients: ['Whey protein 1 scoop', 'Banana 1', 'Milk 300ml'], recipe_instructions: ['Blend all ingredients'], prep_time_minutes: 5, cook_time_minutes: 0, calories: 280, protein: 30, carbs: 30, fats: 5, portion_size: '1 glass', meal_timing: '4:00 PM - 5:00 PM' },
+      { meal_type: 'dinner', meal_name: 'Fish Curry with Roti', name_hindi: 'मछली करी और रोटी', ingredients: ['Fish 200g', 'Curry masala', 'Roti 2'], recipe_instructions: ['Cook fish in curry', 'Serve with roti'], prep_time_minutes: 15, cook_time_minutes: 25, calories: 450, protein: 35, carbs: 35, fats: 18, portion_size: '1 plate', meal_timing: '7:30 PM - 8:30 PM' },
+    ];
+  }
+}
+
+// Helper function to get sample workouts
+function getSampleWorkouts(level: string, equipment: string[]) {
+  const hasWeights = equipment.includes('dumbbells') || equipment.includes('barbell');
+  const hasMachines = equipment.includes('machines');
+  
+  // Base workout templates
+  const workouts: any[][] = [];
+  
+  // Day 1 - Upper Body
+  workouts.push([
+    { session_type: 'warm-up', exercise_name: 'Arm Circles', duration_minutes: 2, muscles_targeted: ['Shoulders'], form_instructions: 'Stand straight, extend arms, rotate in circles', tips: ['Start small, increase range'], mistakes_to_avoid: ['Rushing the movement'] },
+    { session_type: 'warm-up', exercise_name: 'Jumping Jacks', duration_minutes: 3, muscles_targeted: ['Full Body'], form_instructions: 'Jump while spreading arms and legs', tips: ['Keep core engaged'], mistakes_to_avoid: ['Landing hard'] },
+    { session_type: 'strength', exercise_name: 'Push-ups', sets: level === 'beginner' ? 2 : 3, reps: level === 'beginner' ? '8-10' : '12-15', rest_seconds: 60, muscles_targeted: ['Chest', 'Triceps', 'Shoulders'], form_instructions: 'Keep body straight, lower chest to ground', tips: ['Engage core throughout'], mistakes_to_avoid: ['Sagging hips'] },
+    { session_type: 'strength', exercise_name: hasWeights ? 'Dumbbell Rows' : 'Bodyweight Rows', sets: 3, reps: '10-12', rest_seconds: 60, muscles_targeted: ['Back', 'Biceps'], form_instructions: 'Pull weight/body towards chest, squeeze back muscles', tips: ['Keep back flat'], mistakes_to_avoid: ['Rounding back'] },
+    { session_type: 'core', exercise_name: 'Plank', duration_minutes: 1, muscles_targeted: ['Core'], form_instructions: 'Hold body straight in push-up position on forearms', tips: ['Breathe steadily'], mistakes_to_avoid: ['Dropping hips'] },
+  ]);
+
+  // Day 2 - Lower Body
+  workouts.push([
+    { session_type: 'warm-up', exercise_name: 'High Knees', duration_minutes: 2, muscles_targeted: ['Legs', 'Core'], form_instructions: 'Run in place, bringing knees high', tips: ['Pump arms'], mistakes_to_avoid: ['Leaning back'] },
+    { session_type: 'warm-up', exercise_name: 'Leg Swings', duration_minutes: 2, muscles_targeted: ['Hips', 'Legs'], form_instructions: 'Swing leg forward and back', tips: ['Hold onto wall for balance'], mistakes_to_avoid: ['Swinging too fast'] },
+    { session_type: 'strength', exercise_name: 'Squats', sets: 3, reps: level === 'beginner' ? '12-15' : '15-20', rest_seconds: 60, muscles_targeted: ['Quads', 'Glutes', 'Hamstrings'], form_instructions: 'Lower body as if sitting, keep chest up', tips: ['Push through heels'], mistakes_to_avoid: ['Knees caving in'] },
+    { session_type: 'strength', exercise_name: 'Lunges', sets: 3, reps: '10 each leg', rest_seconds: 60, muscles_targeted: ['Quads', 'Glutes'], form_instructions: 'Step forward, lower back knee to ground', tips: ['Keep front knee over ankle'], mistakes_to_avoid: ['Leaning forward'] },
+    { session_type: 'core', exercise_name: 'Bicycle Crunches', sets: 3, reps: '15 each side', rest_seconds: 45, muscles_targeted: ['Abs', 'Obliques'], form_instructions: 'Alternate bringing elbow to opposite knee', tips: ['Slow and controlled'], mistakes_to_avoid: ['Pulling on neck'] },
+  ]);
+
+  // Day 3 - Cardio/HIIT
+  workouts.push([
+    { session_type: 'warm-up', exercise_name: 'March in Place', duration_minutes: 3, muscles_targeted: ['Full Body'], form_instructions: 'March while pumping arms', tips: ['Gradually increase pace'], mistakes_to_avoid: ['Slouching'] },
+    { session_type: 'hiit', exercise_name: 'Burpees', sets: 3, reps: level === 'beginner' ? '5-8' : '10-12', rest_seconds: 45, muscles_targeted: ['Full Body'], form_instructions: 'Jump down to push-up, jump back up with arms overhead', tips: ['Modify by stepping if needed'], mistakes_to_avoid: ['Landing hard'] },
+    { session_type: 'hiit', exercise_name: 'Mountain Climbers', duration_minutes: 1, muscles_targeted: ['Core', 'Shoulders', 'Legs'], form_instructions: 'Alternate bringing knees to chest in push-up position', tips: ['Keep hips low'], mistakes_to_avoid: ['Bouncing hips'] },
+    { session_type: 'cardio', exercise_name: 'Jump Rope (or simulated)', duration_minutes: 5, muscles_targeted: ['Calves', 'Shoulders', 'Cardio'], form_instructions: 'Jump continuously with light hops', tips: ['Stay on toes'], mistakes_to_avoid: ['Jumping too high'] },
+    { session_type: 'stretching', exercise_name: 'Full Body Stretch', duration_minutes: 5, muscles_targeted: ['Full Body'], form_instructions: 'Stretch all major muscle groups', tips: ['Hold each stretch 20-30 seconds'], mistakes_to_avoid: ['Bouncing while stretching'] },
+  ]);
+
+  return workouts;
 }
 
 // Helper function to build payment message
