@@ -355,18 +355,24 @@ export default function DietPlannerPage() {
       </div>
 
       {(!bodyComp || !bodyComp.bmr) && !selectedPlan && (
-        <Card className="bg-card border border-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center">
-                <Target className="w-5 h-5 text-white" />
+        <Card className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-orange-500/30">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center shrink-0">
+                <Target className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-orange-500">Body Composition Required</h3>
-                <p className="text-sm text-muted-foreground">
-                  Please upload a body composition report and select your lifestyle to generate a personalized diet plan.
+                <h3 className="font-semibold text-lg text-orange-500">Body Composition Required</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  To generate a personalized diet plan based on your body metrics, please complete your body composition report first. This helps us recommend the right health goals for you.
                 </p>
               </div>
+              <Link href="/member/diet-planner/body-report">
+                <Button className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:opacity-90 text-white gap-2 whitespace-nowrap">
+                  <Target className="w-4 h-4" />
+                  Complete Body Report
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
