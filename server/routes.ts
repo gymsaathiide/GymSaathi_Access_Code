@@ -4,6 +4,7 @@ import "./types";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { z } from "zod";
+import OpenAI from "openai";
 import { storage } from "./storage";
 import { insertMemberSchema, insertPaymentSchema, insertInvoiceSchema, insertLeadSchema, insertProductSchema, insertOrderSchema, insertClassSchema, insertClassTypeSchema, insertClassBookingSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
@@ -8389,7 +8390,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Diet Planner API Routes
-  
+
+  // Initialize OpenAI client for body composition parsing
+  const openai = new OpenAI({
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  });
+
+  // Parse body composition report from image using AI
+  app.post('/api/diet-planner/parse-body-composition', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { imageData } = req.body;
+
+      if (!imageData) {
+        return res.status(400).json({ error: 'No image data provided' });
+      }
+
+      // Check if OpenAI is configured
+      if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+        return res.status(503).json({ 
+          error: 'AI service not configured',
+          message: 'Please configure OpenAI integration'
+        });
+      }
+
+      // Parse the image using OpenAI Vision
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Analyze this body composition report image and extract the following metrics. Return ONLY a valid JSON object with these fields (use null for any values not found):
+
+{
+  "user_name": "string or null",
+  "report_date": "YYYY-MM-DD format or null",
+  "weight": "number in kg or null",
+  "bmi": "number or null",
+  "body_fat_percentage": "number or null",
+  "fat_mass": "number in kg or null",
+  "fat_free_body_weight": "number in kg or null",
+  "muscle_mass": "number in kg or null",
+  "muscle_rate": "number percentage or null",
+  "skeletal_muscle": "number in kg or null",
+  "bone_mass": "number in kg or null",
+  "protein_mass": "number in kg or null",
+  "protein": "number percentage or null",
+  "water_weight": "number in kg or null",
+  "body_water": "number percentage or null",
+  "subcutaneous_fat": "number percentage or null",
+  "visceral_fat": "number level or null",
+  "bmr": "number in kcal or null",
+  "body_age": "number in years or null",
+  "ideal_body_weight": "number in kg or null"
+}
+
+Return ONLY the JSON object, no other text.`
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageData.startsWith('data:') ? imageData : `data:image/jpeg;base64,${imageData}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      
+      if (!content) {
+        return res.status(500).json({ error: 'No response from AI service' });
+      }
+
+      // Parse the JSON response
+      try {
+        // Clean the response - remove markdown code blocks if present
+        let jsonStr = content.trim();
+        if (jsonStr.startsWith('```json')) {
+          jsonStr = jsonStr.slice(7);
+        }
+        if (jsonStr.startsWith('```')) {
+          jsonStr = jsonStr.slice(3);
+        }
+        if (jsonStr.endsWith('```')) {
+          jsonStr = jsonStr.slice(0, -3);
+        }
+        jsonStr = jsonStr.trim();
+
+        const parsedData = JSON.parse(jsonStr);
+        
+        res.json({
+          success: true,
+          data: parsedData
+        });
+      } catch (parseError) {
+        console.error('Error parsing AI response:', content);
+        res.status(500).json({ 
+          error: 'Failed to parse body composition data',
+          raw: content 
+        });
+      }
+    } catch (error: any) {
+      console.error('Error parsing body composition:', error);
+      
+      if (error.code === 'ECONNREFUSED' || error.message?.includes('connect')) {
+        return res.status(503).json({ 
+          error: 'AI service unavailable',
+          message: 'Connection error: AI services not available'
+        });
+      }
+      
+      res.status(500).json({ error: error.message || 'Failed to parse body composition report' });
+    }
+  });
+
   // Get initial data for diet planner (body composition, diet plans)
   app.get('/api/diet-planner/initial-data', async (req, res) => {
     if (!req.session?.userId) {
