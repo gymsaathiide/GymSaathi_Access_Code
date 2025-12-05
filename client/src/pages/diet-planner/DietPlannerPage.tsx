@@ -389,11 +389,11 @@ export default function DietPlannerPage() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 rounded-lg bg-background/50">
-                <p className="text-2xl font-bold text-cyan-500">{bodyComp.weight?.toFixed(1) || '--'}</p>
+                <p className="text-2xl font-bold text-cyan-500">{bodyComp.weight ? Number(bodyComp.weight).toFixed(1) : '--'}</p>
                 <p className="text-xs text-muted-foreground">Weight (kg)</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-background/50">
-                <p className="text-2xl font-bold text-orange-500">{bodyComp.bmi?.toFixed(1) || '--'}</p>
+                <p className="text-2xl font-bold text-orange-500">{bodyComp.bmi ? Number(bodyComp.bmi).toFixed(1) : '--'}</p>
                 <p className="text-xs text-muted-foreground">BMI</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-background/50">
