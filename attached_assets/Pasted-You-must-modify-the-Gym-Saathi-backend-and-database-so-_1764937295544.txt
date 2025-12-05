@@ -1,0 +1,231 @@
+You must modify the Gym Saathi backend and database so that all diet recommendations are generated only from our own Supabase tables.
+No third-party API must be used anywhere.
+
+Implement the entire feature end-to-end exactly as described below.
+
+1. Create the required Supabase tables
+Table: meals
+
+This table stores all meals that we will recommend to users.
+
+id (uuid) PK
+name (text)
+type (text) -- breakfast | lunch | snack | dinner
+category (text) -- veg | non-veg
+calories (integer)
+protein (float)
+carbs (float)
+fat (float)
+health_goal (text) -- weight_loss | muscle_gain | fat_loss | maintenance
+description (text)
+image_url (text)
+
+Table: health_goals_rules
+
+This table defines how the body report translates into a health goal.
+
+id (uuid) PK
+bmi_min (float)
+bmi_max (float)
+body_fat_min (float)
+body_fat_max (float)
+visceral_fat_min (float)
+visceral_fat_max (float)
+goal (text) -- weight_loss | muscle_gain | fat_loss | maintenance
+explanation (text)
+
+
+Seed it with at least these rules:
+
+If BMI > 30 OR Body Fat > 25% OR Visceral Fat > 12 → fat_loss
+
+If Muscle Mass < 55 → muscle_gain
+
+If BMI between 25 and 30 → weight_loss
+
+Else → maintenance
+
+2. Create utility to interpret user report
+
+Create file utils/determineGoal.js.
+
+Input: user report object containing:
+
+{
+  weight,
+  bmi,
+  bodyFat,
+  visceralFat,
+  muscleMass,
+  isVegetarian
+}
+
+
+Steps:
+
+Compare report values against health_goals_rules table.
+
+Determine user's goal: fat_loss / muscle_gain / weight_loss / maintenance.
+
+Return result:
+
+{
+  goal: "fat_loss",
+  reasons: ["High BMI", "High visceral fat"]
+}
+
+
+No external API must be used.
+
+3. Add API route to generate diet plan
+Route: POST /api/generate-diet
+
+Input:
+
+{
+  report: {
+    weight,
+    bmi,
+    bodyFat,
+    visceralFat,
+    muscleMass,
+    isVegetarian
+  }
+}
+
+
+Backend flow:
+
+Call determineGoal(report) to get goal.
+
+Query meals table:
+
+SELECT * FROM meals
+WHERE health_goal = goal
+AND (category = 'veg' OR category = (isVegetarian ? 'veg' : category))
+ORDER BY protein DESC;
+
+
+Group meals by meal type:
+
+{
+  breakfast: [...],
+  lunch: [...],
+  snacks: [...],
+  dinner: [...]
+}
+
+
+Respond with:
+
+{
+  goal: "fat_loss",
+  reasons: [...],
+  meals: {
+    breakfast: [...],
+    lunch: [...],
+    snacks: [...],
+    dinner: [...]
+  }
+}
+
+4. Seed the meals table with at least 40 items
+
+Replit must insert example meals for all categories:
+
+For fat_loss:
+
+Oats + chia + banana
+
+Moong dal chilla
+
+Vegetable khichdi
+
+Sprouts salad
+
+Upma
+
+For muscle_gain:
+
+Paneer bhurji
+
+Peanut butter roti
+
+Chickpeas bowl
+
+High-protein dal + rice
+
+Tofu scramble
+
+For weight_loss:
+
+Poha
+
+Idli + sambar
+
+Dal soup
+
+Grilled tofu salad
+
+Mixed sabzi
+
+For maintenance:
+
+Roti + sabzi
+
+Dal + chawal
+
+Veg pulao
+
+Paratha + curd
+
+Each must include calories, protein, carbs, fat, type, category, and health_goal.
+
+5. Frontend integration
+
+Add a function:
+
+async function getDietPlan(report) {
+  const res = await axios.post(`${BASE_URL}/api/generate-diet`, { report });
+  return res.data;
+}
+
+
+Frontend will:
+
+Take OCR values from uploaded report
+
+Build report object
+
+Call backend
+
+Display diet plan grouped by meal type
+
+6. Replit must test end-to-end
+
+Use this sample report:
+
+{
+  weight: 92.35,
+  bmi: 31.2,
+  bodyFat: 28.0,
+  visceralFat: 13.7,
+  muscleMass: 63.2,
+  isVegetarian: true
+}
+
+
+Expected goal = fat_loss
+Return veg only meals for breakfast/lunch/snacks/dinner.
+
+Important Notes for Replit
+
+Do NOT create unrelated files or change project structure.
+
+Keep code modular and clean.
+
+Use Supabase client only.
+
+NEVER call an external food API.
+
+Ensure grouping of meals works reliably.

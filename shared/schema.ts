@@ -848,3 +848,57 @@ export interface AdminDashboardResponse {
   };
   alerts: AlertRow[];
 }
+
+// === DIET PLANNER - DATABASE-DRIVEN MEALS ===
+
+// Health Goals Rules - maps body composition metrics to health goals
+export const healthGoalEnum = pgEnum('health_goal', ['fat_loss', 'muscle_gain', 'weight_loss', 'maintenance']);
+export const mealCategoryEnum = pgEnum('meal_category', ['veg', 'non-veg']);
+export const mealTypeEnum = pgEnum('meal_type', ['breakfast', 'lunch', 'snack', 'dinner']);
+
+// Health Goals Rules Table
+export const healthGoalsRules = pgTable("health_goals_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  bmiMin: decimal("bmi_min", { precision: 5, scale: 2 }),
+  bmiMax: decimal("bmi_max", { precision: 5, scale: 2 }),
+  bodyFatMin: decimal("body_fat_min", { precision: 5, scale: 2 }),
+  bodyFatMax: decimal("body_fat_max", { precision: 5, scale: 2 }),
+  visceralFatMin: decimal("visceral_fat_min", { precision: 5, scale: 2 }),
+  visceralFatMax: decimal("visceral_fat_max", { precision: 5, scale: 2 }),
+  muscleMassMin: decimal("muscle_mass_min", { precision: 5, scale: 2 }),
+  muscleMassMax: decimal("muscle_mass_max", { precision: 5, scale: 2 }),
+  goal: healthGoalEnum("goal").notNull(),
+  explanation: text("explanation").notNull(),
+  priority: integer("priority").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertHealthGoalsRulesSchema = createInsertSchema(healthGoalsRules).omit({ id: true, createdAt: true });
+export type InsertHealthGoalsRules = z.infer<typeof insertHealthGoalsRulesSchema>;
+export type HealthGoalsRules = typeof healthGoalsRules.$inferSelect;
+
+// Meal Database Table - stores all recommended meals
+export const mealDatabase = pgTable("meal_database", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  nameHindi: text("name_hindi"),
+  type: mealTypeEnum("type").notNull(),
+  category: mealCategoryEnum("category").notNull(),
+  calories: integer("calories").notNull(),
+  protein: decimal("protein", { precision: 6, scale: 2 }).notNull(),
+  carbs: decimal("carbs", { precision: 6, scale: 2 }).notNull(),
+  fat: decimal("fat", { precision: 6, scale: 2 }).notNull(),
+  healthGoal: healthGoalEnum("health_goal").notNull(),
+  description: text("description"),
+  ingredients: text("ingredients"), // JSON array
+  recipeInstructions: text("recipe_instructions"), // JSON array
+  prepTimeMinutes: integer("prep_time_minutes"),
+  cookTimeMinutes: integer("cook_time_minutes"),
+  portionSize: text("portion_size"),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMealDatabaseSchema = createInsertSchema(mealDatabase).omit({ id: true, createdAt: true });
+export type InsertMealDatabase = z.infer<typeof insertMealDatabaseSchema>;
+export type MealDatabase = typeof mealDatabase.$inferSelect;

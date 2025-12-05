@@ -35,6 +35,7 @@ interface DietPlan {
   total_protein: number;
   total_carbs: number;
   total_fats: number;
+  goal_reasons?: string[];
   created_at: string;
 }
 
@@ -73,6 +74,8 @@ export default function DietPlannerPage() {
   const [expandedMeals, setExpandedMeals] = useState<Set<string>>(new Set());
   const [bodyComp, setBodyComp] = useState<BodyComposition | null>(null);
   const [eatenMeals, setEatenMeals] = useState<string[]>([]);
+  const [determinedGoal, setDeterminedGoal] = useState<string | null>(null);
+  const [goalReasons, setGoalReasons] = useState<string[]>([]);
 
   const goals = [
     { 
@@ -120,7 +123,12 @@ export default function DietPlannerPage() {
         setBodyComp(data.bodyComposition);
         setDietPlans(data.dietPlans || []);
         if (data.dietPlans?.length > 0) {
-          setSelectedPlan(data.dietPlans[0]);
+          const plan = data.dietPlans[0];
+          setSelectedPlan(plan);
+          // Load goal reasons from the persisted plan data
+          if (plan.goal_reasons && Array.isArray(plan.goal_reasons)) {
+            setGoalReasons(plan.goal_reasons);
+          }
         }
       }
     } catch (error) {
@@ -234,9 +242,19 @@ export default function DietPlannerPage() {
         throw new Error(result.error || 'Failed to generate diet plan');
       }
 
+      // Store the determined goal and reasons from body composition analysis
+      if (result.determinedGoal) {
+        setDeterminedGoal(result.determinedGoal);
+      }
+      if (result.reasons && result.reasons.length > 0) {
+        setGoalReasons(result.reasons);
+      }
+
       toast({
         title: "Diet Plan Generated!",
-        description: `Your ${planType} diet plan is ready`,
+        description: result.determinedGoal 
+          ? `Goal: ${result.plan?.goal || goal} based on your body composition` 
+          : `Your ${planType} diet plan is ready`,
       });
       
       await loadInitialData();
@@ -449,6 +467,32 @@ export default function DietPlannerPage() {
               Reset & Regenerate
             </Button>
           </div>
+
+          {goalReasons.length > 0 && (
+            <Card className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-orange-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center shrink-0">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-orange-500">Body Composition Analysis</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Based on your body composition report, we've created a personalized diet plan for you:
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      {goalReasons.map((reason, idx) => (
+                        <li key={idx} className="text-sm flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex gap-2 overflow-x-auto pb-2">
             {Array.from({ length: selectedPlan.plan_type === '7-day' ? 7 : 30 }, (_, i) => i + 1).map((day) => (

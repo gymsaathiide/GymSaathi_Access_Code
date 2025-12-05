@@ -8554,17 +8554,23 @@ Return ONLY the JSON object, no other text.`;
         LIMIT 1
       `);
 
-      // Get active diet plans
+      // Get active diet plans with goal reasons
       const dietPlansResult = await db!.execute(sql`
-        SELECT id, plan_type, goal, total_calories, total_protein, total_carbs, total_fats, created_at
+        SELECT id, plan_type, goal, total_calories, total_protein, total_carbs, total_fats, goal_reasons, created_at
         FROM diet_plans
         WHERE user_id = ${req.session.userId} AND is_active = true
         ORDER BY created_at DESC
       `);
 
+      // Parse goal_reasons from JSON string to array
+      const dietPlans = (dietPlansResult.rows || []).map((plan: any) => ({
+        ...plan,
+        goal_reasons: plan.goal_reasons ? JSON.parse(plan.goal_reasons) : []
+      }));
+
       res.json({
         bodyComposition: bodyCompResult.rows?.[0] || null,
-        dietPlans: dietPlansResult.rows || [],
+        dietPlans,
       });
     } catch (error: any) {
       console.error('Error fetching diet planner initial data:', error);
@@ -8860,7 +8866,203 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
-  // Generate diet plan (simplified - no AI integration for now)
+  // Utility function to determine health goal from body composition report
+  async function determineGoal(report: {
+    weight: number;
+    bmi: number;
+    bodyFat: number;
+    visceralFat: number;
+    muscleMass: number;
+  }): Promise<{ goal: string; reasons: string[] }> {
+    const reasons: string[] = [];
+    
+    // Get all rules from database, ordered by priority (highest first)
+    const rulesResult = await db!.execute(sql`
+      SELECT * FROM health_goals_rules ORDER BY priority DESC
+    `);
+    
+    const rules = rulesResult.rows || [];
+    
+    // Evaluate each rule - a rule matches if ALL its conditions are met
+    for (const rule of rules as any[]) {
+      let matches = true;
+      const ruleReasons: string[] = [];
+      let hasCondition = false;
+      
+      // Check BMI conditions
+      if (rule.bmi_min !== null) {
+        hasCondition = true;
+        if (report.bmi >= parseFloat(rule.bmi_min)) {
+          ruleReasons.push(`BMI (${report.bmi.toFixed(1)}) is ${parseFloat(rule.bmi_min) >= 30 ? 'very high' : 'elevated'}`);
+        } else {
+          matches = false;
+        }
+      }
+      if (rule.bmi_max !== null) {
+        hasCondition = true;
+        if (report.bmi > parseFloat(rule.bmi_max)) {
+          matches = false;
+        }
+      }
+      
+      // Check Body Fat conditions
+      if (rule.body_fat_min !== null) {
+        hasCondition = true;
+        if (report.bodyFat >= parseFloat(rule.body_fat_min)) {
+          ruleReasons.push(`Body Fat (${report.bodyFat.toFixed(1)}%) is above optimal range`);
+        } else {
+          matches = false;
+        }
+      }
+      if (rule.body_fat_max !== null) {
+        hasCondition = true;
+        if (report.bodyFat > parseFloat(rule.body_fat_max)) {
+          matches = false;
+        }
+      }
+      
+      // Check Visceral Fat conditions
+      if (rule.visceral_fat_min !== null) {
+        hasCondition = true;
+        if (report.visceralFat >= parseFloat(rule.visceral_fat_min)) {
+          ruleReasons.push(`Visceral Fat (${report.visceralFat.toFixed(1)}) is elevated`);
+        } else {
+          matches = false;
+        }
+      }
+      
+      // Check Muscle Mass conditions - muscle_mass_max indicates LOW muscle mass threshold
+      // If user's muscle mass is BELOW the threshold, they need muscle gain
+      if (rule.muscle_mass_max !== null) {
+        hasCondition = true;
+        if (report.muscleMass <= parseFloat(rule.muscle_mass_max)) {
+          ruleReasons.push(`Muscle Mass (${report.muscleMass.toFixed(1)}kg) is below optimal - needs strength training`);
+        } else {
+          matches = false;
+        }
+      }
+      if (rule.muscle_mass_min !== null) {
+        hasCondition = true;
+        if (report.muscleMass < parseFloat(rule.muscle_mass_min)) {
+          matches = false;
+        }
+      }
+      
+      // Rule matches if it has conditions, all conditions are met, and we have reasons
+      if (hasCondition && matches && ruleReasons.length > 0) {
+        reasons.push(...ruleReasons);
+        return { goal: rule.goal, reasons };
+      }
+    }
+    
+    // Default to maintenance if no rules match
+    return { goal: 'maintenance', reasons: ['Your body composition is within healthy ranges'] };
+  }
+
+  // Database-driven diet generation endpoint
+  app.post('/api/generate-diet', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { report } = req.body;
+      
+      if (!report) {
+        return res.status(400).json({ error: 'Body composition report is required' });
+      }
+
+      const { weight, bmi, bodyFat, visceralFat, muscleMass, isVegetarian } = report;
+      
+      // Determine goal based on body composition
+      const { goal, reasons } = await determineGoal({
+        weight: parseFloat(weight) || 70,
+        bmi: parseFloat(bmi) || 22,
+        bodyFat: parseFloat(bodyFat) || 20,
+        visceralFat: parseFloat(visceralFat) || 8,
+        muscleMass: parseFloat(muscleMass) || 50
+      });
+
+      // Query meals from database based on goal and diet preference
+      let mealsQuery;
+      if (isVegetarian) {
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meal_database
+          WHERE health_goal = ${goal}
+          AND category = 'veg'
+          ORDER BY protein DESC
+        `);
+      } else {
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meal_database
+          WHERE health_goal = ${goal}
+          ORDER BY protein DESC
+        `);
+      }
+
+      const allMeals = mealsQuery.rows || [];
+
+      // Group meals by type
+      const mealsByType: Record<string, any[]> = {
+        breakfast: [],
+        lunch: [],
+        snack: [],
+        dinner: []
+      };
+
+      for (const meal of allMeals as any[]) {
+        const mealType = meal.type;
+        if (mealsByType[mealType]) {
+          // Parse ingredients from JSON if stored as string
+          let ingredients = meal.ingredients;
+          if (typeof ingredients === 'string') {
+            try {
+              ingredients = JSON.parse(ingredients);
+            } catch {
+              ingredients = [];
+            }
+          }
+          
+          let recipeInstructions = meal.recipe_instructions;
+          if (typeof recipeInstructions === 'string') {
+            try {
+              recipeInstructions = JSON.parse(recipeInstructions);
+            } catch {
+              recipeInstructions = [];
+            }
+          }
+
+          mealsByType[mealType].push({
+            id: meal.id,
+            name: meal.name,
+            nameHindi: meal.name_hindi,
+            calories: meal.calories,
+            protein: parseFloat(meal.protein),
+            carbs: parseFloat(meal.carbs),
+            fat: parseFloat(meal.fat),
+            description: meal.description,
+            ingredients,
+            recipeInstructions,
+            prepTimeMinutes: meal.prep_time_minutes,
+            cookTimeMinutes: meal.cook_time_minutes,
+            portionSize: meal.portion_size
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        goal,
+        reasons,
+        meals: mealsByType
+      });
+    } catch (error: any) {
+      console.error('Error generating diet from database:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate diet plan (database-driven - no AI integration)
   app.post('/api/diet-planner/generate-plan', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -8868,6 +9070,43 @@ Return ONLY the JSON object, no other text.`;
 
     try {
       const { planType, goal, bmr, bodyWeight, lifestyle, isVegetarian } = req.body;
+      
+      // First, get the latest body composition report to determine goal from database rules
+      const bodyCompResult = await db!.execute(sql`
+        SELECT weight, bmi, body_fat_percentage, visceral_fat, muscle_mass
+        FROM body_composition_reports
+        WHERE user_id = ${req.session.userId}
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+
+      const bodyComp = bodyCompResult.rows?.[0] as any;
+      
+      // Determine health goal from body composition if we have data
+      let determinedGoal = goal;
+      let goalReasons: string[] = [];
+      
+      if (bodyComp) {
+        const goalResult = await determineGoal({
+          weight: parseFloat(bodyComp.weight) || bodyWeight || 70,
+          bmi: parseFloat(bodyComp.bmi) || 22,
+          bodyFat: parseFloat(bodyComp.body_fat_percentage) || 20,
+          visceralFat: parseFloat(bodyComp.visceral_fat) || 8,
+          muscleMass: parseFloat(bodyComp.muscle_mass) || 50
+        });
+        determinedGoal = goalResult.goal;
+        goalReasons = goalResult.reasons;
+      }
+
+      // Map database goal to UI goal format
+      const goalMapping: Record<string, string> = {
+        'fat_loss': 'Fat Loss',
+        'muscle_gain': 'Muscle Gain',
+        'weight_loss': 'Weight Loss',
+        'maintenance': 'Trim & Tone'
+      };
+      
+      const displayGoal = goalMapping[determinedGoal] || goal;
       
       // Calculate target calories based on goal
       const lifestyleFactors: Record<string, number> = {
@@ -8879,14 +9118,14 @@ Return ONLY the JSON object, no other text.`;
       const factor = lifestyleFactors[lifestyle] || 1.55;
       let targetCalories = Math.round(bmr * factor);
       
-      if (goal === 'Fat Loss') {
+      if (determinedGoal === 'fat_loss' || determinedGoal === 'weight_loss') {
         targetCalories -= 200;
-      } else if (goal === 'Muscle Gain') {
+      } else if (determinedGoal === 'muscle_gain') {
         targetCalories += 200;
       }
       
       // Calculate macros
-      const protein = Math.round(bodyWeight * 2); // 2g per kg for muscle building
+      const protein = Math.round(bodyWeight * 2);
       const fats = Math.round(targetCalories * 0.25 / 9);
       const carbs = Math.round((targetCalories - (protein * 4) - (fats * 9)) / 4);
 
@@ -8895,10 +9134,11 @@ Return ONLY the JSON object, no other text.`;
         UPDATE diet_plans SET is_active = false WHERE user_id = ${req.session.userId}
       `);
 
-      // Create new diet plan
+      // Create new diet plan with goal reasons
+      const goalReasonsJson = JSON.stringify(goalReasons);
       const planResult = await db!.execute(sql`
-        INSERT INTO diet_plans (user_id, plan_type, goal, total_calories, total_protein, total_carbs, total_fats, is_active)
-        VALUES (${req.session.userId}, ${planType}, ${goal}, ${targetCalories}, ${protein}, ${carbs}, ${fats}, true)
+        INSERT INTO diet_plans (user_id, plan_type, goal, total_calories, total_protein, total_carbs, total_fats, is_active, goal_reasons)
+        VALUES (${req.session.userId}, ${planType}, ${displayGoal}, ${targetCalories}, ${protein}, ${carbs}, ${fats}, true, ${goalReasonsJson})
         RETURNING *
       `);
 
@@ -8907,36 +9147,90 @@ Return ONLY the JSON object, no other text.`;
         throw new Error('Failed to create diet plan');
       }
 
-      // Generate sample meals for the plan
-      const numDays = planType === '7-day' ? 7 : 30;
-      const mealTemplates = getSampleMeals(isVegetarian);
+      // Get meals from database based on determined goal
+      let mealsQuery;
+      if (isVegetarian !== false) {
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meal_database
+          WHERE health_goal = ${determinedGoal}
+          AND category = 'veg'
+          ORDER BY type, RANDOM()
+        `);
+      } else {
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meal_database
+          WHERE health_goal = ${determinedGoal}
+          ORDER BY type, RANDOM()
+        `);
+      }
+
+      const dbMeals = mealsQuery.rows || [];
       
+      // Group meals by type
+      const mealsByType: Record<string, any[]> = {
+        breakfast: [],
+        lunch: [],
+        snack: [],
+        dinner: []
+      };
+
+      for (const meal of dbMeals as any[]) {
+        if (mealsByType[meal.type]) {
+          mealsByType[meal.type].push(meal);
+        }
+      }
+
       // Helper to convert JS array to PostgreSQL array format
-      const toPgArray = (arr: string[]): string => {
-        if (!arr || arr.length === 0) return '{}';
-        const escaped = arr.map(item => `"${item.replace(/"/g, '\\"')}"`);
+      const toPgArray = (arr: string[] | string): string => {
+        if (!arr) return '{}';
+        if (typeof arr === 'string') {
+          try {
+            arr = JSON.parse(arr);
+          } catch {
+            return '{}';
+          }
+        }
+        if (!Array.isArray(arr) || arr.length === 0) return '{}';
+        const escaped = arr.map(item => `"${String(item).replace(/"/g, '\\"')}"`);
         return `{${escaped.join(',')}}`;
       };
+
+      // Generate meals for each day
+      const numDays = planType === '7-day' ? 7 : 30;
       
       for (let day = 1; day <= numDays; day++) {
-        for (const template of mealTemplates) {
-          const ingredientsArr = toPgArray(template.ingredients || []);
-          const instructionsArr = toPgArray(template.recipe_instructions || []);
+        const mealTypes = ['breakfast', 'lunch', 'snack', 'dinner'];
+        
+        for (const mealType of mealTypes) {
+          const typeMeals = mealsByType[mealType];
+          if (typeMeals.length === 0) continue;
+          
+          // Pick a meal for this day (rotate through available meals)
+          const mealIndex = (day - 1) % typeMeals.length;
+          const selectedMeal = typeMeals[mealIndex];
+          
+          const ingredientsArr = toPgArray(selectedMeal.ingredients);
+          const instructionsArr = toPgArray(selectedMeal.recipe_instructions);
           
           await db!.execute(sql`
             INSERT INTO meals (diet_plan_id, day_number, meal_type, meal_name, name_hindi, 
               ingredients, recipe_instructions, prep_time_minutes, cook_time_minutes,
               calories, protein, carbs, fats, portion_size, meal_timing)
-            VALUES (${plan.id}, ${day}, ${template.meal_type}, ${template.meal_name}, ${template.name_hindi || null},
+            VALUES (${plan.id}, ${day}, ${mealType}, ${selectedMeal.name}, ${selectedMeal.name_hindi || null},
               ${ingredientsArr}::text[], ${instructionsArr}::text[],
-              ${template.prep_time_minutes || null}, ${template.cook_time_minutes || null},
-              ${template.calories}, ${template.protein}, ${template.carbs}, ${template.fats},
-              ${template.portion_size || null}, ${template.meal_timing || null})
+              ${selectedMeal.prep_time_minutes || null}, ${selectedMeal.cook_time_minutes || null},
+              ${selectedMeal.calories}, ${selectedMeal.protein}, ${selectedMeal.carbs}, ${selectedMeal.fat},
+              ${selectedMeal.portion_size || null}, ${null})
           `);
         }
       }
 
-      res.json({ success: true, plan });
+      res.json({ 
+        success: true, 
+        plan,
+        determinedGoal,
+        reasons: goalReasons
+      });
     } catch (error: any) {
       console.error('Error generating diet plan:', error);
       res.status(500).json({ error: error.message });
