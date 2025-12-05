@@ -72,6 +72,15 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   Delete superadmin accounts (with self-deletion and last-admin protections)
     -   Mobile-responsive card view for small screens, table view for desktop
     -   Routes: `/settings` and `/users` (Super Admin only)
+-   **Diet Planner System** (Member Dashboard): Comprehensive nutrition and fitness planning with:
+    -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals
+    -   **AI-Powered Diet Plans**: Generate 7-day or 30-day personalized meal plans (vegetarian/non-vegetarian)
+    -   **Meal Details**: Indian cuisine focus with Hindi translations, ingredients, recipes, prep/cook times
+    -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
+    -   **Workout Planner**: Exercise library with warm-up, strength, cardio, and stretching exercises
+    -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
+    -   Database tables: body_composition_reports, diet_plans, meals, meal_logs, user_foods, daily_tracking, workout_plans, workout_exercises
+    -   Routes: `/member/diet-planner/*` (Body Report, Diet Planner, Daily Nutrition, Workout Plan)
 
 # External Dependencies
 
