@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Upload, Loader2, Save, History, PenLine, Activity, Zap, Flame } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, Save, History, PenLine, Activity, Zap, Flame, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "wouter";
 
 type LifestyleType = 'sedentary' | 'moderately_active' | 'super_active';
+type StatusLevel = 'low' | 'standard' | 'high' | 'excellent';
 
 interface ReportData {
   id?: string;
@@ -88,19 +89,86 @@ const getEmptyReportData = (): ReportData => ({
   lifestyle: 'moderately_active',
 });
 
-interface MetricInputProps {
+function getMetricStatus(metric: string, value: number | undefined): { status: StatusLevel; color: string } {
+  if (value === undefined || value === null) return { status: 'standard', color: 'text-muted-foreground' };
+  
+  switch (metric) {
+    case 'weight':
+      return { status: 'high', color: 'text-orange-500' };
+    case 'bmi':
+      if (value < 18.5) return { status: 'low', color: 'text-yellow-500' };
+      if (value <= 24.9) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'high', color: 'text-orange-500' };
+    case 'body_fat_percentage':
+      if (value < 10) return { status: 'low', color: 'text-yellow-500' };
+      if (value <= 20) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'high', color: 'text-orange-500' };
+    case 'muscle_mass':
+    case 'skeletal_muscle':
+      if (value > 40) return { status: 'excellent', color: 'text-green-500' };
+      if (value > 30) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'low', color: 'text-yellow-500' };
+    case 'bone_mass':
+      if (value >= 2.5 && value <= 4) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'low', color: 'text-yellow-500' };
+    case 'protein':
+      if (value > 16) return { status: 'excellent', color: 'text-green-500' };
+      if (value >= 14) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'low', color: 'text-yellow-500' };
+    case 'body_water':
+      if (value >= 50) return { status: 'excellent', color: 'text-green-500' };
+      if (value >= 45) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'low', color: 'text-yellow-500' };
+    case 'subcutaneous_fat':
+      if (value > 25) return { status: 'high', color: 'text-orange-500' };
+      if (value >= 15) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'low', color: 'text-yellow-500' };
+    case 'visceral_fat':
+      if (value > 12) return { status: 'high', color: 'text-orange-500' };
+      if (value >= 1) return { status: 'standard', color: 'text-green-500' };
+      return { status: 'low', color: 'text-yellow-500' };
+    case 'body_age':
+      return { status: 'high', color: 'text-orange-500' };
+    default:
+      return { status: 'standard', color: 'text-muted-foreground' };
+  }
+}
+
+interface MetricCardProps {
   label: string;
   value: number | string | undefined;
   unit?: string;
   type?: 'number' | 'text' | 'datetime-local';
   onChange: (value: number | string) => void;
+  showStatus?: boolean;
+  statusMetric?: string;
+  fullWidth?: boolean;
 }
 
-function MetricInput({ label, value, unit, type = 'number', onChange }: MetricInputProps) {
+function MetricCard({ label, value, unit, type = 'number', onChange, showStatus = false, statusMetric, fullWidth = false }: MetricCardProps) {
+  const { status, color } = statusMetric ? getMetricStatus(statusMetric, value as number) : { status: 'standard', color: '' };
+  
   return (
-    <div className="space-y-2">
-      <Label className="text-sm text-muted-foreground">{label}</Label>
-      <div className="relative">
+    <div className={`bg-card border border-border rounded-xl p-4 ${fullWidth ? 'col-span-full' : ''}`}>
+      <div className="flex items-center justify-between mb-2">
+        <Label className="text-sm text-muted-foreground">{label}</Label>
+        {showStatus && status !== 'standard' && (
+          <span className={`text-xs font-medium capitalize ${color}`}>
+            {status === 'excellent' ? 'Excellent' : status.charAt(0).toUpperCase() + status.slice(1)}
+          </span>
+        )}
+      </div>
+      {showStatus && (
+        <div className="flex gap-2 mb-2">
+          <span className={`text-xs ${status === 'low' ? color : 'text-muted-foreground/50'}`}>Low</span>
+          <span className={`text-xs ${status === 'standard' ? 'text-green-500' : 'text-muted-foreground/50'}`}>Standard</span>
+          <span className={`text-xs ${status === 'high' ? color : 'text-muted-foreground/50'}`}>High</span>
+          {(statusMetric === 'muscle_mass' || statusMetric === 'protein' || statusMetric === 'body_water') && (
+            <span className={`text-xs ${status === 'excellent' ? 'text-green-500' : 'text-muted-foreground/50'}`}>Excellent</span>
+          )}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
         <Input
           type={type}
           value={value ?? ''}
@@ -111,12 +179,10 @@ function MetricInput({ label, value, unit, type = 'number', onChange }: MetricIn
               onChange(e.target.value);
             }
           }}
-          className="pr-12"
+          className="bg-background/50 border-0"
         />
         {unit && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-            {unit}
-          </span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">{unit}</span>
         )}
       </div>
     </div>
@@ -129,9 +195,10 @@ export default function BodyCompositionPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [parsedData, setParsedData] = useState<ReportData | null>(null);
   const [entryMode, setEntryMode] = useState<'upload' | 'manual'>('manual');
-  const [manualData, setManualData] = useState<ReportData>(getEmptyReportData());
+  const [formData, setFormData] = useState<ReportData>(getEmptyReportData());
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -157,7 +224,7 @@ export default function BodyCompositionPage() {
     }
 
     setIsProcessing(true);
-    setReportData(null);
+    setParsedData(null);
 
     try {
       const reader = new FileReader();
@@ -189,10 +256,19 @@ export default function BodyCompositionPage() {
             return;
           }
 
-          setReportData(data.data);
+          const parsed = data.data;
+          const parsedWithDefaults: ReportData = {
+            ...parsed,
+            report_date: parsed.report_date || new Date().toISOString().slice(0, 16),
+            lifestyle: 'moderately_active',
+          };
+          
+          setParsedData(parsedWithDefaults);
+          setFormData(parsedWithDefaults);
+          
           toast({
             title: "Success!",
-            description: "Body composition report processed successfully",
+            description: "Body composition report processed successfully. Review and save the data below.",
           });
         } catch (fetchError) {
           console.error('Fetch error:', fetchError);
@@ -225,10 +301,14 @@ export default function BodyCompositionPage() {
       });
       setIsProcessing(false);
     }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const handleSaveManualEntry = async () => {
-    if (!manualData.weight && !manualData.bmi && !manualData.body_fat_percentage) {
+  const handleSave = async () => {
+    if (!formData.weight && !formData.bmi && !formData.body_fat_percentage) {
       toast({
         title: "Missing Data",
         description: "Please enter at least Weight, BMI, or Body Fat %",
@@ -237,7 +317,7 @@ export default function BodyCompositionPage() {
       return;
     }
 
-    if (!manualData.lifestyle) {
+    if (!formData.lifestyle) {
       toast({
         title: "Lifestyle Required",
         description: "Please select your lifestyle to help us calculate your daily calorie targets",
@@ -253,7 +333,7 @@ export default function BodyCompositionPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(manualData),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -262,15 +342,15 @@ export default function BodyCompositionPage() {
         throw new Error(data.error || 'Failed to save body composition data');
       }
 
-      const lifestyleLabel = LIFESTYLE_OPTIONS.find(o => o.value === manualData.lifestyle)?.label || 'Moderately Active';
+      const lifestyleLabel = LIFESTYLE_OPTIONS.find(o => o.value === formData.lifestyle)?.label || 'Moderately Active';
       toast({
         title: "Saved!",
         description: `Body report saved! Your lifestyle is set to ${lifestyleLabel}. This will be used to calculate your calories and macros.`,
       });
-      setManualData(getEmptyReportData());
-      setReportData(data.report);
+      
+      setShowSuccess(true);
     } catch (error: any) {
-      console.error('Error saving manual entry:', error);
+      console.error('Error saving:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to save body composition data",
@@ -281,9 +361,227 @@ export default function BodyCompositionPage() {
     }
   };
 
-  const updateManualField = (field: keyof ReportData, value: number | string) => {
-    setManualData({ ...manualData, [field]: value });
+  const handleAddNewReport = () => {
+    setParsedData(null);
+    setFormData(getEmptyReportData());
+    setShowSuccess(false);
   };
+
+  const updateField = (field: keyof ReportData, value: number | string) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const renderForm = (data: ReportData, updateFn: (field: keyof ReportData, value: number | string) => void) => (
+    <div className="space-y-6">
+      <Card className="border-2 border-cyan-500/30 bg-cyan-500/5">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MetricCard
+              label="Name"
+              value={data.user_name || ''}
+              onChange={(v) => updateFn('user_name', v as string)}
+              type="text"
+            />
+            <MetricCard
+              label="Date & Time"
+              value={data.report_date || ''}
+              onChange={(v) => updateFn('report_date', v as string)}
+              type="datetime-local"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <MetricCard
+          label="Weight"
+          value={data.weight}
+          unit="kg"
+          onChange={(v) => updateFn('weight', v as number)}
+          showStatus
+          statusMetric="weight"
+        />
+        <MetricCard
+          label="BMI"
+          value={data.bmi}
+          onChange={(v) => updateFn('bmi', v as number)}
+          showStatus
+          statusMetric="bmi"
+        />
+        <MetricCard
+          label="Body Fat"
+          value={data.body_fat_percentage}
+          unit="%"
+          onChange={(v) => updateFn('body_fat_percentage', v as number)}
+          showStatus
+          statusMetric="body_fat_percentage"
+        />
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Detailed Body Composition</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <MetricCard
+            label="Fat Mass"
+            value={data.fat_mass}
+            unit="kg"
+            onChange={(v) => updateFn('fat_mass', v as number)}
+            showStatus
+            statusMetric="fat_mass"
+          />
+          <MetricCard
+            label="Fat-Free Body Weight"
+            value={data.fat_free_body_weight}
+            unit="kg"
+            onChange={(v) => updateFn('fat_free_body_weight', v as number)}
+            showStatus
+            statusMetric="fat_free_body_weight"
+          />
+          <MetricCard
+            label="Muscle Mass"
+            value={data.muscle_mass}
+            unit="kg"
+            onChange={(v) => updateFn('muscle_mass', v as number)}
+            showStatus
+            statusMetric="muscle_mass"
+          />
+          <MetricCard
+            label="Muscle Rate"
+            value={data.muscle_rate}
+            unit="%"
+            onChange={(v) => updateFn('muscle_rate', v as number)}
+            showStatus
+            statusMetric="muscle_rate"
+          />
+          <MetricCard
+            label="Skeletal Muscle"
+            value={data.skeletal_muscle}
+            unit="kg"
+            onChange={(v) => updateFn('skeletal_muscle', v as number)}
+            showStatus
+            statusMetric="skeletal_muscle"
+          />
+          <MetricCard
+            label="Bone Mass"
+            value={data.bone_mass}
+            unit="kg"
+            onChange={(v) => updateFn('bone_mass', v as number)}
+            showStatus
+            statusMetric="bone_mass"
+          />
+          <MetricCard
+            label="Protein Mass"
+            value={data.protein_mass}
+            unit="kg"
+            onChange={(v) => updateFn('protein_mass', v as number)}
+            showStatus
+            statusMetric="protein_mass"
+          />
+          <MetricCard
+            label="Protein"
+            value={data.protein}
+            unit="%"
+            onChange={(v) => updateFn('protein', v as number)}
+            showStatus
+            statusMetric="protein"
+          />
+          <MetricCard
+            label="Water Weight"
+            value={data.water_weight}
+            unit="kg"
+            onChange={(v) => updateFn('water_weight', v as number)}
+            showStatus
+            statusMetric="water_weight"
+          />
+          <MetricCard
+            label="Body Water"
+            value={data.body_water}
+            unit="%"
+            onChange={(v) => updateFn('body_water', v as number)}
+            showStatus
+            statusMetric="body_water"
+          />
+          <MetricCard
+            label="Subcutaneous Fat"
+            value={data.subcutaneous_fat}
+            unit="%"
+            onChange={(v) => updateFn('subcutaneous_fat', v as number)}
+            showStatus
+            statusMetric="subcutaneous_fat"
+          />
+          <MetricCard
+            label="Visceral Fat"
+            value={data.visceral_fat}
+            unit="level"
+            onChange={(v) => updateFn('visceral_fat', v as number)}
+            showStatus
+            statusMetric="visceral_fat"
+          />
+          <MetricCard
+            label="BMR (Basal Metabolic Rate)"
+            value={data.bmr}
+            unit="kcal"
+            onChange={(v) => updateFn('bmr', v as number)}
+          />
+          <MetricCard
+            label="Body Age"
+            value={data.body_age}
+            unit="years"
+            onChange={(v) => updateFn('body_age', v as number)}
+            showStatus
+            statusMetric="body_age"
+          />
+          <MetricCard
+            label="Ideal Body Weight"
+            value={data.ideal_body_weight}
+            unit="kg"
+            onChange={(v) => updateFn('ideal_body_weight', v as number)}
+            fullWidth
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Your Lifestyle <span className="text-red-500">*</span></h3>
+        <p className="text-sm text-muted-foreground mb-4">Choose your typical daily activity level. This helps us calculate your daily calorie and macro targets.</p>
+        
+        <RadioGroup
+          value={data.lifestyle || ''}
+          onValueChange={(value) => updateFn('lifestyle', value)}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          {LIFESTYLE_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            const isSelected = data.lifestyle === option.value;
+            return (
+              <div
+                key={option.value}
+                className={`relative rounded-xl p-4 border-2 cursor-pointer transition-all ${
+                  isSelected
+                    ? 'border-cyan-500 bg-cyan-500/10'
+                    : 'border-border hover:border-cyan-500/50'
+                }`}
+                onClick={() => updateFn('lifestyle', option.value)}
+              >
+                <RadioGroupItem value={option.value} className="sr-only" />
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${option.color} flex items-center justify-center`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">{option.label}</h4>
+                    <p className="text-xs text-muted-foreground">{option.labelHindi}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                </div>
+              </div>
+            );
+          })}
+        </RadioGroup>
+        <p className="text-xs text-muted-foreground mt-4 text-center">You can change your lifestyle anytime by uploading a new report.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 pb-20">
@@ -294,10 +592,7 @@ export default function BodyCompositionPage() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Body Composition Analysis</h1>
-            <p className="text-muted-foreground text-sm">Track your body metrics and progress</p>
-          </div>
+          <h1 className="text-2xl font-bold">Body Composition Analysis</h1>
         </div>
         <Link href="/member/diet-planner/history">
           <Button variant="outline" className="gap-2">
@@ -315,7 +610,60 @@ export default function BodyCompositionPage() {
         className="hidden"
       />
 
-      {!reportData && (
+      {showSuccess ? (
+        <div className="text-center py-12 space-y-6">
+          <div className="w-20 h-20 mx-auto rounded-full bg-green-500/20 flex items-center justify-center">
+            <Save className="w-10 h-10 text-green-500" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-green-500">Report Saved Successfully!</h2>
+            <p className="text-muted-foreground mt-2">Your body composition data has been saved.</p>
+          </div>
+          <div className="flex gap-4 justify-center">
+            <Link href="/member/diet-planner">
+              <Button size="lg">Go to Diet Planner</Button>
+            </Link>
+            <Button variant="outline" size="lg" onClick={handleAddNewReport} className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Add New Report
+            </Button>
+          </div>
+        </div>
+      ) : parsedData ? (
+        <div className="space-y-6">
+          {renderForm(formData, updateField)}
+          
+          <div className="flex gap-4 sticky bottom-4">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex-1 bg-cyan-500 hover:bg-cyan-600"
+              size="lg"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleAddNewReport}
+              size="lg"
+              className="flex-1 gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Add New Report
+            </Button>
+          </div>
+        </div>
+      ) : (
         <Tabs value={entryMode} onValueChange={(v) => setEntryMode(v as 'upload' | 'manual')} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="manual" className="flex items-center gap-2">
@@ -329,135 +677,34 @@ export default function BodyCompositionPage() {
           </TabsList>
 
           <TabsContent value="manual" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                    <PenLine className="w-5 h-5 text-white" />
-                  </div>
-                  Enter Your Measurements
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <MetricInput
-                    label="Name"
-                    value={manualData.user_name || ''}
-                    onChange={(v) => updateManualField('user_name', v as string)}
-                    type="text"
-                  />
-                  <MetricInput
-                    label="Date & Time"
-                    value={manualData.report_date || ''}
-                    onChange={(v) => updateManualField('report_date', v as string)}
-                    type="datetime-local"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Key Metrics</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <MetricInput
-                      label="Weight"
-                      value={manualData.weight}
-                      unit="kg"
-                      onChange={(v) => updateManualField('weight', v as number)}
-                    />
-                    <MetricInput
-                      label="BMI"
-                      value={manualData.bmi}
-                      onChange={(v) => updateManualField('bmi', v as number)}
-                    />
-                    <MetricInput
-                      label="Body Fat"
-                      value={manualData.body_fat_percentage}
-                      unit="%"
-                      onChange={(v) => updateManualField('body_fat_percentage', v as number)}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Detailed Body Composition</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <MetricInput label="Fat Mass" value={manualData.fat_mass} unit="kg" onChange={(v) => updateManualField('fat_mass', v as number)} />
-                    <MetricInput label="Muscle Mass" value={manualData.muscle_mass} unit="kg" onChange={(v) => updateManualField('muscle_mass', v as number)} />
-                    <MetricInput label="Skeletal Muscle" value={manualData.skeletal_muscle} unit="kg" onChange={(v) => updateManualField('skeletal_muscle', v as number)} />
-                    <MetricInput label="Bone Mass" value={manualData.bone_mass} unit="kg" onChange={(v) => updateManualField('bone_mass', v as number)} />
-                    <MetricInput label="Body Water" value={manualData.body_water} unit="%" onChange={(v) => updateManualField('body_water', v as number)} />
-                    <MetricInput label="Visceral Fat" value={manualData.visceral_fat} unit="level" onChange={(v) => updateManualField('visceral_fat', v as number)} />
-                    <MetricInput label="BMR (Basal Metabolic Rate)" value={manualData.bmr} unit="kcal" onChange={(v) => updateManualField('bmr', v as number)} />
-                    <MetricInput label="Body Age" value={manualData.body_age} unit="years" onChange={(v) => updateManualField('body_age', v as number)} />
-                    <MetricInput label="Ideal Body Weight" value={manualData.ideal_body_weight} unit="kg" onChange={(v) => updateManualField('ideal_body_weight', v as number)} />
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Your Lifestyle <span className="text-red-500">*</span></h3>
-                  <p className="text-sm text-muted-foreground mb-4">Choose your typical daily activity level. This helps us calculate your daily calorie and macro targets.</p>
-                  
-                  <RadioGroup
-                    value={manualData.lifestyle || ''}
-                    onValueChange={(value) => updateManualField('lifestyle', value)}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                  >
-                    {LIFESTYLE_OPTIONS.map((option) => {
-                      const Icon = option.icon;
-                      const isSelected = manualData.lifestyle === option.value;
-                      return (
-                        <div
-                          key={option.value}
-                          className={`relative rounded-xl p-4 border-2 cursor-pointer transition-all ${
-                            isSelected
-                              ? 'border-orange-500 bg-orange-500/10'
-                              : 'border-border hover:border-orange-500/50'
-                          }`}
-                          onClick={() => updateManualField('lifestyle', option.value)}
-                        >
-                          <RadioGroupItem value={option.value} className="sr-only" />
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${option.color} flex items-center justify-center`}>
-                              <Icon className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold">{option.label}</h4>
-                              <p className="text-xs text-muted-foreground">{option.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </RadioGroup>
-                </div>
-
-                <Button 
-                  onClick={handleSaveManualEntry} 
-                  disabled={isSaving}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Body Composition
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+            {renderForm(formData, updateField)}
+            
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className="w-full bg-cyan-500 hover:bg-cyan-600"
+              size="lg"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Body Composition
+                </>
+              )}
+            </Button>
           </TabsContent>
 
           <TabsContent value="upload" className="space-y-6">
             <Card>
               <CardContent className="p-8">
                 <div className="text-center space-y-4">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center">
-                    <Upload className="w-10 h-10 text-orange-500" />
+                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center">
+                    <Upload className="w-10 h-10 text-cyan-500" />
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">Upload Body Composition Report</h3>
@@ -467,7 +714,7 @@ export default function BodyCompositionPage() {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isProcessing}
                     size="lg"
-                    className="gap-2"
+                    className="gap-2 bg-cyan-500 hover:bg-cyan-600"
                   >
                     {isProcessing ? (
                       <>
@@ -487,56 +734,6 @@ export default function BodyCompositionPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      )}
-
-      {reportData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Report Saved Successfully!</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {reportData.weight && (
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <p className="text-2xl font-bold">{reportData.weight} kg</p>
-                  <p className="text-sm text-muted-foreground">Weight</p>
-                </div>
-              )}
-              {reportData.bmi && (
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <p className="text-2xl font-bold">{reportData.bmi}</p>
-                  <p className="text-sm text-muted-foreground">BMI</p>
-                </div>
-              )}
-              {reportData.body_fat_percentage && (
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <p className="text-2xl font-bold">{reportData.body_fat_percentage}%</p>
-                  <p className="text-sm text-muted-foreground">Body Fat</p>
-                </div>
-              )}
-              {reportData.bmr && (
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <p className="text-2xl font-bold">{reportData.bmr}</p>
-                  <p className="text-sm text-muted-foreground">BMR (kcal)</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-6 flex gap-3">
-              <Link href="/member/diet-planner">
-                <Button className="flex-1">Go to Diet Planner</Button>
-              </Link>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setReportData(null);
-                  setManualData(getEmptyReportData());
-                }}
-              >
-                Add Another Report
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       )}
     </div>
   );
