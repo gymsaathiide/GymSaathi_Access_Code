@@ -9116,17 +9116,36 @@ Return ONLY the JSON object, no other text.`;
       };
       
       const factor = lifestyleFactors[lifestyle] || 1.55;
-      let targetCalories = Math.round(bmr * factor);
+      const tdee = Math.round(bmr * factor);
+      let targetCalories = tdee;
       
+      // Apply calorie adjustment based on goal
+      // For fat loss: 500-750 kcal deficit for safe 1-1.5 lb/week loss
+      // For muscle gain: 300-500 kcal surplus
       if (determinedGoal === 'fat_loss' || determinedGoal === 'weight_loss') {
-        targetCalories -= 200;
+        // Use 15% deficit for sustainable fat loss (min 500, max 1000)
+        const deficit = Math.min(1000, Math.max(500, Math.round(tdee * 0.15)));
+        targetCalories -= deficit;
       } else if (determinedGoal === 'muscle_gain') {
-        targetCalories += 200;
+        // Use 10% surplus for lean muscle gain
+        const surplus = Math.round(tdee * 0.10);
+        targetCalories += surplus;
       }
       
-      // Calculate macros
-      const protein = Math.round(bodyWeight * 2);
+      // Ensure minimum safe calories (never below 1200 for women, 1500 for men)
+      targetCalories = Math.max(1500, targetCalories);
+      
+      // Calculate macros based on lean body mass for protein
+      // For high BMI individuals, use adjusted body weight for protein calculation
+      const adjustedWeight = bodyWeight > 100 ? 
+        (0.4 * bodyWeight + 0.6 * 70) : // Adjust for overweight - blend towards ideal weight
+        bodyWeight;
+      
+      // Protein: 1.6-2.2g per kg of adjusted body weight
+      const protein = Math.round(adjustedWeight * 2);
+      // Fats: 25-30% of calories
       const fats = Math.round(targetCalories * 0.25 / 9);
+      // Carbs: remaining calories
       const carbs = Math.round((targetCalories - (protein * 4) - (fats * 9)) / 4);
 
       // Deactivate existing plans

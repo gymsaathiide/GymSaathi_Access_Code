@@ -573,19 +573,52 @@ export default function DietPlannerPage() {
             ))}
           </div>
 
+          <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-green-500 flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Your Daily Target
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Based on your body composition and goals</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 rounded-lg bg-background/50">
+                  <p className="text-2xl font-bold text-green-500">{selectedPlan.total_calories}</p>
+                  <p className="text-xs text-muted-foreground">Target Calories</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-background/50">
+                  <p className="text-2xl font-bold text-blue-500">{selectedPlan.total_protein}g</p>
+                  <p className="text-xs text-muted-foreground">Target Protein</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-background/50">
+                  <p className="text-2xl font-bold text-amber-500">{selectedPlan.total_carbs}g</p>
+                  <p className="text-xs text-muted-foreground">Target Carbs</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-background/50">
+                  <p className="text-2xl font-bold text-purple-500">{selectedPlan.total_fats}g</p>
+                  <p className="text-xs text-muted-foreground">Target Fats</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
-              <CardTitle>Day {selectedDay} Summary</CardTitle>
+              <CardTitle>Day {selectedDay} - Meal Plan ({dailyCalories} kcal)</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Suggested meals for today. Adjust portions to meet your {selectedPlan.total_calories} kcal target.
+              </p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-orange-500">{dailyCalories}</p>
-                  <p className="text-sm text-muted-foreground">Calories</p>
+                  <p className="text-sm text-muted-foreground">Meal Calories</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-blue-500">{dailyProtein}g</p>
-                  <p className="text-sm text-muted-foreground">Protein</p>
+                  <p className="text-sm text-muted-foreground">Meal Protein</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-500">{dailyCarbs}g</p>
