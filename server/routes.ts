@@ -9116,37 +9116,85 @@ Return ONLY the JSON object, no other text.`;
       };
       
       const factor = lifestyleFactors[lifestyle] || 1.55;
-      const tdee = Math.round(bmr * factor);
+      
+      // Get body composition data - prefer database values over request values
+      const bmi = bodyComp ? parseFloat(bodyComp.bmi) || 22 : 22;
+      const bodyFatPercent = bodyComp ? parseFloat(bodyComp.body_fat_percentage) || 20 : 20;
+      const actualWeight = bodyComp ? parseFloat(bodyComp.weight) || bodyWeight : bodyWeight;
+      
+      // Validate weight - ensure it's a reasonable value
+      const validWeight = (actualWeight && actualWeight > 30 && actualWeight < 500) ? actualWeight : 70;
+      
+      // Calculate Lean Body Mass (LBM) - this is the key for accurate calculations
+      const leanBodyMass = validWeight * (1 - bodyFatPercent / 100);
+      
+      // For high BMI users (>30), ALWAYS use Katch-McArdle formula
+      // Machine BMR is often inflated for obese individuals
+      let effectiveBmr = bmr;
+      let bmrAdjusted = false;
+      
+      if (bmi >= 30) {
+        // Katch-McArdle formula: BMR = 370 + (21.6 × LBM in kg)
+        const katchMcArdleBmr = 370 + (21.6 * leanBodyMass);
+        
+        // ALWAYS use Katch-McArdle for obese individuals
+        effectiveBmr = katchMcArdleBmr;
+        bmrAdjusted = true;
+        console.log(`BMR adjusted for high BMI: Machine=${bmr}, Katch-McArdle=${katchMcArdleBmr.toFixed(0)}, LBM=${leanBodyMass.toFixed(1)}kg`);
+      }
+      
+      // Calculate TDEE first (before any caps)
+      let tdee = Math.round(effectiveBmr * factor);
+      
+      // Apply calorie adjustment based on goal FIRST
+      // For fat loss: 15% deficit of actual TDEE
       let targetCalories = tdee;
       
-      // Apply calorie adjustment based on goal
-      // For fat loss: 500-750 kcal deficit for safe 1-1.5 lb/week loss
-      // For muscle gain: 300-500 kcal surplus
       if (determinedGoal === 'fat_loss' || determinedGoal === 'weight_loss') {
-        // Use 15% deficit for sustainable fat loss (min 500, max 1000)
-        const deficit = Math.min(1000, Math.max(500, Math.round(tdee * 0.15)));
-        targetCalories -= deficit;
+        // Use 15% deficit for sustainable fat loss (min 400, max 700)
+        const deficit = Math.min(700, Math.max(400, Math.round(tdee * 0.15)));
+        targetCalories = tdee - deficit;
       } else if (determinedGoal === 'muscle_gain') {
         // Use 10% surplus for lean muscle gain
         const surplus = Math.round(tdee * 0.10);
-        targetCalories += surplus;
+        targetCalories = tdee + surplus;
       }
       
-      // Ensure minimum safe calories (never below 1200 for women, 1500 for men)
+      // Cap target calories AFTER applying deficit (more accurate)
+      // Maximum practical targets based on goal
+      const MAX_FAT_LOSS_CALORIES = 2800; // Even very large individuals should stay under this for fat loss
+      const MAX_MAINTENANCE_CALORIES = 3200;
+      const MAX_MUSCLE_GAIN_CALORIES = 3500;
+      
+      if (determinedGoal === 'fat_loss' || determinedGoal === 'weight_loss') {
+        targetCalories = Math.min(targetCalories, MAX_FAT_LOSS_CALORIES);
+      } else if (determinedGoal === 'maintenance') {
+        targetCalories = Math.min(targetCalories, MAX_MAINTENANCE_CALORIES);
+      } else if (determinedGoal === 'muscle_gain') {
+        targetCalories = Math.min(targetCalories, MAX_MUSCLE_GAIN_CALORIES);
+      }
+      
+      // Ensure minimum safe calories (never below 1500)
       targetCalories = Math.max(1500, targetCalories);
       
-      // Calculate macros based on lean body mass for protein
-      // For high BMI individuals, use adjusted body weight for protein calculation
-      const adjustedWeight = bodyWeight > 100 ? 
-        (0.4 * bodyWeight + 0.6 * 70) : // Adjust for overweight - blend towards ideal weight
-        bodyWeight;
+      // Calculate macros based on lean body mass
+      // Protein: 2.0g per kg of lean body mass (optimal for preserving muscle during fat loss)
+      const protein = Math.round(leanBodyMass * 2);
       
-      // Protein: 1.6-2.2g per kg of adjusted body weight
-      const protein = Math.round(adjustedWeight * 2);
-      // Fats: 25-30% of calories
-      const fats = Math.round(targetCalories * 0.25 / 9);
-      // Carbs: remaining calories
-      const carbs = Math.round((targetCalories - (protein * 4) - (fats * 9)) / 4);
+      // Fats: ~25-30% of calories (minimum 0.5g/kg of body weight for hormone health)
+      const minFats = Math.round(validWeight * 0.5);
+      const calculatedFats = Math.round(targetCalories * 0.27 / 9);
+      const fats = Math.max(minFats, calculatedFats);
+      
+      // Carbs: remaining calories after protein and fats
+      const proteinCalories = protein * 4;
+      const fatCalories = fats * 9;
+      const remainingCalories = targetCalories - proteinCalories - fatCalories;
+      const carbs = Math.max(50, Math.round(remainingCalories / 4)); // Minimum 50g carbs
+      
+      console.log(`Diet plan calculation: BMI=${bmi.toFixed(1)}, Weight=${validWeight}kg, LBM=${leanBodyMass.toFixed(1)}kg`);
+      console.log(`  BMR: Machine=${bmr}, Effective=${effectiveBmr.toFixed(0)}, TDEE=${tdee}`);
+      console.log(`  Target=${targetCalories}kcal, P=${protein}g, C=${carbs}g, F=${fats}g`);
 
       // Deactivate existing plans
       await db!.execute(sql`
