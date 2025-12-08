@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, Plus, Minus, Trash2, Search, ShoppingBag, Package, Eye, CheckCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ProductCard } from "@/components/ProductCard";
 import { format } from "date-fns";
 
 export default function MemberStore() {
@@ -235,86 +236,14 @@ export default function MemberStore() {
                 const cartItem = cart.find(item => item.productId === product.id);
                 
                 return (
-                  <Card key={product.id} className="overflow-hidden flex flex-col">
-                    {/* Product Image */}
-                    <div 
-                      className="aspect-square bg-muted relative cursor-pointer"
-                      onClick={() => setSelectedProduct(product)}
-                    >
-                      {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <ShoppingBag className="h-10 w-10 sm:h-16 sm:w-16 text-muted-foreground" />
-                        </div>
-                      )}
-                      {product.stock <= product.lowStockAlert && product.stock > 0 && (
-                        <Badge variant="secondary" className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 text-xs">Low Stock</Badge>
-                      )}
-                      {product.stock === 0 && (
-                        <Badge variant="destructive" className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 text-xs">Out of Stock</Badge>
-                      )}
-                      {product.discountPrice && (
-                        <Badge className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-green-600 text-xs">
-                          {Math.round((1 - product.discountPrice / product.price) * 100)}% OFF
-                        </Badge>
-                      )}
-                      <Button 
-                        variant="secondary" 
-                        size="icon" 
-                        className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 h-8 w-8 opacity-80 hover:opacity-100"
-                        onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    {/* Product Info */}
-                    <CardContent className="p-2.5 sm:p-4 flex-1 flex flex-col">
-                      <h3 className="font-medium text-sm sm:text-base line-clamp-2 mb-1">{product.name}</h3>
-                      
-                      <div className="flex items-baseline gap-1.5 mb-2 sm:mb-3">
-                        <span className="text-lg sm:text-xl font-bold">₹{product.discountPrice || product.price}</span>
-                        {product.discountPrice && (
-                          <span className="text-xs sm:text-sm text-muted-foreground line-through">₹{product.price}</span>
-                        )}
-                      </div>
-                      
-                      <div className="mt-auto">
-                        {cartItem ? (
-                          <div className="flex items-center justify-between bg-muted rounded-md p-1">
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-8 w-8"
-                              onClick={() => updateQuantity(product.id, -1)}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className="font-medium text-sm">{cartItem.quantity}</span>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-8 w-8"
-                              onClick={() => updateQuantity(product.id, 1)}
-                              disabled={cartItem.quantity >= product.stock}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button 
-                            className="w-full h-9 text-sm" 
-                            onClick={() => addToCart(product)}
-                            disabled={product.stock === 0}
-                          >
-                            <ShoppingCart className="mr-1.5 h-4 w-4" />
-                            Add
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    cartItem={cartItem}
+                    onAddToCart={() => addToCart(product)}
+                    onUpdateQuantity={(delta) => updateQuantity(product.id, delta)}
+                    onView={() => setSelectedProduct(product)}
+                  />
                 );
               })}
             </div>

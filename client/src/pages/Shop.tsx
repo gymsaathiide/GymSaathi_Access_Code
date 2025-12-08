@@ -40,6 +40,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ProductForm } from "@/components/ProductForm";
 import { OrderForm } from "@/components/OrderForm";
+import { ProductCard } from "@/components/ProductCard";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -640,44 +641,19 @@ export default function Shop() {
           <div className="text-center py-8 text-muted-foreground">No products available</div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {mobileStoreProducts.map((product) => (
-              <Card key={product.id} className="overflow-hidden">
-                <div 
-                  className="aspect-square bg-muted relative cursor-pointer"
-                  onClick={() => setMobileProductDetail(product)}
-                >
-                  {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="h-12 w-12 text-muted-foreground/30" />
-                    </div>
-                  )}
-                  {product.stock === 0 && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">Out of Stock</span>
-                    </div>
-                  )}
-                </div>
-                <CardContent className="p-3">
-                  <h3 className="font-medium text-sm truncate">{product.name}</h3>
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-base font-bold">₹{parseFloat(product.discountPrice || product.price).toFixed(0)}</span>
-                    {product.discountPrice && (
-                      <span className="text-xs text-muted-foreground line-through">₹{parseFloat(product.price).toFixed(0)}</span>
-                    )}
-                  </div>
-                  <Button
-                    className="w-full mt-2 h-8 text-xs"
-                    disabled={product.stock === 0}
-                    onClick={() => addToCart(product)}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add to Cart
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {mobileStoreProducts.map((product) => {
+              const cartItem = cart.find(item => item.productId === product.id);
+              return (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  cartItem={cartItem}
+                  onAddToCart={() => addToCart(product)}
+                  onUpdateQuantity={(delta) => updateCartQuantity(product.id, cartItem ? cartItem.quantity + delta : 1)}
+                  onView={() => setMobileProductDetail(product)}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -1118,111 +1094,13 @@ export default function Shop() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {filteredProducts.map((product) => (
-                <Card
+                <ProductCard
                   key={product.id}
-                  data-testid={`card-product-${product.id}`}
-                  className={!product.isActive ? "opacity-60" : ""}
-                >
-                  <CardHeader className="p-3 sm:p-6 pb-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle
-                          className="text-base sm:text-lg truncate"
-                          data-testid={`text-product-name-${product.id}`}
-                        >
-                          {product.name}
-                        </CardTitle>
-                        {product.sku && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            SKU: {product.sku}
-                          </p>
-                        )}
-                        {product.description && (
-                          <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2">
-                            {product.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-1 items-end flex-shrink-0">
-                        {product.isFeatured && (
-                          <Badge
-                            variant="default"
-                            className="text-xs"
-                            data-testid={`badge-featured-${product.id}`}
-                          >
-                            Featured
-                          </Badge>
-                        )}
-                        {!product.isActive && (
-                          <Badge variant="secondary" className="text-xs">Inactive</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-3 sm:p-6 pt-0 space-y-3">
-                    <div className="space-y-1">
-                      {product.mrp &&
-                        product.mrp >
-                          (product.discountPrice || product.price) && (
-                          <p className="text-xs text-muted-foreground line-through">
-                            MRP: ₹{parseFloat(product.mrp).toFixed(2)}
-                          </p>
-                        )}
-                      <div className="flex items-baseline gap-2">
-                        <p
-                          className="text-xl sm:text-2xl font-bold"
-                          data-testid={`text-product-price-${product.id}`}
-                        >
-                          ₹
-                          {parseFloat(
-                            product.discountPrice || product.price,
-                          ).toFixed(2)}
-                        </p>
-                        {product.discountPrice && (
-                          <p className="text-xs sm:text-sm text-muted-foreground line-through">
-                            ₹{parseFloat(product.price).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                      {product.taxPercent > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          + {product.taxPercent}% tax
-                        </p>
-                      )}
-                    </div>
-
-                    <Badge
-                      variant={getStockBadgeVariant(product)}
-                      className="text-xs"
-                      data-testid={`badge-stock-${product.id}`}
-                    >
-                      {getStockStatus(product)} ({product.stock})
-                    </Badge>
-
-                    {canManageProducts && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-xs sm:text-sm"
-                          onClick={() => handleEditProduct(product)}
-                          data-testid={`button-edit-${product.id}`}
-                        >
-                          <Edit className="mr-1 h-3 w-3" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteProductId(product.id)}
-                          data-testid={`button-delete-${product.id}`}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                  product={product}
+                  showAdminActions={canManageProducts}
+                  onEdit={() => handleEditProduct(product)}
+                  onDelete={() => setDeleteProductId(product.id)}
+                />
               ))}
             </div>
           )}
