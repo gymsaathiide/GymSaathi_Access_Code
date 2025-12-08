@@ -78,6 +78,7 @@ export default function DietPlannerPage() {
   const [eatenMeals, setEatenMeals] = useState<string[]>([]);
   const [determinedGoal, setDeterminedGoal] = useState<string | null>(null);
   const [goalReasons, setGoalReasons] = useState<string[]>([]);
+  const [mealFilter, setMealFilter] = useState<string>("all");
 
   const goals = [
     { 
@@ -522,145 +523,198 @@ export default function DietPlannerPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
+          {/* Header with greeting and actions */}
+          <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-xl font-bold">{selectedPlan.plan_type} Plan</h2>
-              <p className="text-muted-foreground">Goal: {selectedPlan.goal}</p>
+              <h2 className="text-2xl font-bold">Hello, {user?.name?.split(' ')[0] || 'there'}!</h2>
+              <p className="text-muted-foreground">Complete your daily nutrition</p>
             </div>
-            <Button variant="outline" onClick={resetDietPlan} className="gap-2">
-              <RotateCw className="w-4 h-4" />
-              Reset & Regenerate
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <MoreHorizontal className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
-
-          {goalReasons.length > 0 && (
-            <Card className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border-orange-500/20">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center shrink-0">
-                    <Activity className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-orange-500">Body Composition Analysis</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Based on your body composition report, we've created a personalized diet plan for you:
-                    </p>
-                    <ul className="mt-2 space-y-1">
-                      {goalReasons.map((reason, idx) => (
-                        <li key={idx} className="text-sm flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                          {reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {Array.from({ length: selectedPlan.plan_type === '7-day' ? 7 : 30 }, (_, i) => i + 1).map((day) => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-all ${
-                  selectedDay === day
-                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                    : 'bg-card border border-border hover:border-orange-500/50'
-                }`}
-              >
-                Day {day}
-              </button>
-            ))}
-          </div>
-
-          <Card className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-green-500 flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                Your Daily Target
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">Based on your body composition and goals</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 rounded-lg bg-background/50">
-                  <p className="text-2xl font-bold text-green-500">{selectedPlan.total_calories}</p>
-                  <p className="text-xs text-muted-foreground">Target Calories</p>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-background/50">
-                  <p className="text-2xl font-bold text-blue-500">{selectedPlan.total_protein}g</p>
-                  <p className="text-xs text-muted-foreground">Target Protein</p>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-background/50">
-                  <p className="text-2xl font-bold text-amber-500">{selectedPlan.total_carbs}g</p>
-                  <p className="text-xs text-muted-foreground">Target Carbs</p>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-background/50">
-                  <p className="text-2xl font-bold text-purple-500">{selectedPlan.total_fats}g</p>
-                  <p className="text-xs text-muted-foreground">Target Fats</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Meal Type Cards - Horizontal Scroll */}
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {[
-              { type: 'breakfast', icon: '🍳', color: 'from-orange-400 to-orange-500' },
-              { type: 'lunch', icon: '🍱', color: 'from-amber-400 to-yellow-500' },
-              { type: 'dinner', icon: '🍽️', color: 'from-red-400 to-rose-500' },
-              { type: 'snack', icon: '🥗', color: 'from-emerald-400 to-green-500' }
-            ].map(({ type, icon, color }) => {
+              { type: 'breakfast', icon: '🍳', bgColor: 'bg-orange-100 dark:bg-orange-500/20', textColor: 'text-orange-600 dark:text-orange-400' },
+              { type: 'lunch', icon: '🍱', bgColor: 'bg-amber-100 dark:bg-amber-500/20', textColor: 'text-amber-600 dark:text-amber-400' },
+              { type: 'dinner', icon: '🍽️', bgColor: 'bg-red-100 dark:bg-red-500/20', textColor: 'text-red-600 dark:text-red-400' },
+              { type: 'snack', icon: '🥗', bgColor: 'bg-emerald-100 dark:bg-emerald-500/20', textColor: 'text-emerald-600 dark:text-emerald-400' }
+            ].map(({ type, icon, bgColor, textColor }) => {
               const typeMeals = dayMeals.filter(m => m.meal_type === type);
               const typeCalories = typeMeals.reduce((sum, m) => sum + m.calories, 0);
               
               return (
                 <div 
                   key={type}
-                  className={`flex flex-col items-center justify-center p-4 rounded-2xl min-w-[100px] bg-gradient-to-br ${color} text-white shadow-lg cursor-pointer transition-transform hover:scale-105`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl min-w-[140px] ${bgColor} cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]`}
                   onClick={() => {
+                    setMealFilter(type);
                     const element = document.getElementById(`meal-section-${type}`);
                     element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
                 >
-                  <span className="text-2xl mb-1">{icon}</span>
-                  <span className="text-xs font-medium capitalize opacity-90">{type}</span>
-                  <span className="text-lg font-bold mt-1">{typeCalories}</span>
-                  <span className="text-xs opacity-75">kcal</span>
+                  <span className="text-2xl">{icon}</span>
+                  <div>
+                    <p className="text-xs text-muted-foreground capitalize">{type}</p>
+                    <p className={`text-lg font-bold ${textColor}`}>{typeCalories} <span className="text-xs font-normal">kcal</span></p>
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Calories Remaining Card */}
-          <div className="bg-card/50 backdrop-blur rounded-2xl p-4 border border-border">
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-              Calories Remaining
-            </h3>
-            <div className="flex items-center justify-center gap-2 text-sm flex-wrap">
-              <div className="text-center px-2">
-                <p className="text-xl font-bold text-foreground">{selectedPlan.total_calories}</p>
-                <p className="text-xs text-muted-foreground">Goal</p>
+          {/* Food Log Focus - Circular Progress */}
+          <Card className="border-0 bg-card/50 backdrop-blur">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Food Log Focus</h3>
+                <div className="text-right text-sm">
+                  <p className="text-muted-foreground">Remaining <span className="font-semibold text-foreground ml-2">Target</span></p>
+                  <p className="text-lg font-bold">{Math.max(0, selectedPlan.total_calories - dailyCalories)} <span className="text-muted-foreground ml-2">{selectedPlan.total_calories}</span></p>
+                </div>
               </div>
-              <span className="text-muted-foreground text-xl">−</span>
-              <div className="text-center px-2">
-                <p className="text-xl font-bold text-orange-500">{dailyCalories}</p>
-                <p className="text-xs text-muted-foreground">Food</p>
+              
+              <div className="flex justify-center mb-6">
+                <CircularProgress
+                  value={dailyCalories}
+                  max={selectedPlan.total_calories}
+                  size={180}
+                  strokeWidth={14}
+                  color="stroke-violet-500"
+                  trackColor="stroke-muted/20"
+                >
+                  <Flame className="w-6 h-6 text-orange-500 mb-1" />
+                  <span className="text-3xl font-bold">{dailyCalories}</span>
+                  <span className="text-sm text-muted-foreground">Consumed</span>
+                </CircularProgress>
               </div>
-              <span className="text-muted-foreground text-xl">+</span>
-              <div className="text-center px-2">
-                <p className="text-xl font-bold text-emerald-500">0</p>
-                <p className="text-xs text-muted-foreground">Exercise</p>
+
+              {/* Macro Circles */}
+              <div className="flex justify-center gap-8">
+                <MacroCircle
+                  label="Protein"
+                  value={dailyProtein}
+                  target={selectedPlan.total_protein}
+                  color="stroke-rose-500"
+                  size={56}
+                />
+                <MacroCircle
+                  label="Carbs"
+                  value={dailyCarbs}
+                  target={selectedPlan.total_carbs}
+                  color="stroke-blue-500"
+                  size={56}
+                />
+                <MacroCircle
+                  label="Fat"
+                  value={dailyFats}
+                  target={selectedPlan.total_fats}
+                  color="stroke-emerald-500"
+                  size={56}
+                />
               </div>
-              <span className="text-muted-foreground text-xl">=</span>
-              <div className="text-center px-2">
-                <p className="text-xl font-bold text-blue-500">{selectedPlan.total_calories - dailyCalories}</p>
-                <p className="text-xs text-muted-foreground">Remaining</p>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
+
+          {/* Day Selector */}
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {Array.from({ length: selectedPlan.plan_type === '7-day' ? 7 : 30 }, (_, i) => i + 1).map((day) => (
+              <button
+                key={day}
+                onClick={() => setSelectedDay(day)}
+                className={`flex flex-col items-center px-3 py-2 rounded-xl min-w-[48px] transition-all ${
+                  selectedDay === day
+                    ? 'bg-primary text-primary-foreground shadow-lg'
+                    : 'bg-card/50 hover:bg-card border border-border/50'
+                }`}
+              >
+                <span className="text-[10px] uppercase opacity-70">Day</span>
+                <span className="text-lg font-bold">{day}</span>
+              </button>
+            ))}
           </div>
+
+          {/* Calories Remaining Card */}
+          <Card className="border-0 bg-card/50 backdrop-blur">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                Calories Remaining
+              </h3>
+              <div className="flex items-center justify-between text-sm">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-foreground">{selectedPlan.total_calories}</p>
+                  <p className="text-xs text-muted-foreground">Goal</p>
+                </div>
+                <span className="text-muted-foreground text-lg">−</span>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-orange-500">{dailyCalories}</p>
+                  <p className="text-xs text-muted-foreground">Food</p>
+                </div>
+                <span className="text-muted-foreground text-lg">+</span>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-emerald-500">0</p>
+                  <p className="text-xs text-muted-foreground">Exercise</p>
+                </div>
+                <span className="text-muted-foreground text-lg">=</span>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-blue-500">{Math.max(0, selectedPlan.total_calories - dailyCalories)}</p>
+                  <p className="text-xs text-muted-foreground">Remaining</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Meal Filter Dropdown */}
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold">Food Log</h3>
+            <Select value={mealFilter} onValueChange={setMealFilter}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue placeholder="All Meals" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Meals</SelectItem>
+                <SelectItem value="breakfast">Breakfast</SelectItem>
+                <SelectItem value="lunch">Lunch</SelectItem>
+                <SelectItem value="dinner">Dinner</SelectItem>
+                <SelectItem value="snack">Snacks</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Goal Analysis - Collapsible */}
+          {goalReasons.length > 0 && (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between px-4 py-3 h-auto bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-500/20 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <Activity className="w-5 h-5 text-orange-500" />
+                    <span className="font-semibold text-orange-500">Body Composition Analysis</span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 px-4 py-3 bg-card/50 rounded-xl border border-border/50">
+                <ul className="space-y-2">
+                  {goalReasons.map((reason, idx) => (
+                    <li key={idx} className="text-sm flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                      {reason}
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Reset Button */}
+          <Button variant="outline" onClick={resetDietPlan} className="w-full gap-2 border-dashed">
+            <RotateCw className="w-4 h-4" />
+            Reset & Generate New Plan
+          </Button>
 
           {/* Meal Sections with Time-based Layout */}
           <div className="space-y-3">
@@ -669,7 +723,8 @@ export default function DietPlannerPage() {
               { type: 'snack', icon: '🥗', time: '9:00 AM', color: 'green' },
               { type: 'lunch', icon: '🍱', time: '1:00 PM', color: 'yellow' },
               { type: 'dinner', icon: '🍽️', time: '7:00 PM', color: 'red' }
-            ].map(({ type, icon, time, color }) => {
+            ].filter(({ type }) => mealFilter === 'all' || mealFilter === type)
+            .map(({ type, icon, time, color }) => {
               const typeMeals = dayMeals.filter(m => m.meal_type === type);
               if (typeMeals.length === 0) return null;
               
