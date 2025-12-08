@@ -74,13 +74,20 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   Routes: `/settings` and `/users` (Super Admin only)
 -   **Diet Planner System** (Member Dashboard): Comprehensive nutrition and fitness planning with:
     -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals (uses OpenAI Vision for image parsing)
-    -   **AI-Powered Diet Plans**: Generate 7-day or 30-day personalized meal plans (vegetarian/non-vegetarian)
-    -   **Meal Details**: Indian cuisine focus with Hindi translations, ingredients, recipes, prep/cook times
+    -   **Meal Database System**: Card-based navigation to Breakfast, Lunch, and Dinner meal databases
+    -   **Breakfast Meals Database**: 300 healthy breakfast recipes with:
+        -   Visual category indicators (green=veg, yellow=eggetarian, red=non-veg)
+        -   Search and filter by category
+        -   Full CRUD operations (view, edit, delete meals)
+        -   Nutritional info display (calories, protein, carbs, fats)
+        -   Edit modal with all meal fields pre-filled
+        -   Delete confirmation dialog
+        -   Database table: `meals_breakfast`
     -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
     -   **Workout Planner**: Exercise library with warm-up, strength, cardio, and stretching exercises
     -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
-    -   Database tables: body_composition_reports, diet_plans, meals, meal_logs, user_foods, daily_tracking, workout_plans, workout_exercises
-    -   Routes: `/member/diet-planner/*` (Body Report, Diet Planner, Daily Nutrition, Workout Plan)
+    -   Database tables: body_composition_reports, meals_breakfast, diet_plans, meals, meal_logs, user_foods, daily_tracking, workout_plans, workout_exercises
+    -   Routes: `/member/diet-planner/*` (Diet Planner with meal cards, Breakfast, Lunch, Dinner, Daily Nutrition, Workout Plan)
 -   **Permanent Member Deletion** (Admin): Complete member data removal with:
     -   Delete button with confirmation dialog in Members page
     -   Permanent deletion of member record and linked user account
