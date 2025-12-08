@@ -603,123 +603,207 @@ export default function DietPlannerPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Day {selectedDay} - Meal Plan ({dailyCalories} kcal)</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Suggested meals for today. Adjust portions to meet your {selectedPlan.total_calories} kcal target.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-500">{dailyCalories}</p>
-                  <p className="text-sm text-muted-foreground">Meal Calories</p>
+          {/* Meal Type Cards - Horizontal Scroll */}
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+            {[
+              { type: 'breakfast', icon: '🍳', color: 'from-orange-400 to-orange-500' },
+              { type: 'lunch', icon: '🍱', color: 'from-amber-400 to-yellow-500' },
+              { type: 'dinner', icon: '🍽️', color: 'from-red-400 to-rose-500' },
+              { type: 'snack', icon: '🥗', color: 'from-emerald-400 to-green-500' }
+            ].map(({ type, icon, color }) => {
+              const typeMeals = dayMeals.filter(m => m.meal_type === type);
+              const typeCalories = typeMeals.reduce((sum, m) => sum + m.calories, 0);
+              
+              return (
+                <div 
+                  key={type}
+                  className={`flex flex-col items-center justify-center p-4 rounded-2xl min-w-[100px] bg-gradient-to-br ${color} text-white shadow-lg cursor-pointer transition-transform hover:scale-105`}
+                  onClick={() => {
+                    const element = document.getElementById(`meal-section-${type}`);
+                    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                >
+                  <span className="text-2xl mb-1">{icon}</span>
+                  <span className="text-xs font-medium capitalize opacity-90">{type}</span>
+                  <span className="text-lg font-bold mt-1">{typeCalories}</span>
+                  <span className="text-xs opacity-75">kcal</span>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-500">{dailyProtein}g</p>
-                  <p className="text-sm text-muted-foreground">Meal Protein</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-500">{dailyCarbs}g</p>
-                  <p className="text-sm text-muted-foreground">Carbs</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-500">{dailyFats}g</p>
-                  <p className="text-sm text-muted-foreground">Fats</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              );
+            })}
+          </div>
 
-          <div className="space-y-4">
-            {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => {
-              const typeMeals = dayMeals.filter(m => m.meal_type === mealType);
+          {/* Calories Remaining Card */}
+          <div className="bg-card/50 backdrop-blur rounded-2xl p-4 border border-border">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+              Calories Remaining
+            </h3>
+            <div className="flex items-center justify-center gap-2 text-sm flex-wrap">
+              <div className="text-center px-2">
+                <p className="text-xl font-bold text-foreground">{selectedPlan.total_calories}</p>
+                <p className="text-xs text-muted-foreground">Goal</p>
+              </div>
+              <span className="text-muted-foreground text-xl">−</span>
+              <div className="text-center px-2">
+                <p className="text-xl font-bold text-orange-500">{dailyCalories}</p>
+                <p className="text-xs text-muted-foreground">Food</p>
+              </div>
+              <span className="text-muted-foreground text-xl">+</span>
+              <div className="text-center px-2">
+                <p className="text-xl font-bold text-emerald-500">0</p>
+                <p className="text-xs text-muted-foreground">Exercise</p>
+              </div>
+              <span className="text-muted-foreground text-xl">=</span>
+              <div className="text-center px-2">
+                <p className="text-xl font-bold text-blue-500">{selectedPlan.total_calories - dailyCalories}</p>
+                <p className="text-xs text-muted-foreground">Remaining</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Meal Sections with Time-based Layout */}
+          <div className="space-y-3">
+            {[
+              { type: 'breakfast', icon: '🍳', time: '7:00 AM', color: 'orange' },
+              { type: 'snack', icon: '🥗', time: '9:00 AM', color: 'green' },
+              { type: 'lunch', icon: '🍱', time: '1:00 PM', color: 'yellow' },
+              { type: 'dinner', icon: '🍽️', time: '7:00 PM', color: 'red' }
+            ].map(({ type, icon, time, color }) => {
+              const typeMeals = dayMeals.filter(m => m.meal_type === type);
               if (typeMeals.length === 0) return null;
+              
+              const typeCalories = typeMeals.reduce((sum, m) => sum + m.calories, 0);
+              const isExpanded = expandedMeals.has(type);
+              
+              const colorClasses: Record<string, { border: string; bg: string; text: string }> = {
+                orange: { border: 'border-l-orange-500', bg: 'bg-orange-500/5', text: 'text-orange-500' },
+                yellow: { border: 'border-l-amber-500', bg: 'bg-amber-500/5', text: 'text-amber-500' },
+                green: { border: 'border-l-emerald-500', bg: 'bg-emerald-500/5', text: 'text-emerald-500' },
+                red: { border: 'border-l-red-500', bg: 'bg-red-500/5', text: 'text-red-500' }
+              };
+              
+              const colors = colorClasses[color];
 
               return (
-                <div key={mealType} className="space-y-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <span>{getMealTypeIcon(mealType)}</span>
-                    <span className="capitalize">{mealType}</span>
-                  </h3>
-                  
-                  {typeMeals.map((meal) => {
-                    const isEaten = eatenMeals.includes(meal.id);
-                    const isExpanded = expandedMeals.has(meal.id);
+                <div key={type} id={`meal-section-${type}`} className="flex items-start gap-3">
+                  <div className="text-xs text-muted-foreground w-14 pt-4 shrink-0 text-right">
+                    {time}
+                  </div>
+                  <div className={`flex-1 rounded-2xl overflow-hidden border-l-4 ${colors.border} ${colors.bg} border border-border/50`}>
+                    <button 
+                      onClick={() => toggleMealExpanded(type)}
+                      className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{icon}</span>
+                        <div className="text-left">
+                          <h3 className="font-semibold capitalize">{type}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {typeMeals.length} item{typeMeals.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-sm font-bold ${colors.text}`}>
+                          {typeCalories} kcal
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </button>
                     
-                    return (
-                      <Collapsible key={meal.id} open={isExpanded} onOpenChange={() => toggleMealExpanded(meal.id)}>
-                        <Card className={`transition-all ${isEaten ? 'bg-green-500/10 border-green-500/30' : ''}`}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Checkbox
-                                  checked={isEaten}
-                                  onCheckedChange={() => toggleMealEaten(meal.id)}
-                                />
-                                <div>
-                                  <p className={`font-medium ${isEaten ? 'line-through text-muted-foreground' : ''}`}>
-                                    {meal.meal_name}
-                                  </p>
-                                  <div className="flex gap-3 text-sm text-muted-foreground">
-                                    <span>{meal.calories} kcal</span>
-                                    <span>P: {meal.protein}g</span>
-                                    <span>C: {meal.carbs}g</span>
-                                    <span>F: {meal.fats}g</span>
+                    {isExpanded && (
+                      <div className="px-4 pb-4 space-y-2">
+                        {typeMeals.map((meal) => {
+                          const isEaten = eatenMeals.includes(meal.id);
+                          const isMealExpanded = expandedMeals.has(meal.id);
+                          
+                          return (
+                            <div key={meal.id} className="rounded-xl bg-background/80 overflow-hidden">
+                              <div className="p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    checked={isEaten}
+                                    onCheckedChange={() => toggleMealEaten(meal.id)}
+                                    className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                                  />
+                                  <div>
+                                    <p className={`font-medium text-sm ${isEaten ? 'line-through text-muted-foreground' : ''}`}>
+                                      {meal.meal_name}
+                                    </p>
+                                    {meal.name_hindi && (
+                                      <p className="text-xs text-muted-foreground">{meal.name_hindi}</p>
+                                    )}
                                   </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-right">
+                                    <p className={`text-sm font-semibold ${colors.text}`}>
+                                      {meal.calories} kcal
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      P:{meal.protein}g C:{meal.carbs}g F:{meal.fats}g
+                                    </p>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => toggleMealExpanded(meal.id)}
+                                  >
+                                    {isMealExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  </Button>
                                 </div>
                               </div>
-                              <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                </Button>
-                              </CollapsibleTrigger>
+                              
+                              {isMealExpanded && (
+                                <div className="px-3 pb-3 pt-1 space-y-3 border-t border-border/50">
+                                  {meal.ingredients && meal.ingredients.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium mb-2 text-muted-foreground">Ingredients:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {meal.ingredients.map((ing, idx) => (
+                                          <Badge key={idx} variant="secondary" className="text-xs">{ing}</Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {meal.recipe_instructions && meal.recipe_instructions.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium mb-2 text-muted-foreground">How to prepare:</p>
+                                      <ol className="list-decimal list-inside text-xs text-muted-foreground space-y-1">
+                                        {meal.recipe_instructions.map((step, idx) => (
+                                          <li key={idx}>{step}</li>
+                                        ))}
+                                      </ol>
+                                    </div>
+                                  )}
+                                  {(meal.prep_time_minutes || meal.cook_time_minutes) && (
+                                    <div className="flex gap-4 text-xs text-muted-foreground">
+                                      {meal.prep_time_minutes && (
+                                        <span className="flex items-center gap-1">
+                                          <Clock className="w-3 h-3" />
+                                          Prep: {meal.prep_time_minutes} min
+                                        </span>
+                                      )}
+                                      {meal.cook_time_minutes && (
+                                        <span className="flex items-center gap-1">
+                                          <ChefHat className="w-3 h-3" />
+                                          Cook: {meal.cook_time_minutes} min
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            
-                            <CollapsibleContent className="mt-4 space-y-3">
-                              {meal.ingredients && meal.ingredients.length > 0 && (
-                                <div>
-                                  <p className="text-sm font-medium mb-2">Ingredients:</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {meal.ingredients.map((ing, idx) => (
-                                      <Badge key={idx} variant="secondary">{ing}</Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              {meal.recipe_instructions && meal.recipe_instructions.length > 0 && (
-                                <div>
-                                  <p className="text-sm font-medium mb-2">Instructions:</p>
-                                  <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
-                                    {meal.recipe_instructions.map((step, idx) => (
-                                      <li key={idx}>{step}</li>
-                                    ))}
-                                  </ol>
-                                </div>
-                              )}
-                              {(meal.prep_time_minutes || meal.cook_time_minutes) && (
-                                <div className="flex gap-4 text-sm text-muted-foreground">
-                                  {meal.prep_time_minutes && (
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="w-4 h-4" />
-                                      Prep: {meal.prep_time_minutes} min
-                                    </span>
-                                  )}
-                                  {meal.cook_time_minutes && (
-                                    <span className="flex items-center gap-1">
-                                      <ChefHat className="w-4 h-4" />
-                                      Cook: {meal.cook_time_minutes} min
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </CollapsibleContent>
-                          </CardContent>
-                        </Card>
-                      </Collapsible>
-                    );
-                  })}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
