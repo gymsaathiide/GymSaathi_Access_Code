@@ -83,6 +83,13 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
         -   Edit modal with all meal fields pre-filled
         -   Delete confirmation dialog
         -   Database table: `meals_breakfast`
+        -   **Automated Meal Plan Generation**:
+            -   Generate 7-day or 30-day breakfast meal plans
+            -   Category filtering (All, Veg, Eggetarian, Non-Veg)
+            -   Random meal selection from database with repetition support
+            -   Regenerate button to create new plans while respecting filters
+            -   Day-by-day view with meal details and nutritional info
+            -   API endpoint: `POST /api/meals/breakfast/generate-plan`
     -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
     -   **Workout Planner**: Exercise library with warm-up, strength, cardio, and stretching exercises
     -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
