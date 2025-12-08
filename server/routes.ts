@@ -10092,6 +10092,58 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // Generate meal plan (7 or 30 days)
+  app.post('/api/meals/breakfast/generate-plan', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { duration, category } = req.body;
+      
+      // Validate duration
+      if (![7, 30].includes(duration)) {
+        return res.status(400).json({ ok: false, error: 'Duration must be 7 or 30 days' });
+      }
+
+      // Build query based on category filter
+      let mealsQuery;
+      if (category && category !== 'all') {
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meals_breakfast 
+          WHERE category = ${category}
+          ORDER BY RANDOM()
+        `);
+      } else {
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meals_breakfast 
+          ORDER BY RANDOM()
+        `);
+      }
+
+      const availableMeals = mealsQuery.rows || [];
+      
+      if (availableMeals.length === 0) {
+        return res.status(400).json({ ok: false, error: 'No meals available for the selected category' });
+      }
+
+      // Generate meal plan with repetition if needed
+      const mealPlan = [];
+      for (let day = 1; day <= duration; day++) {
+        const randomIndex = Math.floor(Math.random() * availableMeals.length);
+        mealPlan.push({
+          day,
+          meal: availableMeals[randomIndex]
+        });
+      }
+
+      res.json({ ok: true, plan: mealPlan });
+    } catch (error: any) {
+      console.error('Error generating breakfast meal plan:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
