@@ -9959,48 +9959,34 @@ Return ONLY the JSON object, no other text.`;
     try {
       const { category, search } = req.query;
       
-      let query = 'SELECT * FROM meals_breakfast';
-      const params: any[] = [];
-      const conditions: string[] = [];
+      let queryResult;
       
-      if (category && category !== 'all') {
-        conditions.push(`category = $${params.length + 1}`);
-        params.push(category);
-      }
-      
-      if (search) {
-        conditions.push(`(LOWER(name) LIKE $${params.length + 1} OR LOWER(description) LIKE $${params.length + 1})`);
-        params.push(`%${String(search).toLowerCase()}%`);
-      }
-      
-      if (conditions.length > 0) {
-        query += ' WHERE ' + conditions.join(' AND ');
-      }
-      
-      query += ' ORDER BY name ASC';
-      
-      const result = await db!.execute(sql.raw(query + (params.length ? '' : ''), params));
-      
-      // If we have parameters, use parameterized query
-      let meals;
-      if (params.length > 0) {
-        const paramQuery = sql`SELECT * FROM meals_breakfast WHERE ${
-          category && category !== 'all' 
-            ? sql`category = ${category}` 
-            : sql`1=1`
-        } ${
-          search 
-            ? sql` AND (LOWER(name) LIKE ${`%${String(search).toLowerCase()}%`} OR LOWER(description) LIKE ${`%${String(search).toLowerCase()}%`})`
-            : sql``
-        } ORDER BY name ASC`;
-        const queryResult = await db!.execute(paramQuery);
-        meals = queryResult.rows;
+      if (category && category !== 'all' && search) {
+        const searchTerm = `%${String(search).toLowerCase()}%`;
+        queryResult = await db!.execute(sql`
+          SELECT * FROM meals_breakfast 
+          WHERE category = ${category} 
+          AND (LOWER(name) LIKE ${searchTerm} OR LOWER(description) LIKE ${searchTerm})
+          ORDER BY name ASC
+        `);
+      } else if (category && category !== 'all') {
+        queryResult = await db!.execute(sql`
+          SELECT * FROM meals_breakfast 
+          WHERE category = ${category}
+          ORDER BY name ASC
+        `);
+      } else if (search) {
+        const searchTerm = `%${String(search).toLowerCase()}%`;
+        queryResult = await db!.execute(sql`
+          SELECT * FROM meals_breakfast 
+          WHERE LOWER(name) LIKE ${searchTerm} OR LOWER(description) LIKE ${searchTerm}
+          ORDER BY name ASC
+        `);
       } else {
-        const queryResult = await db!.execute(sql`SELECT * FROM meals_breakfast ORDER BY name ASC`);
-        meals = queryResult.rows;
+        queryResult = await db!.execute(sql`SELECT * FROM meals_breakfast ORDER BY name ASC`);
       }
       
-      res.json({ ok: true, meals });
+      res.json({ ok: true, meals: queryResult.rows });
     } catch (error: any) {
       console.error('Error fetching breakfast meals:', error);
       res.status(500).json({ ok: false, error: error.message });
