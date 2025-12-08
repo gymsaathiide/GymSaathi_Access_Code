@@ -431,158 +431,133 @@ export default function BreakfastPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {activePlan.meals.map((item, index) => {
             const meal = item.meal;
               const config = categoryConfig[meal.category];
               const CategoryIcon = config.icon;
               
-              // Category-specific color schemes
-              const categoryColors = {
-                veg: { bg: '#E8F5E9', inner: '#C8E6C9', text: '#2E7D32', accent: '#43A047' },
-                eggetarian: { bg: '#FFFACD', inner: '#FFF599', text: '#B49A18', accent: '#D4AF37' },
-                'non-veg': { bg: '#FFEBEE', inner: '#FFCDD2', text: '#C62828', accent: '#E53935' }
+              // Category gradient colors matching app theme
+              const categoryGradients = {
+                veg: 'from-green-600 to-green-400',
+                eggetarian: 'from-yellow-600 to-amber-400',
+                'non-veg': 'from-red-600 to-red-400'
               };
-              const colors = categoryColors[meal.category] || categoryColors.eggetarian;
+              const gradient = categoryGradients[meal.category] || categoryGradients.eggetarian;
               
               return (
                 <div 
                   key={`${meal.id}-${index}`} 
-                  className="fitCard flex min-h-[22em] flex-col items-center justify-start gap-2 rounded-[1.5em] p-3 font-sans group relative transition-transform hover:scale-[1.02] duration-300"
-                  style={{ backgroundColor: colors.bg, color: colors.text }}
+                  className="w-full rounded-[20px] bg-[#1b233d] p-[5px] overflow-hidden shadow-[0_7px_20px_rgba(100,100,111,0.2)] transform transition-transform duration-500 hover:scale-105 group"
                 >
-                  {/* Header with Day Badge and Category */}
-                  <div 
-                    className="flex h-14 w-full items-center justify-between rounded-[1.5em] px-4"
-                    style={{ backgroundColor: colors.inner }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md"
-                        style={{ backgroundColor: colors.accent }}
-                      >
-                        D{item.day}
+                  {/* Top section with gradient */}
+                  <div className={`h-[120px] rounded-[15px] flex flex-col bg-gradient-to-tr ${gradient} relative overflow-hidden`}>
+                    {/* Skewed bar */}
+                    <div className="h-[30px] w-[100px] bg-[#1b233d] rounded-br-[10px] -skew-x-[40deg] origin-left" />
+                    
+                    {/* Day badge and category */}
+                    <div className="absolute top-0 left-0 w-full h-[30px] flex items-center justify-between px-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-bold text-lg pl-2">D{item.day}</span>
                       </div>
-                      <CategoryIcon className="h-5 w-5" style={{ color: colors.text }} />
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon className="h-4 w-4 text-[#1b233d]" />
+                        <span className="text-[#1b233d] text-xs font-semibold">{config.label}</span>
+                      </div>
                     </div>
-                    <span className="text-sm font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: colors.bg }}>
-                      {config.label}
-                    </span>
-                  </div>
-
-                  {/* Meal Name & Description */}
-                  <div 
-                    className="flex w-full flex-col rounded-[1.5em] p-4 relative overflow-hidden group/title"
-                    style={{ backgroundColor: colors.inner }}
-                  >
-                    <h3 className="text-lg font-bold mb-1 line-clamp-1">{meal.name}</h3>
-                    <p className="text-sm opacity-70 line-clamp-2">{meal.description || 'Delicious breakfast meal'}</p>
+                    
+                    {/* Meal name centered */}
+                    <div className="flex-1 flex items-center justify-center px-4">
+                      <h3 className="text-white font-bold text-center line-clamp-2 text-base leading-tight">{meal.name}</h3>
+                    </div>
                     
                     {/* Edit/Delete buttons - appear on hover */}
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <button
                         onClick={() => handleEditClick(meal)}
-                        className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg transition-colors"
+                        className="p-1.5 bg-[#1b233d]/80 hover:bg-[#1b233d] text-white rounded-lg transition-colors"
                         title="Edit meal"
                       >
-                        <Edit className="h-3.5 w-3.5" />
+                        <Edit className="h-3 w-3" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(meal.id)}
-                        className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors"
+                        className="p-1.5 bg-[#1b233d]/80 hover:bg-[#1b233d] text-white rounded-lg transition-colors"
                         title="Delete meal"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Ingredients Section */}
-                  {meal.ingredients && (() => {
-                    const ingredientsList = meal.ingredients.split(',').map(i => i.trim()).filter(i => i);
-                    const isExpanded = expandedIngredients.has(meal.id);
-                    const displayedIngredients = isExpanded ? ingredientsList : ingredientsList.slice(0, 3);
-                    const hasMore = ingredientsList.length > 3;
+                  {/* Bottom section */}
+                  <div className="mt-3 px-3 pb-3">
+                    {/* Description */}
+                    <p className="text-[rgba(170,222,243,0.72)] text-xs text-center line-clamp-2 mb-3">
+                      {meal.description || 'Delicious breakfast meal'}
+                    </p>
                     
-                    return (
-                      <div 
-                        className="flex w-full flex-col rounded-[1.5em] p-3 group/ingredients relative overflow-hidden"
-                        style={{ backgroundColor: colors.inner }}
-                      >
-                        <p className="text-xs font-semibold mb-2 flex items-center gap-1">
-                          🥗 Ingredients
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {displayedIngredients.map((ingredient, idx) => (
-                            <span 
-                              key={idx} 
-                              className="text-xs px-2 py-1 rounded-full"
-                              style={{ backgroundColor: colors.bg }}
-                            >
-                              {ingredient}
-                            </span>
-                          ))}
-                          {hasMore && (
-                            <span 
-                              className="text-xs px-2 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity font-medium"
-                              style={{ backgroundColor: colors.accent, color: 'white' }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedIngredients(prev => {
-                                  const newSet = new Set(prev);
-                                  if (isExpanded) {
-                                    newSet.delete(meal.id);
-                                  } else {
-                                    newSet.add(meal.id);
-                                  }
-                                  return newSet;
-                                });
-                              }}
-                            >
-                              {isExpanded ? '− less' : `+${ingredientsList.length - 3}`}
-                            </span>
-                          )}
+                    {/* Ingredients */}
+                    {meal.ingredients && (() => {
+                      const ingredientsList = meal.ingredients.split(',').map(i => i.trim()).filter(i => i);
+                      const isExpanded = expandedIngredients.has(meal.id);
+                      const displayedIngredients = isExpanded ? ingredientsList : ingredientsList.slice(0, 3);
+                      const hasMore = ingredientsList.length > 3;
+                      
+                      return (
+                        <div className="mb-3">
+                          <p className="text-[rgba(170,222,243,0.5)] text-[10px] mb-1.5">Ingredients</p>
+                          <div className="flex flex-wrap gap-1">
+                            {displayedIngredients.map((ingredient, idx) => (
+                              <span 
+                                key={idx} 
+                                className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-[rgba(170,222,243,0.9)]"
+                              >
+                                {ingredient}
+                              </span>
+                            ))}
+                            {hasMore && (
+                              <span 
+                                className={`text-[10px] px-2 py-0.5 rounded-full cursor-pointer transition-colors font-medium bg-gradient-to-r ${gradient} text-white`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedIngredients(prev => {
+                                    const newSet = new Set(prev);
+                                    if (isExpanded) {
+                                      newSet.delete(meal.id);
+                                    } else {
+                                      newSet.add(meal.id);
+                                    }
+                                    return newSet;
+                                  });
+                                }}
+                              >
+                                {isExpanded ? '− less' : `+${ingredientsList.length - 3}`}
+                              </span>
+                            )}
+                          </div>
                         </div>
+                      );
+                    })()}
+
+                    {/* Nutrition Stats */}
+                    <div className="flex justify-between border-t border-white/10 pt-3">
+                      <div className="flex-1 text-center px-1 text-[rgba(170,222,243,0.72)]">
+                        <span className="block text-sm font-semibold text-white">{Number(meal.calories).toFixed(0)}</span>
+                        <span className="block text-[9px]">kcal</span>
                       </div>
-                    );
-                  })()}
-
-                  {/* Nutrition Stats - Grid */}
-                  <div className="flex w-full gap-2">
-                    <div 
-                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3 group/stat relative overflow-hidden"
-                      style={{ backgroundColor: colors.inner }}
-                    >
-                      <Flame className="h-5 w-5 mb-1" style={{ color: colors.accent }} />
-                      <span className="text-lg font-bold">{Number(meal.calories).toFixed(0)}</span>
-                      <span className="text-[10px] opacity-60">kcal</span>
-                    </div>
-                    <div 
-                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3"
-                      style={{ backgroundColor: colors.inner }}
-                    >
-                      <Dumbbell className="h-5 w-5 mb-1" style={{ color: colors.accent }} />
-                      <span className="text-lg font-bold">{Number(meal.protein).toFixed(1)}g</span>
-                      <span className="text-[10px] opacity-60">Protein</span>
-                    </div>
-                  </div>
-
-                  <div className="flex w-full gap-2">
-                    <div 
-                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3"
-                      style={{ backgroundColor: colors.inner }}
-                    >
-                      <span className="text-base mb-1">🍞</span>
-                      <span className="text-lg font-bold">{Number(meal.carbs).toFixed(1)}g</span>
-                      <span className="text-[10px] opacity-60">Carbs</span>
-                    </div>
-                    <div 
-                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3"
-                      style={{ backgroundColor: colors.inner }}
-                    >
-                      <span className="text-base mb-1">🧈</span>
-                      <span className="text-lg font-bold">{Number(meal.fats).toFixed(1)}g</span>
-                      <span className="text-[10px] opacity-60">Fats</span>
+                      <div className="flex-1 text-center px-1 text-[rgba(170,222,243,0.72)] border-x border-white/10">
+                        <span className="block text-sm font-semibold text-white">{Number(meal.protein).toFixed(1)}g</span>
+                        <span className="block text-[9px]">Protein</span>
+                      </div>
+                      <div className="flex-1 text-center px-1 text-[rgba(170,222,243,0.72)] border-r border-white/10">
+                        <span className="block text-sm font-semibold text-white">{Number(meal.carbs).toFixed(1)}g</span>
+                        <span className="block text-[9px]">Carbs</span>
+                      </div>
+                      <div className="flex-1 text-center px-1 text-[rgba(170,222,243,0.72)]">
+                        <span className="block text-sm font-semibold text-white">{Number(meal.fats).toFixed(1)}g</span>
+                        <span className="block text-[9px]">Fats</span>
+                      </div>
                     </div>
                   </div>
                 </div>
