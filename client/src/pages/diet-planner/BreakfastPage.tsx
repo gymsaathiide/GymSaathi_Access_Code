@@ -431,120 +431,161 @@ export default function BreakfastPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activePlan.meals.map((item, index) => {
             const meal = item.meal;
               const config = categoryConfig[meal.category];
               const CategoryIcon = config.icon;
               
+              // Category-specific color schemes
+              const categoryColors = {
+                veg: { bg: '#E8F5E9', inner: '#C8E6C9', text: '#2E7D32', accent: '#43A047' },
+                eggetarian: { bg: '#FFFACD', inner: '#FFF599', text: '#B49A18', accent: '#D4AF37' },
+                'non-veg': { bg: '#FFEBEE', inner: '#FFCDD2', text: '#C62828', accent: '#E53935' }
+              };
+              const colors = categoryColors[meal.category] || categoryColors.eggetarian;
+              
               return (
-                <Card key={`${meal.id}-${index}`} className="bg-white/5 border-white/10 hover:bg-white/8 transition-colors group relative">
-                  <div className="absolute top-2 left-2 z-10">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
-                      <span className="text-white font-bold text-sm">D{item.day}</span>
+                <div 
+                  key={`${meal.id}-${index}`} 
+                  className="fitCard flex min-h-[22em] flex-col items-center justify-start gap-2 rounded-[1.5em] p-3 font-sans group relative transition-transform hover:scale-[1.02] duration-300"
+                  style={{ backgroundColor: colors.bg, color: colors.text }}
+                >
+                  {/* Header with Day Badge and Category */}
+                  <div 
+                    className="flex h-14 w-full items-center justify-between rounded-[1.5em] px-4"
+                    style={{ backgroundColor: colors.inner }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md"
+                        style={{ backgroundColor: colors.accent }}
+                      >
+                        D{item.day}
+                      </div>
+                      <CategoryIcon className="h-5 w-5" style={{ color: colors.text }} />
+                    </div>
+                    <span className="text-sm font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: colors.bg }}>
+                      {config.label}
+                    </span>
+                  </div>
+
+                  {/* Meal Name & Description */}
+                  <div 
+                    className="flex w-full flex-col rounded-[1.5em] p-4 relative overflow-hidden group/title"
+                    style={{ backgroundColor: colors.inner }}
+                  >
+                    <h3 className="text-lg font-bold mb-1 line-clamp-1">{meal.name}</h3>
+                    <p className="text-sm opacity-70 line-clamp-2">{meal.description || 'Delicious breakfast meal'}</p>
+                    
+                    {/* Edit/Delete buttons - appear on hover */}
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <button
+                        onClick={() => handleEditClick(meal)}
+                        className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg transition-colors"
+                        title="Edit meal"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(meal.id)}
+                        className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors"
+                        title="Delete meal"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
-                  <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleEditClick(meal)}
-                      className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-lg transition-colors"
-                      title="Edit meal"
+
+                  {/* Ingredients Section */}
+                  {meal.ingredients && (() => {
+                    const ingredientsList = meal.ingredients.split(',').map(i => i.trim()).filter(i => i);
+                    const isExpanded = expandedIngredients.has(meal.id);
+                    const displayedIngredients = isExpanded ? ingredientsList : ingredientsList.slice(0, 3);
+                    const hasMore = ingredientsList.length > 3;
+                    
+                    return (
+                      <div 
+                        className="flex w-full flex-col rounded-[1.5em] p-3 group/ingredients relative overflow-hidden"
+                        style={{ backgroundColor: colors.inner }}
+                      >
+                        <p className="text-xs font-semibold mb-2 flex items-center gap-1">
+                          🥗 Ingredients
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {displayedIngredients.map((ingredient, idx) => (
+                            <span 
+                              key={idx} 
+                              className="text-xs px-2 py-1 rounded-full"
+                              style={{ backgroundColor: colors.bg }}
+                            >
+                              {ingredient}
+                            </span>
+                          ))}
+                          {hasMore && (
+                            <span 
+                              className="text-xs px-2 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity font-medium"
+                              style={{ backgroundColor: colors.accent, color: 'white' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedIngredients(prev => {
+                                  const newSet = new Set(prev);
+                                  if (isExpanded) {
+                                    newSet.delete(meal.id);
+                                  } else {
+                                    newSet.add(meal.id);
+                                  }
+                                  return newSet;
+                                });
+                              }}
+                            >
+                              {isExpanded ? '− less' : `+${ingredientsList.length - 3}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Nutrition Stats - Grid */}
+                  <div className="flex w-full gap-2">
+                    <div 
+                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3 group/stat relative overflow-hidden"
+                      style={{ backgroundColor: colors.inner }}
                     >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(meal.id)}
-                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors"
-                      title="Delete meal"
+                      <Flame className="h-5 w-5 mb-1" style={{ color: colors.accent }} />
+                      <span className="text-lg font-bold">{Number(meal.calories).toFixed(0)}</span>
+                      <span className="text-[10px] opacity-60">kcal</span>
+                    </div>
+                    <div 
+                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3"
+                      style={{ backgroundColor: colors.inner }}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      <Dumbbell className="h-5 w-5 mb-1" style={{ color: colors.accent }} />
+                      <span className="text-lg font-bold">{Number(meal.protein).toFixed(1)}g</span>
+                      <span className="text-[10px] opacity-60">Protein</span>
+                    </div>
                   </div>
-                  <CardContent className="p-4 pt-14">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-lg ${config.bgColor} flex items-center justify-center`}>
-                          <CategoryIcon className={`h-4 w-4 ${config.textColor}`} />
-                        </div>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.bgColor} ${config.textColor}`}>
-                          {config.label}
-                        </span>
-                      </div>
+
+                  <div className="flex w-full gap-2">
+                    <div 
+                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3"
+                      style={{ backgroundColor: colors.inner }}
+                    >
+                      <span className="text-base mb-1">🍞</span>
+                      <span className="text-lg font-bold">{Number(meal.carbs).toFixed(1)}g</span>
+                      <span className="text-[10px] opacity-60">Carbs</span>
                     </div>
-                    
-                    <h3 className="text-lg font-semibold text-white mb-1 line-clamp-1">{meal.name}</h3>
-                    <p className="text-white/50 text-sm mb-2 line-clamp-2">{meal.description || 'No description'}</p>
-                    
-                    {meal.ingredients && (() => {
-                      const ingredientsList = meal.ingredients.split(',').map(i => i.trim()).filter(i => i);
-                      const isExpanded = expandedIngredients.has(meal.id);
-                      const displayedIngredients = isExpanded ? ingredientsList : ingredientsList.slice(0, 4);
-                      const hasMore = ingredientsList.length > 4;
-                      
-                      return (
-                        <div className="mb-3">
-                          <p className="text-white/70 text-xs font-medium mb-1.5 flex items-center gap-1">
-                            <span>🥗</span> Ingredients
-                          </p>
-                          <ul className="text-white/50 text-xs space-y-0.5 pl-1">
-                            {displayedIngredients.map((ingredient, idx) => (
-                              <li key={idx} className="flex items-start gap-1.5">
-                                <span className="text-orange-400 mt-0.5">•</span>
-                                <span className="line-clamp-1">{ingredient}</span>
-                              </li>
-                            ))}
-                            {hasMore && (
-                              <li 
-                                className="text-orange-400 text-[11px] pl-3 cursor-pointer hover:text-orange-300 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExpandedIngredients(prev => {
-                                    const newSet = new Set(prev);
-                                    if (isExpanded) {
-                                      newSet.delete(meal.id);
-                                    } else {
-                                      newSet.add(meal.id);
-                                    }
-                                    return newSet;
-                                  });
-                                }}
-                              >
-                                {isExpanded ? '− Show less' : `+${ingredientsList.length - 4} more`}
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      );
-                    })()}
-                    
-                    <div className="grid grid-cols-4 gap-2 text-center">
-                      <div className="bg-white/5 rounded-lg p-2">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Flame className="h-3 w-3 text-orange-400" />
-                        </div>
-                        <span className="text-white font-semibold text-sm">{Number(meal.calories).toFixed(0)}</span>
-                        <p className="text-white/40 text-[10px]">kcal</p>
-                      </div>
-                      <div className="bg-white/5 rounded-lg p-2">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Dumbbell className="h-3 w-3 text-blue-400" />
-                        </div>
-                        <span className="text-white font-semibold text-sm">{Number(meal.protein).toFixed(1)}g</span>
-                        <p className="text-white/40 text-[10px]">Protein</p>
-                      </div>
-                      <div className="bg-white/5 rounded-lg p-2">
-                        <span className="text-amber-400 text-xs">🍞</span>
-                        <span className="text-white font-semibold text-sm block">{Number(meal.carbs).toFixed(1)}g</span>
-                        <p className="text-white/40 text-[10px]">Carbs</p>
-                      </div>
-                      <div className="bg-white/5 rounded-lg p-2">
-                        <span className="text-purple-400 text-xs">🧈</span>
-                        <span className="text-white font-semibold text-sm block">{Number(meal.fats).toFixed(1)}g</span>
-                        <p className="text-white/40 text-[10px]">Fats</p>
-                      </div>
+                    <div 
+                      className="flex-1 flex flex-col items-center justify-center rounded-[1.5em] p-3"
+                      style={{ backgroundColor: colors.inner }}
+                    >
+                      <span className="text-base mb-1">🧈</span>
+                      <span className="text-lg font-bold">{Number(meal.fats).toFixed(1)}g</span>
+                      <span className="text-[10px] opacity-60">Fats</span>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
