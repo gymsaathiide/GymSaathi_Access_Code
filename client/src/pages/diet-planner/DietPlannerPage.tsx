@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowLeft, Calendar, Target, Loader2, ChefHat, Clock, ChevronDown, ChevronUp, Sparkles, RotateCw, Activity } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, Calendar, Target, Loader2, ChefHat, Clock, ChevronDown, ChevronUp, Sparkles, RotateCw, Activity, Flame, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "wouter";
+import { CircularProgress, MacroCircle } from "@/components/diet/CircularProgress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Meal {
   id: string;

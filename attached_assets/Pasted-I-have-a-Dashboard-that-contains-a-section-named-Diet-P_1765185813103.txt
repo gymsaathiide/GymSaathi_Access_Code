@@ -1,0 +1,58 @@
+I have a Dashboard that contains a section named Diet Planner. I want to add a dropdown control to that section. When the user clicks the dropdown it should show three options:
+
+Breakfast
+
+Lunch
+
+Dinner
+
+Selecting any option must show a full, identical UI panel for that meal type (Breakfast, Lunch, Dinner) using the same visual design I provide in the screenshot. Each meal panel must include the following sub-features and layout elements, and they must match the screenshot styling (fonts, spacing, shadows, colors, paddings, and card style):
+
+Required UI elements for each meal panel
+
+Header with the meal name (Breakfast / Lunch / Dinner).
+
+A visible Add Tracker button (prominent, same styling as screenshot) that opens a small form/modal to add a new tracker entry (date, time, meal item, calories, notes).
+
+A compact tracker list showing recent entries for that meal (date, item, qty, calories, actions: edit/delete).
+
+A small graph area that shows trends for that meal (calories over time or entries per day). Provide a placeholder graph component that can be wired to real data later.
+
+A summary card showing totals (e.g., total calories today, weekly average) — match sizing and typography from the screenshot.
+
+Responsive behavior: the panel must be mobile-first and match the screenshot’s mobile/tablet/desktop layout.
+
+Accessibility: dropdown and controls must be keyboard-focusable and have suitable ARIA labels.
+
+Functional / Integration Requirements
+
+Implement as a reusable React component (preferred) or as plain HTML/CSS/JS if React is not possible.
+
+Provide a clear data contract / sample JSON structure for the meal data and tracker entries so I can supply the Excel import later. Example keys: mealType, date, time, item, quantity, calories, notes, id.
+
+Include a placeholder function or integration hook named importExcelData(file) that will accept the Excel I will provide later. Document where to add Excel parsing (e.g., using SheetJS / papaparse) and how parsed rows should be converted to the sample JSON structure.
+
+The graph should be implemented with a widely-used chart library (e.g., Chart.js or Recharts). Provide a mock dataset and show the graph rendering with that mock data.
+
+State management: prefer local state + prop callbacks (e.g., onAddEntry, onEditEntry, onDeleteEntry) so it’s easy to wire to global state or API later.
+
+Keep styling in a separate CSS/SCSS file or styled-components module and name classes clearly so they can be adapted to the project’s design system.
+
+Provide clear documentation/comments in the code explaining where to replace mock data with real imported data and where to hook an API.
+
+Deliverables
+
+Full React component file(s) for the Diet Planner dropdown + three meal panels.
+
+CSS/SCSS or styled-components file(s) that match the screenshot UI.
+
+A small mock dataset and the sample JSON schema for Excel-imported rows.
+
+Placeholder importExcelData(file) implementation and instructions for converting Excel to the schema.
+
+Short README (5–8 lines) explaining how to integrate the component into the Dashboard and how to supply real data.
+
+Design reference (match exactly):
+[PASTE SCREENSHOT / UI IMAGE HERE — this screenshot is the source of truth for spacing, fonts, colors, and layout; implement the UI exactly as shown]
+
+Notes: I will provide the actual meal/tracker data later in Excel format. For now, use mock sample data only. Ensure the component is ready to accept the Excel import and display the imported entries in the tracker list and graph.
