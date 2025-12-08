@@ -9950,6 +9950,162 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // ==========================================
+  // BREAKFAST MEALS DATABASE API
+  // ==========================================
+
+  // Get all breakfast meals
+  app.get('/api/meals/breakfast', async (req, res) => {
+    try {
+      const { category, search } = req.query;
+      
+      let query = 'SELECT * FROM meals_breakfast';
+      const params: any[] = [];
+      const conditions: string[] = [];
+      
+      if (category && category !== 'all') {
+        conditions.push(`category = $${params.length + 1}`);
+        params.push(category);
+      }
+      
+      if (search) {
+        conditions.push(`(LOWER(name) LIKE $${params.length + 1} OR LOWER(description) LIKE $${params.length + 1})`);
+        params.push(`%${String(search).toLowerCase()}%`);
+      }
+      
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+      
+      query += ' ORDER BY name ASC';
+      
+      const result = await db!.execute(sql.raw(query + (params.length ? '' : ''), params));
+      
+      // If we have parameters, use parameterized query
+      let meals;
+      if (params.length > 0) {
+        const paramQuery = sql`SELECT * FROM meals_breakfast WHERE ${
+          category && category !== 'all' 
+            ? sql`category = ${category}` 
+            : sql`1=1`
+        } ${
+          search 
+            ? sql` AND (LOWER(name) LIKE ${`%${String(search).toLowerCase()}%`} OR LOWER(description) LIKE ${`%${String(search).toLowerCase()}%`})`
+            : sql``
+        } ORDER BY name ASC`;
+        const queryResult = await db!.execute(paramQuery);
+        meals = queryResult.rows;
+      } else {
+        const queryResult = await db!.execute(sql`SELECT * FROM meals_breakfast ORDER BY name ASC`);
+        meals = queryResult.rows;
+      }
+      
+      res.json({ ok: true, meals });
+    } catch (error: any) {
+      console.error('Error fetching breakfast meals:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Get single breakfast meal by ID
+  app.get('/api/meals/breakfast/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await db!.execute(sql`SELECT * FROM meals_breakfast WHERE id = ${id}`);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Meal not found' });
+      }
+      
+      res.json({ ok: true, meal: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error fetching breakfast meal:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Update breakfast meal
+  app.put('/api/meals/breakfast/:id', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { id } = req.params;
+      const { name, description, ingredients, protein, carbs, fats, calories, category, imageUrl } = req.body;
+      
+      const result = await db!.execute(sql`
+        UPDATE meals_breakfast 
+        SET 
+          name = ${name},
+          description = ${description},
+          ingredients = ${ingredients},
+          protein = ${protein},
+          carbs = ${carbs},
+          fats = ${fats},
+          calories = ${calories},
+          category = ${category},
+          image_url = ${imageUrl || null},
+          updated_at = NOW()
+        WHERE id = ${id}
+        RETURNING *
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Meal not found' });
+      }
+      
+      res.json({ ok: true, meal: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error updating breakfast meal:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Delete breakfast meal
+  app.delete('/api/meals/breakfast/:id', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { id } = req.params;
+      
+      const result = await db!.execute(sql`DELETE FROM meals_breakfast WHERE id = ${id} RETURNING id`);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Meal not found' });
+      }
+      
+      res.json({ ok: true, message: 'Meal deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting breakfast meal:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Create new breakfast meal
+  app.post('/api/meals/breakfast', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { name, description, ingredients, protein, carbs, fats, calories, category, imageUrl } = req.body;
+      
+      const result = await db!.execute(sql`
+        INSERT INTO meals_breakfast (name, description, ingredients, protein, carbs, fats, calories, category, image_url)
+        VALUES (${name}, ${description}, ${ingredients}, ${protein}, ${carbs}, ${fats}, ${calories}, ${category}, ${imageUrl || null})
+        RETURNING *
+      `);
+      
+      res.json({ ok: true, meal: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error creating breakfast meal:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
