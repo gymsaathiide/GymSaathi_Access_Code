@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ArrowLeft, Coffee, X, Leaf, Egg, Drumstick, Flame, Dumbbell, Calendar, RefreshCw, Edit, Trash2, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
@@ -288,22 +287,50 @@ export default function BreakfastPage() {
         </div>
 
         <div className="flex flex-col gap-4 mb-6">
-          <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="w-full md:w-auto">
-            <TabsList className="bg-white/5 border border-white/10">
-              <TabsTrigger value="all" className="data-[state=active]:bg-white/10 text-white/60 data-[state=active]:text-white">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="veg" className="data-[state=active]:bg-green-500/20 text-white/60 data-[state=active]:text-green-400">
-                <Leaf className="h-3 w-3 mr-1" /> Veg
-              </TabsTrigger>
-              <TabsTrigger value="eggetarian" className="data-[state=active]:bg-yellow-500/20 text-white/60 data-[state=active]:text-yellow-400">
-                <Egg className="h-3 w-3 mr-1" /> Egg
-              </TabsTrigger>
-              <TabsTrigger value="non-veg" className="data-[state=active]:bg-red-500/20 text-white/60 data-[state=active]:text-red-400">
-                <Drumstick className="h-3 w-3 mr-1" /> Non-Veg
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* Veg/Non-Veg Toggle Switch */}
+          <div className="flex items-center gap-4">
+            <span className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${categoryFilter === 'veg' ? 'text-green-400' : 'text-white/40'}`}>
+              <Leaf className="h-4 w-4" /> Veg
+            </span>
+            
+            <label className="cursor-pointer relative h-[2.5em] w-[5em] rounded-full bg-[hsl(0,0%,7%)] shadow-[0px_2px_4px_0px_rgb(18,18,18,0.25),0px_4px_8px_0px_rgb(18,18,18,0.35)]">
+              <span className="absolute inset-[0.1em] rounded-full border-[1px] border-[hsl(0,0%,25%)]"></span>
+              <input 
+                className="peer h-[1em] w-[1em] opacity-0 absolute" 
+                type="checkbox" 
+                checked={categoryFilter === 'non-veg'}
+                onChange={(e) => setCategoryFilter(e.target.checked ? 'non-veg' : 'veg')}
+              />
+              {/* Track color indicator */}
+              <div className={`absolute inset-[0.2em] rounded-full transition-colors duration-300 ${
+                categoryFilter === 'non-veg' ? 'bg-red-500/20' : 'bg-green-500/20'
+              }`}></div>
+              {/* Toggle knob */}
+              <span className={`absolute top-1/2 flex h-[2em] w-[2em] -translate-y-1/2 items-center justify-center rounded-full shadow-[inset_4px_4px_4px_0px_rgba(64,64,64,0.25),inset_-4px_-4px_4px_0px_rgba(16,16,16,0.5)] duration-300 transition-all ${
+                categoryFilter === 'non-veg' 
+                  ? 'left-[calc(100%-2.25em)] bg-red-500' 
+                  : 'left-[0.25em] bg-green-500'
+              }`}>
+                <span className="relative h-full w-full rounded-full">
+                  <span className="absolute inset-[0.1em] rounded-full border-[1px] border-white/30"></span>
+                </span>
+              </span>
+            </label>
+            
+            <span className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${categoryFilter === 'non-veg' ? 'text-red-400' : 'text-white/40'}`}>
+              <Drumstick className="h-4 w-4" /> Non-Veg
+            </span>
+            
+            {/* All Categories Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCategoryFilter('all')}
+              className={`ml-2 ${categoryFilter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
+            >
+              All
+            </Button>
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <Button
