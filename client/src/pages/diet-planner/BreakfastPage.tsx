@@ -287,46 +287,86 @@ export default function BreakfastPage() {
         </div>
 
         <div className="flex flex-col gap-4 mb-6">
-          {/* Veg/Non-Veg Toggle Switch */}
-          <div className="flex items-center gap-4">
-            <span className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${categoryFilter === 'veg' ? 'text-green-400' : 'text-white/40'}`}>
-              <Leaf className="h-4 w-4" /> Veg
-            </span>
-            
-            <label className="cursor-pointer relative h-[2.5em] w-[5em] rounded-full bg-[hsl(0,0%,7%)] shadow-[0px_2px_4px_0px_rgb(18,18,18,0.25),0px_4px_8px_0px_rgb(18,18,18,0.35)]">
-              <span className="absolute inset-[0.1em] rounded-full border-[1px] border-[hsl(0,0%,25%)]"></span>
+          {/* Category Toggle Switches */}
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* Veg Toggle */}
+            <label className="relative inline-flex items-center cursor-pointer">
               <input 
-                className="peer h-[1em] w-[1em] opacity-0 absolute" 
+                className="sr-only peer" 
                 type="checkbox" 
-                checked={categoryFilter === 'non-veg'}
-                onChange={(e) => setCategoryFilter(e.target.checked ? 'non-veg' : 'veg')}
+                checked={categoryFilter === 'veg'}
+                onChange={() => setCategoryFilter(categoryFilter === 'veg' ? 'all' : 'veg')}
               />
-              {/* Track color indicator */}
-              <div className={`absolute inset-[0.2em] rounded-full transition-colors duration-300 ${
-                categoryFilter === 'non-veg' ? 'bg-red-500/20' : 'bg-green-500/20'
-              }`}></div>
-              {/* Toggle knob */}
-              <span className={`absolute top-1/2 flex h-[2em] w-[2em] -translate-y-1/2 items-center justify-center rounded-full shadow-[inset_4px_4px_4px_0px_rgba(64,64,64,0.25),inset_-4px_-4px_4px_0px_rgba(16,16,16,0.5)] duration-300 transition-all ${
-                categoryFilter === 'non-veg' 
-                  ? 'left-[calc(100%-2.25em)] bg-red-500' 
-                  : 'left-[0.25em] bg-green-500'
+              <div className={`w-16 h-8 rounded-full transition-all duration-500 flex items-center px-1 ${
+                categoryFilter === 'veg' 
+                  ? 'bg-gradient-to-r from-green-400 to-green-600' 
+                  : 'bg-[hsl(0,0%,15%)] border border-white/10'
               }`}>
-                <span className="relative h-full w-full rounded-full">
-                  <span className="absolute inset-[0.1em] rounded-full border-[1px] border-white/30"></span>
-                </span>
+                <div className={`h-6 w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md ${
+                  categoryFilter === 'veg' ? 'translate-x-8' : 'translate-x-0'
+                }`}>
+                  <Leaf className={`h-3.5 w-3.5 ${categoryFilter === 'veg' ? 'text-green-500' : 'text-gray-400'}`} />
+                </div>
+              </div>
+              <span className={`ml-2 text-sm font-medium transition-colors ${categoryFilter === 'veg' ? 'text-green-400' : 'text-white/50'}`}>
+                Veg
               </span>
             </label>
-            
-            <span className={`text-sm font-medium flex items-center gap-1.5 transition-colors ${categoryFilter === 'non-veg' ? 'text-red-400' : 'text-white/40'}`}>
-              <Drumstick className="h-4 w-4" /> Non-Veg
-            </span>
-            
-            {/* All Categories Button */}
+
+            {/* Eggetarian Toggle */}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                className="sr-only peer" 
+                type="checkbox" 
+                checked={categoryFilter === 'eggetarian'}
+                onChange={() => setCategoryFilter(categoryFilter === 'eggetarian' ? 'all' : 'eggetarian')}
+              />
+              <div className={`w-16 h-8 rounded-full transition-all duration-500 flex items-center px-1 ${
+                categoryFilter === 'eggetarian' 
+                  ? 'bg-gradient-to-r from-yellow-400 to-orange-400' 
+                  : 'bg-[hsl(0,0%,15%)] border border-white/10'
+              }`}>
+                <div className={`h-6 w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md text-base ${
+                  categoryFilter === 'eggetarian' ? 'translate-x-8' : 'translate-x-0'
+                }`}>
+                  {categoryFilter === 'eggetarian' ? '🍳' : '🥚'}
+                </div>
+              </div>
+              <span className={`ml-2 text-sm font-medium transition-colors ${categoryFilter === 'eggetarian' ? 'text-yellow-400' : 'text-white/50'}`}>
+                Egg
+              </span>
+            </label>
+
+            {/* Non-Veg Toggle */}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                className="sr-only peer" 
+                type="checkbox" 
+                checked={categoryFilter === 'non-veg'}
+                onChange={() => setCategoryFilter(categoryFilter === 'non-veg' ? 'all' : 'non-veg')}
+              />
+              <div className={`w-16 h-8 rounded-full transition-all duration-500 flex items-center px-1 ${
+                categoryFilter === 'non-veg' 
+                  ? 'bg-gradient-to-r from-red-400 to-red-600' 
+                  : 'bg-[hsl(0,0%,15%)] border border-white/10'
+              }`}>
+                <div className={`h-6 w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md ${
+                  categoryFilter === 'non-veg' ? 'translate-x-8' : 'translate-x-0'
+                }`}>
+                  <Drumstick className={`h-3.5 w-3.5 ${categoryFilter === 'non-veg' ? 'text-red-500' : 'text-gray-400'}`} />
+                </div>
+              </div>
+              <span className={`ml-2 text-sm font-medium transition-colors ${categoryFilter === 'non-veg' ? 'text-red-400' : 'text-white/50'}`}>
+                Non-Veg
+              </span>
+            </label>
+
+            {/* All Button */}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setCategoryFilter('all')}
-              className={`ml-2 ${categoryFilter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
+              className={`${categoryFilter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
             >
               All
             </Button>
