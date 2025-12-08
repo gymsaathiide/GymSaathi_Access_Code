@@ -73,7 +73,7 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   Mobile-responsive card view for small screens, table view for desktop
     -   Routes: `/settings` and `/users` (Super Admin only)
 -   **Diet Planner System** (Member Dashboard): Comprehensive nutrition and fitness planning with:
-    -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals
+    -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals (uses OpenAI Vision for image parsing)
     -   **AI-Powered Diet Plans**: Generate 7-day or 30-day personalized meal plans (vegetarian/non-vegetarian)
     -   **Meal Details**: Indian cuisine focus with Hindi translations, ingredients, recipes, prep/cook times
     -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
@@ -81,6 +81,14 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
     -   Database tables: body_composition_reports, diet_plans, meals, meal_logs, user_foods, daily_tracking, workout_plans, workout_exercises
     -   Routes: `/member/diet-planner/*` (Body Report, Diet Planner, Daily Nutrition, Workout Plan)
+-   **Permanent Member Deletion** (Admin): Complete member data removal with:
+    -   Delete button with confirmation dialog in Members page
+    -   Permanent deletion of member record and linked user account
+    -   Cascading deletion of all related data (memberships, orders, payments, attendance, invoices)
+    -   Diet planner data cleanup (body composition reports, diet plans, meals, meal logs, tracking data)
+    -   Supabase storage file cleanup (member photos, body composition images)
+    -   Lead conversion reference cleanup (clears convertedToMemberId before deletion)
+    -   API endpoint: `DELETE /api/members/:id/permanent` (Admin only)
 
 # External Dependencies
 
