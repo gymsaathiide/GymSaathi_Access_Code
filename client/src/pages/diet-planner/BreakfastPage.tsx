@@ -1,8 +1,14 @@
 import { useState } from "react";
-import { ArrowLeft, Coffee, X, Leaf, Egg, Drumstick, Flame, Dumbbell, Calendar, RefreshCw } from "lucide-react";
+import { ArrowLeft, Coffee, X, Leaf, Egg, Drumstick, Flame, Dumbbell, Calendar, RefreshCw, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
@@ -35,6 +41,19 @@ export default function BreakfastPage() {
   const { toast } = useToast();
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [activePlan, setActivePlan] = useState<{ duration: 7 | 30; category: string; meals: MealPlanItem[] } | null>(null);
+  const [editingMeal, setEditingMeal] = useState<BreakfastMeal | null>(null);
+  const [deletingMealId, setDeletingMealId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    ingredients: '',
+    protein: '',
+    carbs: '',
+    fats: '',
+    calories: '',
+    category: '' as 'veg' | 'eggetarian' | 'non-veg',
+    imageUrl: ''
+  });
 
   const generatePlanMutation = useMutation({
     mutationFn: async ({ duration, category }: { duration: 7 | 30; category: string }) => {
@@ -56,6 +75,73 @@ export default function BreakfastPage() {
     },
   });
 
+  const updateMealMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof editForm }) => {
+      // Convert string values to numbers and match backend schema (snake_case)
+      const payload = {
+        name: data.name,
+        description: data.description,
+        ingredients: data.ingredients,
+        protein: parseFloat(data.protein) || 0,
+        carbs: parseFloat(data.carbs) || 0,
+        fats: parseFloat(data.fats) || 0,
+        calories: parseFloat(data.calories) || 0,
+        category: data.category,
+        image_url: data.imageUrl || null,
+      };
+      
+      const res = await fetch(`/api/meals/breakfast/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Failed to update meal');
+      return res.json();
+    },
+    onSuccess: (response) => {
+      if (activePlan) {
+        const updatedMeals = activePlan.meals.map(item => 
+          item.meal.id === response.meal.id ? { ...item, meal: response.meal } : item
+        );
+        setActivePlan({ ...activePlan, meals: updatedMeals });
+      }
+      setEditingMeal(null);
+      toast({ title: 'Meal updated', description: 'Changes saved successfully' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to update meal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteMealMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/meals/breakfast/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete meal');
+      return res.json();
+    },
+    onSuccess: (_, deletedId) => {
+      if (activePlan) {
+        const updatedMeals = activePlan.meals.filter(item => item.meal.id !== deletedId);
+        if (updatedMeals.length === 0) {
+          setActivePlan(null);
+          toast({ title: 'Plan cleared', description: 'Last meal deleted - plan is now empty' });
+        } else {
+          setActivePlan({ ...activePlan, meals: updatedMeals });
+          toast({ title: 'Meal deleted', description: 'Removed from plan' });
+        }
+      }
+      setDeletingMealId(null);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to delete meal', description: error.message, variant: 'destructive' });
+      setDeletingMealId(null);
+    },
+  });
+
   const handleGeneratePlan = (duration: 7 | 30) => {
     generatePlanMutation.mutate({ duration, category: categoryFilter });
   };
@@ -68,6 +154,36 @@ export default function BreakfastPage() {
   const handleClearPlan = () => {
     setActivePlan(null);
     toast({ title: 'Plan cleared' });
+  };
+
+  const handleEditClick = (meal: BreakfastMeal) => {
+    setEditingMeal(meal);
+    setEditForm({
+      name: meal.name,
+      description: meal.description || '',
+      ingredients: meal.ingredients || '',
+      protein: meal.protein,
+      carbs: meal.carbs,
+      fats: meal.fats,
+      calories: meal.calories,
+      category: meal.category,
+      imageUrl: meal.image_url || ''
+    });
+  };
+
+  const handleUpdateMeal = () => {
+    if (!editingMeal) return;
+    updateMealMutation.mutate({ id: editingMeal.id, data: editForm });
+  };
+
+  const handleDeleteClick = (mealId: string) => {
+    setDeletingMealId(mealId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingMealId) {
+      deleteMealMutation.mutate(deletingMealId);
+    }
   };
 
   return (
@@ -178,6 +294,22 @@ export default function BreakfastPage() {
                       <span className="text-white font-bold text-sm">D{item.day}</span>
                     </div>
                   </div>
+                  <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleEditClick(meal)}
+                      className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-lg transition-colors"
+                      title="Edit meal"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(meal.id)}
+                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors"
+                      title="Delete meal"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                   <CardContent className="p-4 pt-14">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -226,6 +358,146 @@ export default function BreakfastPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Meal Dialog */}
+      <Dialog open={!!editingMeal} onOpenChange={(open) => !open && setEditingMeal(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Breakfast Meal</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Meal Name</Label>
+              <Input
+                id="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Enter meal name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category">Category</Label>
+              <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value as 'veg' | 'eggetarian' | 'non-veg' })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="veg">Veg</SelectItem>
+                  <SelectItem value="eggetarian">Eggetarian</SelectItem>
+                  <SelectItem value="non-veg">Non-Veg</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Enter description"
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ingredients">Ingredients</Label>
+              <Textarea
+                id="ingredients"
+                value={editForm.ingredients}
+                onChange={(e) => setEditForm({ ...editForm, ingredients: e.target.value })}
+                placeholder="Enter ingredients"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="calories">Calories (kcal)</Label>
+                <Input
+                  id="calories"
+                  type="number"
+                  step="0.01"
+                  value={editForm.calories}
+                  onChange={(e) => setEditForm({ ...editForm, calories: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="protein">Protein (g)</Label>
+                <Input
+                  id="protein"
+                  type="number"
+                  step="0.01"
+                  value={editForm.protein}
+                  onChange={(e) => setEditForm({ ...editForm, protein: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="carbs">Carbs (g)</Label>
+                <Input
+                  id="carbs"
+                  type="number"
+                  step="0.01"
+                  value={editForm.carbs}
+                  onChange={(e) => setEditForm({ ...editForm, carbs: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="fats">Fats (g)</Label>
+                <Input
+                  id="fats"
+                  type="number"
+                  step="0.01"
+                  value={editForm.fats}
+                  onChange={(e) => setEditForm({ ...editForm, fats: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="imageUrl">Image URL (optional)</Label>
+              <Input
+                id="imageUrl"
+                value={editForm.imageUrl}
+                onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditingMeal(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateMeal} disabled={updateMealMutation.isPending}>
+              {updateMealMutation.isPending ? 'Updating...' : 'Update Meal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingMealId} onOpenChange={(open) => !open && setDeletingMealId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Meal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this meal from the database. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingMealId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+              disabled={deleteMealMutation.isPending}
+            >
+              {deleteMealMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
