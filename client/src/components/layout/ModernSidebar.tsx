@@ -28,6 +28,7 @@ import {
   Apple,
   Target,
   Activity,
+  Utensils,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
@@ -70,6 +71,7 @@ const memberItems = [
   { title: "Dashboard", url: "/member", icon: LayoutDashboard },
   { title: "Body Report", url: "/member/diet-planner/body-composition", icon: Activity },
   { title: "Diet Planner", url: "/member/diet-planner", icon: Apple },
+  { title: "Meals", url: "/member/diet-planner/meals", icon: Utensils },
   { title: "Daily Nutrition", url: "/member/diet-planner/daily-nutrition", icon: Target },
   { title: "Workout Planner", url: "/member/diet-planner/workout", icon: Dumbbell },
   { title: "Classes", url: "/member/classes", icon: Calendar },

@@ -3,3 +3,7 @@ export { default as DietPlannerPage } from './DietPlannerPage';
 export { default as WorkoutPlannerPage } from './WorkoutPlannerPage';
 export { default as DailyNutritionPage } from './DailyNutritionPage';
 export { default as HistoryPage } from './HistoryPage';
+export { default as DietMealsLandingPage } from './DietMealsLandingPage';
+export { default as BreakfastPage } from './BreakfastPage';
+export { default as LunchPage } from './LunchPage';
+export { default as DinnerPage } from './DinnerPage';
