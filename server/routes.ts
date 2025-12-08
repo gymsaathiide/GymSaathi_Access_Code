@@ -3481,6 +3481,222 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Permanent delete member - removes ALL data including Supabase storage files
+  app.delete('/api/members/:id/permanent', requireRole('admin'), async (req, res) => {
+    try {
+      const memberId = req.params.id;
+      
+      // Find the member
+      const existingMember = await db!.select().from(schema.members)
+        .where(eq(schema.members.id, memberId))
+        .limit(1).then(rows => rows[0]);
+
+      if (!existingMember) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+
+      const user = await storage.getUserById(req.session!.userId!);
+      if (user?.role !== 'superadmin' && existingMember.gymId !== user?.gymId) {
+        return res.status(403).json({ error: 'Access denied to this member' });
+      }
+
+      const userId = existingMember.userId;
+      const deletionResults: { step: string; success: boolean; error?: string }[] = [];
+
+      // 1. Delete diet planner data if user exists
+      if (userId) {
+        try {
+          // Delete body composition reports
+          await db!.execute(sql`DELETE FROM body_composition_reports WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'body_composition_reports', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'body_composition_reports', success: false, error: e.message });
+        }
+
+        try {
+          // Delete meals (linked to diet_plans)
+          await db!.execute(sql`DELETE FROM meals WHERE diet_plan_id IN (SELECT id FROM diet_plans WHERE user_id = ${userId})`);
+          deletionResults.push({ step: 'meals', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'meals', success: false, error: e.message });
+        }
+
+        try {
+          // Delete diet plans
+          await db!.execute(sql`DELETE FROM diet_plans WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'diet_plans', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'diet_plans', success: false, error: e.message });
+        }
+
+        try {
+          // Delete meal logs
+          await db!.execute(sql`DELETE FROM meal_logs WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'meal_logs', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'meal_logs', success: false, error: e.message });
+        }
+
+        try {
+          // Delete daily tracking
+          await db!.execute(sql`DELETE FROM daily_tracking WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'daily_tracking', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'daily_tracking', success: false, error: e.message });
+        }
+
+        try {
+          // Delete user foods
+          await db!.execute(sql`DELETE FROM user_foods WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'user_foods', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'user_foods', success: false, error: e.message });
+        }
+
+        try {
+          // Delete workout exercises (linked to workout_plans)
+          await db!.execute(sql`DELETE FROM workout_exercises WHERE workout_plan_id IN (SELECT id FROM workout_plans WHERE user_id = ${userId})`);
+          deletionResults.push({ step: 'workout_exercises', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'workout_exercises', success: false, error: e.message });
+        }
+
+        try {
+          // Delete workout plans
+          await db!.execute(sql`DELETE FROM workout_plans WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'workout_plans', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'workout_plans', success: false, error: e.message });
+        }
+
+        try {
+          // Delete nutrition preferences
+          await db!.execute(sql`DELETE FROM nutrition_preferences WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'nutrition_preferences', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'nutrition_preferences', success: false, error: e.message });
+        }
+
+        try {
+          // Delete daily recommendations
+          await db!.execute(sql`DELETE FROM daily_recommendations WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'daily_recommendations', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'daily_recommendations', success: false, error: e.message });
+        }
+
+        try {
+          // Delete notifications
+          await db!.execute(sql`DELETE FROM notifications WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'notifications', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'notifications', success: false, error: e.message });
+        }
+
+        try {
+          // Delete OTP verifications
+          await db!.execute(sql`DELETE FROM otp_verifications WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'otp_verifications', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'otp_verifications', success: false, error: e.message });
+        }
+
+        try {
+          // Delete password reset tokens
+          await db!.execute(sql`DELETE FROM password_reset_tokens WHERE user_id = ${userId}`);
+          deletionResults.push({ step: 'password_reset_tokens', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'password_reset_tokens', success: false, error: e.message });
+        }
+      }
+
+      // 2. Delete Supabase storage files
+      try {
+        // Delete member photo if exists
+        if (existingMember.photoUrl && supabaseAdmin) {
+          // Extract file path from URL - handle both public URL formats
+          const photoPath = existingMember.photoUrl.split('/member-photos/').pop();
+          if (photoPath) {
+            const decodedPath = decodeURIComponent(photoPath);
+            const { error: photoDeleteError } = await supabaseAdmin.storage.from('member-photos').remove([decodedPath]);
+            if (photoDeleteError) {
+              console.warn('Failed to delete member photo:', photoDeleteError.message);
+            }
+          }
+        }
+        deletionResults.push({ step: 'member_photo_storage', success: true });
+      } catch (e: any) {
+        console.warn('Error deleting member photo storage:', e.message);
+        deletionResults.push({ step: 'member_photo_storage', success: false, error: e.message });
+      }
+
+      try {
+        // Delete body composition images from storage
+        if (userId && supabaseAdmin) {
+          const { data: files, error: listError } = await supabaseAdmin.storage
+            .from('body-composition')
+            .list(userId);
+          
+          if (listError) {
+            console.warn('Failed to list body composition files:', listError.message);
+          } else if (files && files.length > 0) {
+            const filePaths = files.map(f => `${userId}/${f.name}`);
+            const { error: removeError } = await supabaseAdmin.storage.from('body-composition').remove(filePaths);
+            if (removeError) {
+              console.warn('Failed to delete body composition files:', removeError.message);
+            }
+          }
+        }
+        deletionResults.push({ step: 'body_composition_storage', success: true });
+      } catch (e: any) {
+        console.warn('Error deleting body composition storage:', e.message);
+        deletionResults.push({ step: 'body_composition_storage', success: false, error: e.message });
+      }
+
+      // 3. Clear lead references (converted leads)
+      try {
+        await db!.execute(sql`UPDATE leads SET converted_to_member_id = NULL WHERE converted_to_member_id = ${memberId}`);
+        deletionResults.push({ step: 'clear_lead_references', success: true });
+      } catch (e: any) {
+        deletionResults.push({ step: 'clear_lead_references', success: false, error: e.message });
+      }
+
+      // 4. Delete the member record (cascades to memberships, attendance, orders, etc.)
+      try {
+        await db!.delete(schema.members).where(eq(schema.members.id, memberId));
+        deletionResults.push({ step: 'member_record', success: true });
+      } catch (e: any) {
+        deletionResults.push({ step: 'member_record', success: false, error: e.message });
+        return res.status(500).json({ 
+          error: 'Failed to delete member record',
+          details: e.message,
+          deletionResults 
+        });
+      }
+
+      // 5. Delete the user account if exists
+      if (userId) {
+        try {
+          await db!.delete(schema.users).where(eq(schema.users.id, userId));
+          deletionResults.push({ step: 'user_account', success: true });
+        } catch (e: any) {
+          deletionResults.push({ step: 'user_account', success: false, error: e.message });
+        }
+      }
+
+      console.log(`Member ${memberId} permanently deleted. Results:`, deletionResults);
+      
+      res.json({ 
+        success: true, 
+        message: 'Member permanently deleted',
+        deletionResults 
+      });
+    } catch (error: any) {
+      console.error(`Error permanently deleting member ${req.params.id}:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/membership-plans', requireRole('admin', 'trainer'), async (req, res) => {
     try {
       const user = await storage.getUserById(req.session!.userId!);

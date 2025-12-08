@@ -40,7 +40,17 @@ import { useToast } from "@/hooks/use-toast";
 import { MemberForm } from "@/components/MemberForm";
 import { MemberProfileDialog } from "@/components/MemberProfileDialog";
 import { PageHeader, PageCard } from "@/components/layout";
-import { Search, Plus, Eye, Edit, UserX, Calendar, User } from "lucide-react";
+import { Search, Plus, Eye, Edit, UserX, Calendar, User, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import type { Member } from "@shared/schema";
 
@@ -52,6 +62,7 @@ export default function Members() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [viewingMember, setViewingMember] = useState<Member | null>(null);
+  const [deletingMember, setDeletingMember] = useState<Member | null>(null);
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -87,6 +98,39 @@ export default function Members() {
   const handleDeactivate = async (memberId: string) => {
     if (confirm("Are you sure you want to deactivate this member?")) {
       deleteMutation.mutate(memberId);
+    }
+  };
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const response = await apiRequest("DELETE", `/api/members/${memberId}/permanent`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete member");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      setDeletingMember(null);
+      toast({
+        title: "Member Deleted",
+        description: "Member and all associated data have been permanently deleted.",
+      });
+      console.log("Deletion results:", data?.deletionResults);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Deletion Failed",
+        description: error.message || "An error occurred while deleting the member.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePermanentDelete = () => {
+    if (deletingMember) {
+      permanentDeleteMutation.mutate(deletingMember.id);
     }
   };
 
@@ -273,6 +317,17 @@ export default function Members() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             )}
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-red-600 dark:text-red-400"
+                                onClick={() => setDeletingMember(member)}
+                                disabled={permanentDeleteMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -360,6 +415,19 @@ export default function Members() {
                                 <UserX className="h-4 w-4" />
                               </Button>
                             )}
+                            {canEdit && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-600 dark:text-white/60 hover:text-red-600 dark:hover:text-red-400"
+                                onClick={() => setDeletingMember(member)}
+                                disabled={permanentDeleteMutation.isPending}
+                                data-testid={`button-delete-member-${member.id}`}
+                                title="Permanently Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -417,6 +485,47 @@ export default function Members() {
         open={!!viewingMember}
         onOpenChange={(open) => !open && setViewingMember(null)}
       />
+
+      <AlertDialog open={!!deletingMember} onOpenChange={(open) => !open && setDeletingMember(null)}>
+        <AlertDialogContent className="bg-white dark:bg-[hsl(220,26%,14%)] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">
+              Permanently Delete Member
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-white/70">
+              Are you sure you want to permanently delete <span className="font-semibold text-gray-900 dark:text-white">{deletingMember?.name}</span>?
+              <br /><br />
+              <span className="text-red-600 dark:text-red-400 font-medium">
+                This action cannot be undone. All data will be permanently removed:
+              </span>
+              <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                <li>Member profile and membership history</li>
+                <li>Attendance records</li>
+                <li>Diet plans and body composition reports</li>
+                <li>Meal logs and nutrition tracking</li>
+                <li>Workout plans and exercise history</li>
+                <li>Order history and payments</li>
+                <li>All associated files and photos</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              className="bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border-0"
+              disabled={permanentDeleteMutation.isPending}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePermanentDelete}
+              disabled={permanentDeleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {permanentDeleteMutation.isPending ? "Deleting..." : "Delete Permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
