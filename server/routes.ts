@@ -9993,6 +9993,47 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // Create new breakfast meal
+  app.post('/api/meals/breakfast', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { name, description, ingredients, protein, carbs, fats, calories, category, image_url } = req.body;
+      
+      if (!name || !category) {
+        return res.status(400).json({ ok: false, error: 'Name and category are required' });
+      }
+
+      if (!['veg', 'eggetarian', 'non-veg'].includes(category)) {
+        return res.status(400).json({ ok: false, error: 'Category must be veg, eggetarian, or non-veg' });
+      }
+
+      // Safely coerce numeric fields with NaN guard
+      const safeParseFloat = (val: any): number => {
+        const num = parseFloat(val);
+        return isNaN(num) || num < 0 ? 0 : num;
+      };
+
+      const proteinVal = safeParseFloat(protein);
+      const carbsVal = safeParseFloat(carbs);
+      const fatsVal = safeParseFloat(fats);
+      const caloriesVal = safeParseFloat(calories);
+
+      const result = await db!.execute(sql`
+        INSERT INTO meals_breakfast (name, description, ingredients, protein, carbs, fats, calories, category, image_url)
+        VALUES (${name}, ${description || null}, ${ingredients || null}, ${proteinVal}, ${carbsVal}, ${fatsVal}, ${caloriesVal}, ${category}, ${image_url || null})
+        RETURNING *
+      `);
+      
+      res.status(201).json({ ok: true, meal: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error creating breakfast meal:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   // Get single breakfast meal by ID
   app.get('/api/meals/breakfast/:id', async (req, res) => {
     try {

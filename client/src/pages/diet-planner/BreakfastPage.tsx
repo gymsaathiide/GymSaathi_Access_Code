@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Coffee, X, Leaf, Egg, Drumstick, Flame, Dumbbell, Calendar, RefreshCw, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Coffee, X, Leaf, Egg, Drumstick, Flame, Dumbbell, Calendar, RefreshCw, Edit, Trash2, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,6 +54,18 @@ export default function BreakfastPage() {
     category: '' as 'veg' | 'eggetarian' | 'non-veg',
     imageUrl: ''
   });
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: '',
+    description: '',
+    ingredients: '',
+    protein: '',
+    carbs: '',
+    fats: '',
+    calories: '',
+    category: 'veg' as 'veg' | 'eggetarian' | 'non-veg',
+    imageUrl: ''
+  });
 
   const generatePlanMutation = useMutation({
     mutationFn: async ({ duration, category }: { duration: 7 | 30; category: string }) => {
@@ -77,15 +89,21 @@ export default function BreakfastPage() {
 
   const updateMealMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof editForm }) => {
+      // Helper to safely parse and clamp numeric values (non-negative)
+      const safeNum = (val: string): number => {
+        const num = parseFloat(val);
+        return isNaN(num) || num < 0 ? 0 : num;
+      };
+
       // Convert string values to numbers and match backend schema (snake_case)
       const payload = {
         name: data.name,
         description: data.description,
         ingredients: data.ingredients,
-        protein: parseFloat(data.protein) || 0,
-        carbs: parseFloat(data.carbs) || 0,
-        fats: parseFloat(data.fats) || 0,
-        calories: parseFloat(data.calories) || 0,
+        protein: safeNum(data.protein),
+        carbs: safeNum(data.carbs),
+        fats: safeNum(data.fats),
+        calories: safeNum(data.calories),
         category: data.category,
         image_url: data.imageUrl || null,
       };
@@ -142,6 +160,55 @@ export default function BreakfastPage() {
     },
   });
 
+  const createMealMutation = useMutation({
+    mutationFn: async (data: typeof addForm) => {
+      // Helper to safely parse and clamp numeric values (non-negative)
+      const safeNum = (val: string): number => {
+        const num = parseFloat(val);
+        return isNaN(num) || num < 0 ? 0 : num;
+      };
+
+      const payload = {
+        name: data.name,
+        description: data.description || null,
+        ingredients: data.ingredients || null,
+        protein: safeNum(data.protein),
+        carbs: safeNum(data.carbs),
+        fats: safeNum(data.fats),
+        calories: safeNum(data.calories),
+        category: data.category,
+        image_url: data.imageUrl || null,
+      };
+      
+      const res = await fetch('/api/meals/breakfast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Failed to create meal');
+      return res.json();
+    },
+    onSuccess: () => {
+      setShowAddDialog(false);
+      setAddForm({
+        name: '',
+        description: '',
+        ingredients: '',
+        protein: '',
+        carbs: '',
+        fats: '',
+        calories: '',
+        category: 'veg',
+        imageUrl: ''
+      });
+      toast({ title: 'Breakfast added!', description: 'New meal saved to database' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to add meal', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleGeneratePlan = (duration: 7 | 30) => {
     generatePlanMutation.mutate({ duration, category: categoryFilter });
   };
@@ -184,6 +251,14 @@ export default function BreakfastPage() {
     if (deletingMealId) {
       deleteMealMutation.mutate(deletingMealId);
     }
+  };
+
+  const handleAddMeal = () => {
+    if (!addForm.name || !addForm.category) {
+      toast({ title: 'Missing fields', description: 'Name and category are required', variant: 'destructive' });
+      return;
+    }
+    createMealMutation.mutate(addForm);
   };
 
   return (
@@ -267,6 +342,13 @@ export default function BreakfastPage() {
                 </Button>
               </>
             )}
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="bg-green-500 hover:bg-green-600 ml-auto"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Breakfast
+            </Button>
           </div>
         </div>
 
@@ -498,6 +580,124 @@ export default function BreakfastPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Breakfast Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Breakfast Meal</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="add-name">Meal Name *</Label>
+              <Input
+                id="add-name"
+                value={addForm.name}
+                onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                placeholder="Enter meal name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-category">Category *</Label>
+              <Select value={addForm.category} onValueChange={(value) => setAddForm({ ...addForm, category: value as 'veg' | 'eggetarian' | 'non-veg' })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="veg">Veg</SelectItem>
+                  <SelectItem value="eggetarian">Eggetarian</SelectItem>
+                  <SelectItem value="non-veg">Non-Veg</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-description">Description</Label>
+              <Textarea
+                id="add-description"
+                value={addForm.description}
+                onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                placeholder="Enter description"
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-ingredients">Ingredients</Label>
+              <Textarea
+                id="add-ingredients"
+                value={addForm.ingredients}
+                onChange={(e) => setAddForm({ ...addForm, ingredients: e.target.value })}
+                placeholder="Enter ingredients"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="add-calories">Calories (kcal)</Label>
+                <Input
+                  id="add-calories"
+                  type="number"
+                  step="0.01"
+                  value={addForm.calories}
+                  onChange={(e) => setAddForm({ ...addForm, calories: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-protein">Protein (g)</Label>
+                <Input
+                  id="add-protein"
+                  type="number"
+                  step="0.01"
+                  value={addForm.protein}
+                  onChange={(e) => setAddForm({ ...addForm, protein: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="add-carbs">Carbs (g)</Label>
+                <Input
+                  id="add-carbs"
+                  type="number"
+                  step="0.01"
+                  value={addForm.carbs}
+                  onChange={(e) => setAddForm({ ...addForm, carbs: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-fats">Fats (g)</Label>
+                <Input
+                  id="add-fats"
+                  type="number"
+                  step="0.01"
+                  value={addForm.fats}
+                  onChange={(e) => setAddForm({ ...addForm, fats: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-imageUrl">Image URL (optional)</Label>
+              <Input
+                id="add-imageUrl"
+                value={addForm.imageUrl}
+                onChange={(e) => setAddForm({ ...addForm, imageUrl: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddMeal} disabled={createMealMutation.isPending} className="bg-green-500 hover:bg-green-600">
+              {createMealMutation.isPending ? 'Adding...' : 'Add Breakfast'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
