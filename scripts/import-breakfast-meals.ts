@@ -1,11 +1,16 @@
+
 import XLSX from 'xlsx';
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import * as path from 'path';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/SUPABASE_ANON_KEY');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface BreakfastMeal {
   name: string;
@@ -50,26 +55,58 @@ async function importBreakfastMeals() {
   });
   
   console.log('Clearing existing data...');
-  await pool.query('DELETE FROM meals_breakfast');
+  const { error: deleteError } = await supabase
+    .from('meals_breakfast')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
   
-  console.log('Inserting meals...');
-  for (const meal of meals) {
-    await pool.query(
-      `INSERT INTO meals_breakfast (name, description, ingredients, protein, carbs, fats, calories, category)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [meal.name, meal.description, meal.ingredients, meal.protein, meal.carbs, meal.fats, meal.calories, meal.category]
-    );
+  if (deleteError) {
+    console.error('Error clearing existing data:', deleteError);
+  }
+  
+  console.log('Inserting meals in batches...');
+  const batchSize = 100;
+  for (let i = 0; i < meals.length; i += batchSize) {
+    const batch = meals.slice(i, i + batchSize);
+    const { error: insertError } = await supabase
+      .from('meals_breakfast')
+      .insert(batch.map(meal => ({
+        name: meal.name,
+        description: meal.description,
+        ingredients: meal.ingredients,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fats: meal.fats,
+        calories: meal.calories,
+        category: meal.category
+      })));
+    
+    if (insertError) {
+      console.error(`Error inserting batch ${i / batchSize + 1}:`, insertError);
+    } else {
+      console.log(`Inserted batch ${i / batchSize + 1} (${batch.length} meals)`);
+    }
   }
   
   console.log(`Successfully imported ${meals.length} breakfast meals!`);
   
-  const result = await pool.query('SELECT category, COUNT(*) as count FROM meals_breakfast GROUP BY category');
-  console.log('Category breakdown:');
-  result.rows.forEach(row => {
-    console.log(`  ${row.category}: ${row.count} meals`);
-  });
+  const { data: allMeals, error: countError } = await supabase
+    .from('meals_breakfast')
+    .select('category');
   
-  await pool.end();
+  if (countError) {
+    console.error('Error counting meals:', countError);
+  } else if (allMeals) {
+    const counts: Record<string, number> = {};
+    allMeals.forEach((row: any) => {
+      counts[row.category] = (counts[row.category] || 0) + 1;
+    });
+    
+    console.log('Category breakdown:');
+    Object.entries(counts).forEach(([category, count]) => {
+      console.log(`  ${category}: ${count} meals`);
+    });
+  }
 }
 
 importBreakfastMeals().catch(console.error);
