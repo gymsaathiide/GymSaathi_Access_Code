@@ -405,7 +405,28 @@ export default function BreakfastPage() {
                     </div>
                     
                     <h3 className="text-lg font-semibold text-white mb-1 line-clamp-1">{meal.name}</h3>
-                    <p className="text-white/50 text-sm mb-3 line-clamp-2">{meal.description || 'No description'}</p>
+                    <p className="text-white/50 text-sm mb-2 line-clamp-2">{meal.description || 'No description'}</p>
+                    
+                    {meal.ingredients && (
+                      <div className="mb-3">
+                        <p className="text-white/70 text-xs font-medium mb-1.5 flex items-center gap-1">
+                          <span>🥗</span> Ingredients
+                        </p>
+                        <ul className="text-white/50 text-xs space-y-0.5 pl-1">
+                          {meal.ingredients.split(',').slice(0, 4).map((ingredient, idx) => (
+                            <li key={idx} className="flex items-start gap-1.5">
+                              <span className="text-orange-400 mt-0.5">•</span>
+                              <span className="line-clamp-1">{ingredient.trim()}</span>
+                            </li>
+                          ))}
+                          {meal.ingredients.split(',').length > 4 && (
+                            <li className="text-white/40 text-[10px] pl-3">
+                              +{meal.ingredients.split(',').length - 4} more
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
                     
                     <div className="grid grid-cols-4 gap-2 text-center">
                       <div className="bg-white/5 rounded-lg p-2">
