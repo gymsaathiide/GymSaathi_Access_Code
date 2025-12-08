@@ -56,10 +56,7 @@ export default function BreakfastPage() {
     imageUrl: '',
   });
 
-  const [viewMode, setViewMode] = useState<'browse' | 'plan'>('browse');
-  const [mealPlan, setMealPlan] = useState<MealPlanItem[]>([]);
-  const [planDuration, setPlanDuration] = useState<7 | 30>(7);
-  const [planCategoryFilter, setPlanCategoryFilter] = useState('all');
+  const [activePlan, setActivePlan] = useState<{ duration: 7 | 30; category: string; meals: MealPlanItem[] } | null>(null);
 
   const { data: mealsData, isLoading } = useQuery({
     queryKey: ['breakfast-meals', categoryFilter, searchTerm],
@@ -124,10 +121,9 @@ export default function BreakfastPage() {
       if (!res.ok) throw new Error('Failed to generate meal plan');
       return res.json();
     },
-    onSuccess: (data) => {
-      setMealPlan(data.plan);
-      setViewMode('plan');
-      toast({ title: `${planDuration}-day meal plan generated!`, description: 'Your breakfast plan is ready' });
+    onSuccess: (data, variables) => {
+      setActivePlan({ duration: variables.duration, category: variables.category, meals: data.plan });
+      toast({ title: `${variables.duration}-day meal plan generated!`, description: `Showing ${variables.duration} random breakfast meals` });
     },
     onError: (error: any) => {
       toast({ title: 'Failed to generate meal plan', description: error.message, variant: 'destructive' });
@@ -160,21 +156,27 @@ export default function BreakfastPage() {
   };
 
   const handleGeneratePlan = (duration: 7 | 30) => {
-    setPlanDuration(duration);
-    generatePlanMutation.mutate({ duration, category: planCategoryFilter });
+    generatePlanMutation.mutate({ duration, category: categoryFilter });
   };
 
   const handleRegeneratePlan = () => {
-    generatePlanMutation.mutate({ duration: planDuration, category: planCategoryFilter });
+    if (!activePlan) return;
+    generatePlanMutation.mutate({ duration: activePlan.duration, category: activePlan.category });
   };
 
-  const meals: BreakfastMeal[] = mealsData?.meals || [];
+  const handleClearPlan = () => {
+    setActivePlan(null);
+    toast({ title: 'Plan cleared', description: 'Showing all breakfast meals' });
+  };
+
+  const allMeals: BreakfastMeal[] = mealsData?.meals || [];
+  const displayMeals = activePlan ? activePlan.meals.map(item => item.meal) : allMeals;
 
   const categoryStats = {
-    all: meals.length || 0,
-    veg: meals.filter((m: BreakfastMeal) => m.category === 'veg').length || 0,
-    eggetarian: meals.filter((m: BreakfastMeal) => m.category === 'eggetarian').length || 0,
-    'non-veg': meals.filter((m: BreakfastMeal) => m.category === 'non-veg').length || 0,
+    all: allMeals.length || 0,
+    veg: allMeals.filter((m: BreakfastMeal) => m.category === 'veg').length || 0,
+    eggetarian: allMeals.filter((m: BreakfastMeal) => m.category === 'eggetarian').length || 0,
+    'non-veg': allMeals.filter((m: BreakfastMeal) => m.category === 'non-veg').length || 0,
   };
 
   return (
@@ -186,37 +188,24 @@ export default function BreakfastPage() {
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
           </Link>
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 flex items-center justify-center">
               <Coffee className="h-6 w-6 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">Breakfast</h1>
-              <p className="text-white/60 text-sm mt-1">{meals.length} meals available</p>
+              <p className="text-white/60 text-sm mt-1">
+                {activePlan 
+                  ? `Showing ${activePlan.duration}-day plan (${activePlan.category === 'all' ? 'All' : categoryConfig[activePlan.category as keyof typeof categoryConfig]?.label || activePlan.category})`
+                  : `${allMeals.length} meals available`
+                }
+              </p>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === 'browse' ? 'default' : 'ghost'}
-              onClick={() => setViewMode('browse')}
-              className={viewMode === 'browse' ? 'bg-orange-500 hover:bg-orange-600' : 'text-white/60 hover:text-white hover:bg-white/10'}
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Browse Meals
-            </Button>
-            <Button
-              variant={viewMode === 'plan' ? 'default' : 'ghost'}
-              onClick={() => setViewMode('plan')}
-              className={viewMode === 'plan' ? 'bg-orange-500 hover:bg-orange-600' : 'text-white/60 hover:text-white hover:bg-white/10'}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Meal Plans
-            </Button>
           </div>
         </div>
 
-{viewMode === 'browse' ? (
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+<div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
               <Input
@@ -224,6 +213,7 @@ export default function BreakfastPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                disabled={!!activePlan}
               />
             </div>
             <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="w-full md:w-auto">
@@ -243,86 +233,124 @@ export default function BreakfastPage() {
               </TabsList>
             </Tabs>
           </div>
-        ) : (
-          <div className="space-y-4 mb-6">
-            <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-white">Generate Meal Plan</h2>
-                    <p className="text-white/60 text-sm">Create personalized breakfast plans</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label className="text-white/80 mb-2 block">Category Filter</Label>
-                    <Tabs value={planCategoryFilter} onValueChange={setPlanCategoryFilter}>
-                      <TabsList className="bg-white/5 border border-white/10 w-full">
-                        <TabsTrigger value="all" className="flex-1 data-[state=active]:bg-white/10 text-white/60 data-[state=active]:text-white">
-                          All
-                        </TabsTrigger>
-                        <TabsTrigger value="veg" className="flex-1 data-[state=active]:bg-green-500/20 text-white/60 data-[state=active]:text-green-400">
-                          Veg
-                        </TabsTrigger>
-                        <TabsTrigger value="eggetarian" className="flex-1 data-[state=active]:bg-yellow-500/20 text-white/60 data-[state=active]:text-yellow-400">
-                          Egg
-                        </TabsTrigger>
-                        <TabsTrigger value="non-veg" className="flex-1 data-[state=active]:bg-red-500/20 text-white/60 data-[state=active]:text-red-400">
-                          Non-Veg
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-
-                  <div>
-                    <Label className="text-white/80 mb-2 block">Plan Duration</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        onClick={() => handleGeneratePlan(7)}
-                        disabled={generatePlanMutation.isPending}
-                        className="bg-orange-500 hover:bg-orange-600 h-10"
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        7 Days
-                      </Button>
-                      <Button
-                        onClick={() => handleGeneratePlan(30)}
-                        disabled={generatePlanMutation.isPending}
-                        className="bg-orange-500 hover:bg-orange-600 h-10"
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        30 Days
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => handleGeneratePlan(7)}
+              disabled={generatePlanMutation.isPending}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Generate 7 Days
+            </Button>
+            <Button
+              onClick={() => handleGeneratePlan(30)}
+              disabled={generatePlanMutation.isPending}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Generate 30 Days
+            </Button>
+            
+            {activePlan && (
+              <>
+                <Button
+                  onClick={handleRegeneratePlan}
+                  disabled={generatePlanMutation.isPending}
+                  className="bg-white/10 hover:bg-white/20 text-white"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${generatePlanMutation.isPending ? 'animate-spin' : ''}`} />
+                  Regenerate
+                </Button>
+                <Button
+                  onClick={handleClearPlan}
+                  variant="ghost"
+                  className="text-white/60 hover:text-white hover:bg-white/10"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Plan
+                </Button>
+              </>
+            )}
           </div>
-        )}
+        </div>
 
-{viewMode === 'browse' ? (
-          isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
-            </div>
-          ) : meals.length === 0 ? (
-            <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-12 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-                  <Search className="h-8 w-8 text-white/40" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2">No meals found</h3>
-                <p className="text-white/60">Try adjusting your search or filter</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {meals.map((meal: BreakfastMeal) => {
+{isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+          </div>
+        ) : displayMeals.length === 0 ? (
+          <Card className="bg-white/5 border-white/10">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
+                <Search className="h-8 w-8 text-white/40" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">No meals found</h3>
+              <p className="text-white/60">Try adjusting your search or filter</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activePlan ? (
+              activePlan.meals.map((item, index) => {
+                const meal = item.meal;
+                const config = categoryConfig[meal.category];
+                const CategoryIcon = config.icon;
+                
+                return (
+                  <Card key={`${meal.id}-${index}`} className="bg-white/5 border-white/10 hover:bg-white/8 transition-colors group relative">
+                    <div className="absolute top-2 left-2 z-10">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-sm">D{item.day}</span>
+                      </div>
+                    </div>
+                    <CardContent className="p-4 pt-14">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-8 h-8 rounded-lg ${config.bgColor} flex items-center justify-center`}>
+                            <CategoryIcon className={`h-4 w-4 ${config.textColor}`} />
+                          </div>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.bgColor} ${config.textColor}`}>
+                            {config.label}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-lg font-semibold text-white mb-1 line-clamp-1">{meal.name}</h3>
+                      <p className="text-white/50 text-sm mb-3 line-clamp-2">{meal.description || 'No description'}</p>
+                      
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="bg-white/5 rounded-lg p-2">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <Flame className="h-3 w-3 text-orange-400" />
+                          </div>
+                          <span className="text-white font-semibold text-sm">{Number(meal.calories).toFixed(0)}</span>
+                          <p className="text-white/40 text-[10px]">kcal</p>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-2">
+                          <div className="flex items-center justify-center gap-1 mb-1">
+                            <Dumbbell className="h-3 w-3 text-blue-400" />
+                          </div>
+                          <span className="text-white font-semibold text-sm">{Number(meal.protein).toFixed(1)}g</span>
+                          <p className="text-white/40 text-[10px]">Protein</p>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-2">
+                          <span className="text-amber-400 text-xs">🍞</span>
+                          <span className="text-white font-semibold text-sm block">{Number(meal.carbs).toFixed(1)}g</span>
+                          <p className="text-white/40 text-[10px]">Carbs</p>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-2">
+                          <span className="text-purple-400 text-xs">🧈</span>
+                          <span className="text-white font-semibold text-sm block">{Number(meal.fats).toFixed(1)}g</span>
+                          <p className="text-white/40 text-[10px]">Fats</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              displayMeals.map((meal) => {
                 const config = categoryConfig[meal.category];
                 const CategoryIcon = config.icon;
                 
@@ -390,90 +418,9 @@ export default function BreakfastPage() {
                     </CardContent>
                   </Card>
                 );
-              })}
-            </div>
-          )
-        ) : (
-          mealPlan.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    {planDuration}-Day Meal Plan
-                  </h2>
-                  <p className="text-white/60 text-sm mt-1">
-                    {planCategoryFilter === 'all' ? 'All categories' : categoryConfig[planCategoryFilter as keyof typeof categoryConfig]?.label || planCategoryFilter}
-                  </p>
-                </div>
-                <Button
-                  onClick={handleRegeneratePlan}
-                  disabled={generatePlanMutation.isPending}
-                  className="bg-orange-500 hover:bg-orange-600"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${generatePlanMutation.isPending ? 'animate-spin' : ''}`} />
-                  Regenerate
-                </Button>
-              </div>
-
-              <div className="grid gap-3">
-                {mealPlan.map((item) => {
-                  const config = categoryConfig[item.meal.category];
-                  const CategoryIcon = config.icon;
-                  
-                  return (
-                    <Card key={item.day} className="bg-white/5 border-white/10 hover:bg-white/8 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="flex-shrink-0">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
-                              <span className="text-white font-bold text-lg">D{item.day}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className={`w-6 h-6 rounded-lg ${config.bgColor} flex items-center justify-center`}>
-                                <CategoryIcon className={`h-3 w-3 ${config.textColor}`} />
-                              </div>
-                              <h3 className="text-white font-semibold">{item.meal.name}</h3>
-                            </div>
-                            <p className="text-white/50 text-sm line-clamp-1">{item.meal.description || 'No description'}</p>
-                          </div>
-
-                          <div className="flex gap-4 text-center">
-                            <div>
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <Flame className="h-3 w-3 text-orange-400" />
-                              </div>
-                              <span className="text-white font-semibold text-sm">{Number(item.meal.calories).toFixed(0)}</span>
-                              <p className="text-white/40 text-[10px]">kcal</p>
-                            </div>
-                            <div>
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <Dumbbell className="h-3 w-3 text-blue-400" />
-                              </div>
-                              <span className="text-white font-semibold text-sm">{Number(item.meal.protein).toFixed(1)}g</span>
-                              <p className="text-white/40 text-[10px]">Protein</p>
-                            </div>
-                            <div>
-                              <span className="text-amber-400 text-xs">🍞</span>
-                              <span className="text-white font-semibold text-sm block">{Number(item.meal.carbs).toFixed(1)}g</span>
-                              <p className="text-white/40 text-[10px]">Carbs</p>
-                            </div>
-                            <div>
-                              <span className="text-purple-400 text-xs">🧈</span>
-                              <span className="text-white font-semibold text-sm block">{Number(item.meal.fats).toFixed(1)}g</span>
-                              <p className="text-white/40 text-[10px]">Fats</p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          )
+              })
+            )}
+          </div>
         )}
 
         <Dialog open={!!editMeal} onOpenChange={() => setEditMeal(null)}>
