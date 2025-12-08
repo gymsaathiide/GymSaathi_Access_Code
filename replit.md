@@ -75,24 +75,19 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
 -   **Diet Planner System** (Member Dashboard): Comprehensive nutrition and fitness planning with:
     -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals (uses OpenAI Vision for image parsing)
     -   **Meal Database System**: Card-based navigation to Breakfast, Lunch, and Dinner meal databases
-    -   **Breakfast Meals Database**: 300 healthy breakfast recipes with:
+    -   **Breakfast Meal Plan Generator**: Simplified meal planning interface with:
+        -   Empty state on page load (no meals shown initially)
+        -   Category filter tabs (All, Veg, Eggetarian, Non-Veg) for plan customization
+        -   Generate 7-day or 30-day meal plan buttons
+        -   Meal cards display ONLY when plan is generated (no browse/search mode)
         -   Visual category indicators (green=veg, yellow=eggetarian, red=non-veg)
-        -   Search and filter by category
-        -   Full CRUD operations (view, edit, delete meals)
+        -   Day badges (D1, D2, etc) on each meal card
         -   Nutritional info display (calories, protein, carbs, fats)
-        -   Edit modal with all meal fields pre-filled
-        -   Delete confirmation dialog
-        -   Database table: `meals_breakfast`
-        -   **Automated Meal Plan Generation** (Single Integrated View):
-            -   Generate 7-day or 30-day breakfast meal plans from same browse interface
-            -   Category filtering (All, Veg, Eggetarian, Non-Veg) persists across plan operations
-            -   Random meal selection from database with repetition support
-            -   When plan active: shows only plan meals with day badges (D1, D2, etc) in unified card grid
-            -   When browsing: shows all meals with search/filter and edit/delete on hover
-            -   Regenerate button maintains category and duration for consistency
-            -   Clear Plan button returns to browse mode
-            -   State management: activePlan stores {duration, category, meals} to prevent desynchronization
-            -   API endpoint: `POST /api/meals/breakfast/generate-plan`
+        -   Regenerate button maintains category and duration for consistency
+        -   Clear Plan button returns to empty state
+        -   State management: activePlan stores {duration, category, meals}
+        -   Database table: `meals_breakfast` (300 meals)
+        -   API endpoint: `POST /api/meals/breakfast/generate-plan`
     -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
     -   **Workout Planner**: Exercise library with warm-up, strength, cardio, and stretching exercises
     -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
