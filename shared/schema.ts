@@ -902,3 +902,28 @@ export const mealDatabase = pgTable("meal_database", {
 export const insertMealDatabaseSchema = createInsertSchema(mealDatabase).omit({ id: true, createdAt: true });
 export type InsertMealDatabase = z.infer<typeof insertMealDatabaseSchema>;
 export type MealDatabase = typeof mealDatabase.$inferSelect;
+
+// === BREAKFAST MEALS DATABASE ===
+
+// Breakfast category enum (veg, eggetarian, non-veg)
+export const breakfastCategoryEnum = pgEnum('breakfast_category', ['veg', 'eggetarian', 'non-veg']);
+
+// Breakfast Meals Table - imported from Excel
+export const mealsBreakfast = pgTable("meals_breakfast", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  ingredients: text("ingredients"),
+  protein: decimal("protein", { precision: 6, scale: 2 }).notNull(),
+  carbs: decimal("carbs", { precision: 6, scale: 2 }).notNull(),
+  fats: decimal("fats", { precision: 6, scale: 2 }).notNull(),
+  calories: decimal("calories", { precision: 6, scale: 2 }).notNull(),
+  category: breakfastCategoryEnum("category").notNull(),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMealsBreakfastSchema = createInsertSchema(mealsBreakfast).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMealsBreakfast = z.infer<typeof insertMealsBreakfastSchema>;
+export type MealsBreakfast = typeof mealsBreakfast.$inferSelect;
