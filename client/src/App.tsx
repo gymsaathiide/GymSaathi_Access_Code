@@ -36,7 +36,7 @@ import Attendance from './pages/Attendance';
 import Trainers from './pages/Trainers';
 import AdminMore from './pages/AdminMore';
 import ShopRevenueDashboard from './pages/ShopRevenueDashboard';
-import { BodyCompositionPage, DietPlannerPage, WorkoutPlannerPage, DailyNutritionPage, HistoryPage, DietMealsLandingPage, BreakfastPage, LunchPage, DinnerPage } from './pages/diet-planner';
+import { BodyCompositionPage, DietPlannerPage, WorkoutPlannerPage, DailyNutritionPage, HistoryPage, BreakfastPage, LunchPage, DinnerPage } from './pages/diet-planner';
 
 function TestDashboard() {
   const { user } = useAuth();
@@ -128,10 +128,9 @@ function ProtectedApp() {
         <Route path="/member/diet-planner/history" component={() => <ProtectedRoute allowedRoles={['member']}><HistoryPage /></ProtectedRoute>} />
         <Route path="/member/diet-planner/daily-nutrition" component={() => <ProtectedRoute allowedRoles={['member']}><DailyNutritionPage /></ProtectedRoute>} />
         <Route path="/member/diet-planner/workout" component={() => <ProtectedRoute allowedRoles={['member']}><WorkoutPlannerPage /></ProtectedRoute>} />
-        <Route path="/member/diet-planner/meals/breakfast" component={() => <ProtectedRoute allowedRoles={['member']}><BreakfastPage /></ProtectedRoute>} />
-        <Route path="/member/diet-planner/meals/lunch" component={() => <ProtectedRoute allowedRoles={['member']}><LunchPage /></ProtectedRoute>} />
-        <Route path="/member/diet-planner/meals/dinner" component={() => <ProtectedRoute allowedRoles={['member']}><DinnerPage /></ProtectedRoute>} />
-        <Route path="/member/diet-planner/meals" component={() => <ProtectedRoute allowedRoles={['member']}><DietMealsLandingPage /></ProtectedRoute>} />
+        <Route path="/member/diet-planner/breakfast" component={() => <ProtectedRoute allowedRoles={['member']}><BreakfastPage /></ProtectedRoute>} />
+        <Route path="/member/diet-planner/lunch" component={() => <ProtectedRoute allowedRoles={['member']}><LunchPage /></ProtectedRoute>} />
+        <Route path="/member/diet-planner/dinner" component={() => <ProtectedRoute allowedRoles={['member']}><DinnerPage /></ProtectedRoute>} />
         <Route path="/member/diet-planner" component={() => <ProtectedRoute allowedRoles={['member']}><DietPlannerPage /></ProtectedRoute>} />
         <Route path="/member/classes" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Classes /></ProtectedRoute>} />
         <Route path="/member/attendance" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Attendance /></ProtectedRoute>} />

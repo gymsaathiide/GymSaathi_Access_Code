@@ -7,7 +7,7 @@ export default function LunchPage() {
     <div className="min-h-screen bg-gradient-to-br from-[hsl(220,26%,10%)] to-[hsl(220,26%,14%)]">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/member/diet-planner/meals">
+          <Link href="/member/diet-planner">
             <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">
               <ArrowLeft className="h-5 w-5 text-white" />
             </button>
