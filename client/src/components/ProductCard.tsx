@@ -109,18 +109,19 @@ export function ProductCard({
 
       <hr className="w-full border border-[#323232] rounded-full my-1" />
 
-      <div className="flex flex-row justify-between items-center">
-        <div className="flex flex-col">
+      {/* Price Row - Always visible */}
+      <div className="flex justify-center sm:justify-start">
+        <div className="flex flex-col items-center sm:items-start">
           {product.mrp && product.mrp > displayPrice && (
             <span className="text-[10px] text-[#999999] line-through">
               MRP: ₹{parseFloat(String(product.mrp)).toFixed(0)}
             </span>
           )}
-          <div className="text-[18px] sm:text-[20px] font-medium text-[#323232]">
-            <span className="text-[16px] sm:text-[18px] font-medium text-[#666666]">₹</span>
+          <div className="text-[16px] sm:text-[20px] font-medium text-[#323232]">
+            <span className="text-[14px] sm:text-[18px] font-medium text-[#666666]">₹</span>
             {parseFloat(String(displayPrice)).toFixed(0)}
             {hasDiscount && (
-              <span className="text-[11px] text-[#999999] line-through ml-1">
+              <span className="text-[10px] sm:text-[11px] text-[#999999] line-through ml-1">
                 ₹{parseFloat(String(product.price)).toFixed(0)}
               </span>
             )}
@@ -131,7 +132,10 @@ export function ProductCard({
             </span>
           )}
         </div>
+      </div>
 
+      {/* Cart Controls - Full width on mobile */}
+      <div className="flex justify-center w-full">
         {showAdminActions ? (
           <div className="flex gap-1.5">
             {onEdit && (
@@ -152,20 +156,20 @@ export function ProductCard({
             )}
           </div>
         ) : cartItem ? (
-          <div className="flex items-center gap-1 bg-gray-100 rounded-[5px] border-2 border-[#323232]">
+          <div className="flex items-center justify-center gap-0 bg-gray-100 rounded-[5px] border-2 border-[#323232] w-full max-w-[120px]">
             <button
               onClick={() => onUpdateQuantity?.(-1)}
-              className="h-[32px] w-[32px] flex items-center justify-center hover:bg-gray-200 transition-colors"
+              className="h-[32px] w-[36px] flex items-center justify-center hover:bg-gray-200 transition-colors rounded-l-[3px]"
             >
               <Minus className="w-4 h-4 text-[#323232]" />
             </button>
-            <span className="w-6 text-center font-medium text-[#323232] text-sm">
+            <span className="w-[36px] text-center font-medium text-[#323232] text-sm">
               {cartItem.quantity}
             </span>
             <button
               onClick={() => onUpdateQuantity?.(1)}
               disabled={cartItem.quantity >= product.stock}
-              className="h-[32px] w-[32px] flex items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="h-[32px] w-[36px] flex items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50 rounded-r-[3px]"
             >
               <Plus className="w-4 h-4 text-[#323232]" />
             </button>
@@ -174,7 +178,7 @@ export function ProductCard({
           <button
             onClick={onAddToCart}
             disabled={isOutOfStock}
-            className="group h-[35px] bg-white border-2 border-[#323232] rounded-[5px] px-3 transition-all duration-300 hover:border-[#2d8cf0] active:translate-y-[3px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="group h-[35px] w-full max-w-[120px] bg-white border-2 border-[#323232] rounded-[5px] px-3 transition-all duration-300 hover:border-[#2d8cf0] active:translate-y-[3px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
           >
             <ShoppingCart className="w-4 h-4 text-[#323232] group-hover:text-[#2d8cf0]" />
             <span className="text-[12px] font-medium text-[#323232] group-hover:text-[#2d8cf0]">
