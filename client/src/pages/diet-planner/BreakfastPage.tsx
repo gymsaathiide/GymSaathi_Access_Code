@@ -287,76 +287,76 @@ export default function BreakfastPage() {
         </div>
 
         <div className="flex flex-col gap-4 mb-6">
-          {/* Category Toggle Switches */}
-          <div className="flex items-center gap-6 flex-wrap">
+          {/* Category Toggle Switches - Horizontal row on all screens */}
+          <div className="grid grid-cols-4 gap-2 sm:flex sm:items-center sm:gap-4">
             {/* Veg Toggle */}
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative flex flex-col sm:flex-row items-center cursor-pointer gap-1 sm:gap-0">
               <input 
                 className="sr-only peer" 
                 type="checkbox" 
                 checked={categoryFilter === 'veg'}
                 onChange={() => setCategoryFilter(categoryFilter === 'veg' ? 'all' : 'veg')}
               />
-              <div className={`w-16 h-8 rounded-full transition-all duration-500 flex items-center px-1 ${
+              <div className={`w-12 h-6 sm:w-16 sm:h-8 rounded-full transition-all duration-500 flex items-center px-0.5 sm:px-1 ${
                 categoryFilter === 'veg' 
                   ? 'bg-gradient-to-r from-green-400 to-green-600' 
                   : 'bg-[hsl(0,0%,15%)] border border-white/10'
               }`}>
-                <div className={`h-6 w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md ${
-                  categoryFilter === 'veg' ? 'translate-x-8' : 'translate-x-0'
+                <div className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md ${
+                  categoryFilter === 'veg' ? 'translate-x-5 sm:translate-x-8' : 'translate-x-0'
                 }`}>
-                  <Leaf className={`h-3.5 w-3.5 ${categoryFilter === 'veg' ? 'text-green-500' : 'text-gray-400'}`} />
+                  <Leaf className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${categoryFilter === 'veg' ? 'text-green-500' : 'text-gray-400'}`} />
                 </div>
               </div>
-              <span className={`ml-2 text-sm font-medium transition-colors ${categoryFilter === 'veg' ? 'text-green-400' : 'text-white/50'}`}>
+              <span className={`sm:ml-2 text-[10px] sm:text-sm font-medium transition-colors ${categoryFilter === 'veg' ? 'text-green-400' : 'text-white/50'}`}>
                 Veg
               </span>
             </label>
 
             {/* Eggetarian Toggle */}
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative flex flex-col sm:flex-row items-center cursor-pointer gap-1 sm:gap-0">
               <input 
                 className="sr-only peer" 
                 type="checkbox" 
                 checked={categoryFilter === 'eggetarian'}
                 onChange={() => setCategoryFilter(categoryFilter === 'eggetarian' ? 'all' : 'eggetarian')}
               />
-              <div className={`w-16 h-8 rounded-full transition-all duration-500 flex items-center px-1 ${
+              <div className={`w-12 h-6 sm:w-16 sm:h-8 rounded-full transition-all duration-500 flex items-center px-0.5 sm:px-1 ${
                 categoryFilter === 'eggetarian' 
                   ? 'bg-gradient-to-r from-yellow-400 to-orange-400' 
                   : 'bg-[hsl(0,0%,15%)] border border-white/10'
               }`}>
-                <div className={`h-6 w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md text-base ${
-                  categoryFilter === 'eggetarian' ? 'translate-x-8' : 'translate-x-0'
+                <div className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md text-xs sm:text-base ${
+                  categoryFilter === 'eggetarian' ? 'translate-x-5 sm:translate-x-8' : 'translate-x-0'
                 }`}>
                   {categoryFilter === 'eggetarian' ? '🍳' : '🥚'}
                 </div>
               </div>
-              <span className={`ml-2 text-sm font-medium transition-colors ${categoryFilter === 'eggetarian' ? 'text-yellow-400' : 'text-white/50'}`}>
+              <span className={`sm:ml-2 text-[10px] sm:text-sm font-medium transition-colors ${categoryFilter === 'eggetarian' ? 'text-yellow-400' : 'text-white/50'}`}>
                 Egg
               </span>
             </label>
 
             {/* Non-Veg Toggle */}
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative flex flex-col sm:flex-row items-center cursor-pointer gap-1 sm:gap-0">
               <input 
                 className="sr-only peer" 
                 type="checkbox" 
                 checked={categoryFilter === 'non-veg'}
                 onChange={() => setCategoryFilter(categoryFilter === 'non-veg' ? 'all' : 'non-veg')}
               />
-              <div className={`w-16 h-8 rounded-full transition-all duration-500 flex items-center px-1 ${
+              <div className={`w-12 h-6 sm:w-16 sm:h-8 rounded-full transition-all duration-500 flex items-center px-0.5 sm:px-1 ${
                 categoryFilter === 'non-veg' 
                   ? 'bg-gradient-to-r from-red-400 to-red-600' 
                   : 'bg-[hsl(0,0%,15%)] border border-white/10'
               }`}>
-                <div className={`h-6 w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md ${
-                  categoryFilter === 'non-veg' ? 'translate-x-8' : 'translate-x-0'
+                <div className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md ${
+                  categoryFilter === 'non-veg' ? 'translate-x-5 sm:translate-x-8' : 'translate-x-0'
                 }`}>
-                  <Drumstick className={`h-3.5 w-3.5 ${categoryFilter === 'non-veg' ? 'text-red-500' : 'text-gray-400'}`} />
+                  <Drumstick className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${categoryFilter === 'non-veg' ? 'text-red-500' : 'text-gray-400'}`} />
                 </div>
               </div>
-              <span className={`ml-2 text-sm font-medium transition-colors ${categoryFilter === 'non-veg' ? 'text-red-400' : 'text-white/50'}`}>
+              <span className={`sm:ml-2 text-[10px] sm:text-sm font-medium transition-colors ${categoryFilter === 'non-veg' ? 'text-red-400' : 'text-white/50'}`}>
                 Non-Veg
               </span>
             </label>
@@ -366,28 +366,29 @@ export default function BreakfastPage() {
               variant="ghost"
               size="sm"
               onClick={() => setCategoryFilter('all')}
-              className={`${categoryFilter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
+              className={`h-auto py-1 px-2 sm:py-2 sm:px-3 text-[10px] sm:text-sm ${categoryFilter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
             >
               All
             </Button>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          {/* Action Buttons - Grid on mobile, flex on larger screens */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
             <Button
               onClick={() => handleGeneratePlan(7)}
               disabled={generatePlanMutation.isPending}
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-orange-500 hover:bg-orange-600 text-xs sm:text-sm h-9 sm:h-10"
             >
-              <Calendar className="h-4 w-4 mr-2" />
-              Generate 7 Days
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              7 Days
             </Button>
             <Button
               onClick={() => handleGeneratePlan(30)}
               disabled={generatePlanMutation.isPending}
-              className="bg-orange-500 hover:bg-orange-600"
+              className="bg-orange-500 hover:bg-orange-600 text-xs sm:text-sm h-9 sm:h-10"
             >
-              <Calendar className="h-4 w-4 mr-2" />
-              Generate 30 Days
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              30 Days
             </Button>
             
             {activePlan && (
@@ -395,26 +396,26 @@ export default function BreakfastPage() {
                 <Button
                   onClick={handleRegeneratePlan}
                   disabled={generatePlanMutation.isPending}
-                  className="bg-white/10 hover:bg-white/20 text-white"
+                  className="bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm h-9 sm:h-10"
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${generatePlanMutation.isPending ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 ${generatePlanMutation.isPending ? 'animate-spin' : ''}`} />
                   Regenerate
                 </Button>
                 <Button
                   onClick={handleClearPlan}
                   variant="ghost"
-                  className="text-white/60 hover:text-white hover:bg-white/10"
+                  className="text-white/60 hover:text-white hover:bg-white/10 text-xs sm:text-sm h-9 sm:h-10"
                 >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear Plan
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  Clear
                 </Button>
               </>
             )}
             <Button
               onClick={() => setShowAddDialog(true)}
-              className="bg-green-500 hover:bg-green-600 ml-auto"
+              className="bg-green-500 hover:bg-green-600 col-span-2 sm:col-span-1 sm:ml-auto text-xs sm:text-sm h-9 sm:h-10"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
               Add Breakfast
             </Button>
           </div>
