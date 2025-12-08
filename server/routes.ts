@@ -8390,7 +8390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Diet Planner API Routes
 
-  // Parse body composition report from image using Gemini AI
+  // Parse body composition report from image using OpenAI Vision
+  // Uses Replit AI Integrations - no API key required, charges billed to credits
   app.post('/api/diet-planner/parse-body-composition', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -8403,11 +8404,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No image data provided' });
       }
 
-      // Check if Gemini API key is configured
-      if (!process.env.GEMINI_API_KEY) {
+      // Check if OpenAI AI Integrations is configured
+      if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || !process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
         return res.status(503).json({ 
           error: 'AI service not configured',
-          message: 'Please configure Gemini API key'
+          message: 'Please configure OpenAI AI Integrations'
         });
       }
 
@@ -8450,47 +8451,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 Return ONLY the JSON object, no other text.`;
 
-      // Call Gemini API
-      const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      // Call OpenAI Vision API via Replit AI Integrations
+      // the newest OpenAI model is "gpt-4o" for vision tasks
+      const openaiResponse = await fetch(
+        `${process.env.AI_INTEGRATIONS_OPENAI_BASE_URL}/chat/completions`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.AI_INTEGRATIONS_OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            contents: [
+            model: 'gpt-4o',
+            messages: [
               {
-                parts: [
-                  { text: prompt },
+                role: 'user',
+                content: [
+                  { type: 'text', text: prompt },
                   {
-                    inline_data: {
-                      mime_type: mimeType,
-                      data: base64Data
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:${mimeType};base64,${base64Data}`,
+                      detail: 'high'
                     }
                   }
                 ]
               }
             ],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 1000,
-            }
+            max_tokens: 1000,
+            temperature: 0.1,
           }),
         }
       );
 
-      if (!geminiResponse.ok) {
-        const errorData = await geminiResponse.json();
-        console.error('Gemini API error:', errorData);
+      if (!openaiResponse.ok) {
+        const errorData = await openaiResponse.json();
+        console.error('OpenAI API error:', errorData);
         return res.status(500).json({ 
           error: 'AI service error',
           message: errorData.error?.message || 'Failed to process image'
         });
       }
 
-      const geminiData = await geminiResponse.json();
-      const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+      const openaiData = await openaiResponse.json();
+      const content = openaiData.choices?.[0]?.message?.content;
       
       if (!content) {
         return res.status(500).json({ error: 'No response from AI service' });
