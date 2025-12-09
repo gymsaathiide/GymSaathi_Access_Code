@@ -640,7 +640,7 @@ export default function Shop() {
         ) : mobileStoreProducts.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">No products available</div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-wrap justify-center gap-6 py-4">
             {mobileStoreProducts.map((product) => {
               const cartItem = cart.find(item => item.productId === product.id);
               return (
@@ -1092,7 +1092,7 @@ export default function Shop() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="flex flex-wrap justify-center gap-6 py-4">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}

@@ -231,7 +231,7 @@ export default function MemberStore() {
               <p className="text-muted-foreground">No products found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="flex flex-wrap justify-center gap-6 py-4">
               {filteredProducts.map((product) => {
                 const cartItem = cart.find(item => item.productId === product.id);
                 
