@@ -77,7 +77,10 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   **Meal Database System**: Card-based navigation to Breakfast, Lunch, and Dinner meal databases
     -   **Breakfast Meal Plan Generator**: Simplified meal planning interface with:
         -   Empty state on page load (no meals shown initially)
-        -   Category filter tabs (All, Veg, Eggetarian, Non-Veg) for plan customization
+        -   **Cumulative category toggle filters** (radio button behavior - only one active):
+            -   **Veg toggle**: Shows only vegetarian meals
+            -   **Egg toggle**: Shows vegetarian + egg-based meals (cumulative)
+            -   **Non-Veg toggle**: Shows all meals - veg + egg + non-veg (default, all-inclusive)
         -   Generate 7-day or 30-day meal plan buttons
         -   Meal cards display ONLY when plan is generated (no browse/search mode)
         -   Visual category indicators (green=veg, yellow=eggetarian, red=non-veg)
@@ -87,7 +90,7 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
         -   Clear Plan button returns to empty state
         -   State management: activePlan stores {duration, category, meals}
         -   Database table: `meals_breakfast` (300 meals)
-        -   API endpoint: `POST /api/meals/breakfast/generate-plan`
+        -   API endpoint: `POST /api/meals/breakfast/generate-plan` (uses SQL IN clause for cumulative filtering)
     -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
     -   **Workout Planner**: Exercise library with warm-up, strength, cardio, and stretching exercises
     -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
