@@ -1,5 +1,6 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 
 function BreakfastCard() {
   return (
@@ -247,6 +248,26 @@ export default function DietPlannerPage() {
             <p className="text-white/60 text-sm mt-1">Choose your meal to explore options</p>
           </div>
         </div>
+
+        <Link href="/member/diet-planner/ai-planner">
+          <div className="mb-8 bg-gradient-to-r from-orange-500/20 via-amber-500/20 to-yellow-500/20 border border-orange-500/30 rounded-xl p-6 cursor-pointer hover:border-orange-500/50 transition-all group">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    AI Diet Planner
+                    <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">NEW</span>
+                  </h3>
+                  <p className="text-white/60 text-sm">Generate a complete personalized meal plan based on your fitness goals</p>
+                </div>
+              </div>
+              <ChevronRight className="w-6 h-6 text-white/60 group-hover:text-orange-400 group-hover:translate-x-1 transition-all" />
+            </div>
+          </div>
+        </Link>
 
         <div className="flex flex-wrap justify-center gap-8 md:gap-12 lg:gap-16">
           <div className="flex flex-col items-center gap-4">

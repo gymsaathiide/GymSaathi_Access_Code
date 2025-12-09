@@ -75,6 +75,20 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
 -   **Diet Planner System** (Member Dashboard): Comprehensive nutrition and fitness planning with:
     -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals (uses OpenAI Vision for image parsing)
     -   **Meal Database System**: Card-based navigation to Breakfast, Lunch, and Dinner meal databases
+    -   **AI Diet Planner** (NEW): Full-day personalized meal plan generator with:
+        -   Goal selection cards (Fat Loss -200kcal, Muscle Gain +200kcal, Trim & Tone maintenance)
+        -   TDEE calculation from body composition BMR with lifestyle multipliers
+        -   Duration selector (7 or 30 days)
+        -   Cumulative dietary preference toggles (Veg, Egg, Non-Veg)
+        -   Festival mode chips (None, Navratri, Ekadashi, Fasting)
+        -   Full day meal breakdown (Breakfast, Lunch, Snack, Dinner)
+        -   Day-by-day navigation with calorie/macro summaries
+        -   Swap meal functionality to replace individual meals
+        -   Favorite toggle to mark preferred meals
+        -   Exclude toggle to skip unwanted meals
+        -   Visual exclusion state (dimmed cards with red border)
+        -   Database tables: ai_diet_plans, ai_diet_plan_items, member_diet_preferences, meal_favorites, meal_exclusions
+        -   Route: `/member/diet-planner/ai-planner`
     -   **Breakfast Meal Plan Generator**: Simplified meal planning interface with:
         -   Empty state on page load (no meals shown initially)
         -   **Cumulative category toggle filters** (radio button behavior - only one active):

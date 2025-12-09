@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, integer, decimal, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, decimal, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -927,3 +927,156 @@ export const mealsBreakfast = pgTable("meals_breakfast", {
 export const insertMealsBreakfastSchema = createInsertSchema(mealsBreakfast).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertMealsBreakfast = z.infer<typeof insertMealsBreakfastSchema>;
 export type MealsBreakfast = typeof mealsBreakfast.$inferSelect;
+
+// === AI DIET PLANNER - FULL SYSTEM ===
+
+// Festival mode enum for dietary restrictions during festivals
+export const festivalModeEnum = pgEnum('festival_mode', ['none', 'navratri', 'ekadashi', 'fasting']);
+
+// Diet goal enum for plan generation
+export const dietGoalEnum = pgEnum('diet_goal', ['fat_loss', 'muscle_gain', 'trim_tone']);
+
+// Lifestyle multiplier enum for TDEE calculation
+export const lifestyleEnum = pgEnum('lifestyle', ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extra_active']);
+
+// Body Composition Reports - stores body analysis data with BMR for TDEE calculation
+export const bodyCompositionReports = pgTable("body_composition_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  reportDate: timestamp("report_date").defaultNow(),
+  weight: decimal("weight", { precision: 6, scale: 2 }),
+  bmi: decimal("bmi", { precision: 5, scale: 2 }),
+  bodyFatPercentage: decimal("body_fat_percentage", { precision: 5, scale: 2 }),
+  fatMass: decimal("fat_mass", { precision: 6, scale: 2 }),
+  fatFreeBodyWeight: decimal("fat_free_body_weight", { precision: 6, scale: 2 }),
+  muscleMass: decimal("muscle_mass", { precision: 6, scale: 2 }),
+  muscleRate: decimal("muscle_rate", { precision: 5, scale: 2 }),
+  skeletalMuscle: decimal("skeletal_muscle", { precision: 6, scale: 2 }),
+  boneMass: decimal("bone_mass", { precision: 5, scale: 2 }),
+  proteinMass: decimal("protein_mass", { precision: 6, scale: 2 }),
+  protein: decimal("protein", { precision: 5, scale: 2 }),
+  waterWeight: decimal("water_weight", { precision: 6, scale: 2 }),
+  bodyWater: decimal("body_water", { precision: 5, scale: 2 }),
+  subcutaneousFat: decimal("subcutaneous_fat", { precision: 5, scale: 2 }),
+  visceralFat: decimal("visceral_fat", { precision: 5, scale: 2 }),
+  bmr: integer("bmr"),
+  bodyAge: integer("body_age"),
+  idealBodyWeight: decimal("ideal_body_weight", { precision: 6, scale: 2 }),
+  weightStatus: text("weight_status"),
+  bmiStatus: text("bmi_status"),
+  bodyFatStatus: text("body_fat_status"),
+  fatMassStatus: text("fat_mass_status"),
+  fatFreeBodyWeightStatus: text("fat_free_body_weight_status"),
+  muscleMassStatus: text("muscle_mass_status"),
+  muscleRateStatus: text("muscle_rate_status"),
+  skeletalMuscleStatus: text("skeletal_muscle_status"),
+  boneMassStatus: text("bone_mass_status"),
+  proteinMassStatus: text("protein_mass_status"),
+  proteinStatus: text("protein_status"),
+  waterWeightStatus: text("water_weight_status"),
+  bodyWaterStatus: text("body_water_status"),
+  subcutaneousFatStatus: text("subcutaneous_fat_status"),
+  visceralFatStatus: text("visceral_fat_status"),
+  bmrStatus: text("bmr_status"),
+  bodyAgeStatus: text("body_age_status"),
+  idealBodyWeightStatus: text("ideal_body_weight_status"),
+  userName: text("user_name"),
+  rawText: text("raw_text"),
+  fileName: text("file_name"),
+  lifestyle: text("lifestyle"),
+  goal: text("goal"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBodyCompositionReportsSchema = createInsertSchema(bodyCompositionReports).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertBodyCompositionReports = z.infer<typeof insertBodyCompositionReportsSchema>;
+export type BodyCompositionReports = typeof bodyCompositionReports.$inferSelect;
+
+// AI Diet Plans - stores generated meal plans (renamed to avoid conflict with existing diet_plans)
+export const aiDietPlans = pgTable("ai_diet_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  gymId: uuid("gym_id"),
+  name: text("name").notNull(),
+  goal: text("goal").notNull(),
+  durationDays: integer("duration_days").notNull(),
+  targetCalories: integer("target_calories").notNull(),
+  tdee: integer("tdee"),
+  dietaryPreference: text("dietary_preference").notNull(),
+  festivalMode: text("festival_mode").default('none'),
+  macroProtein: integer("macro_protein"),
+  macroCarbs: integer("macro_carbs"),
+  macroFat: integer("macro_fat"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type InsertAiDietPlans = typeof aiDietPlans.$inferInsert;
+export type AiDietPlans = typeof aiDietPlans.$inferSelect;
+
+// AI Diet Plan Items - individual meals in a plan
+export const aiDietPlanItems = pgTable("ai_diet_plan_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  planId: uuid("plan_id").notNull().references(() => aiDietPlans.id, { onDelete: 'cascade' }),
+  dayNumber: integer("day_number").notNull(),
+  mealType: text("meal_type").notNull(),
+  mealId: uuid("meal_id"),
+  mealName: text("meal_name").notNull(),
+  calories: integer("calories").notNull(),
+  protein: decimal("protein", { precision: 6, scale: 2 }).notNull(),
+  carbs: decimal("carbs", { precision: 6, scale: 2 }).notNull(),
+  fat: decimal("fat", { precision: 6, scale: 2 }).notNull(),
+  category: text("category").notNull(),
+  isFavorite: boolean("is_favorite").default(false),
+  isExcluded: boolean("is_excluded").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type InsertAiDietPlanItems = typeof aiDietPlanItems.$inferInsert;
+export type AiDietPlanItems = typeof aiDietPlanItems.$inferSelect;
+
+// Member Diet Preferences - stores user dietary preferences
+export const memberDietPreferences = pgTable("member_diet_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().unique(),
+  dietaryPreference: text("dietary_preference").default('non-veg'), // veg, eggetarian, non-veg
+  festivalMode: text("festival_mode").default('none'),
+  excludedIngredients: text("excluded_ingredients"), // JSON array
+  preferredCuisine: text("preferred_cuisine").default('indian'),
+  allergies: text("allergies"), // JSON array
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertMemberDietPreferencesSchema = createInsertSchema(memberDietPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMemberDietPreferences = z.infer<typeof insertMemberDietPreferencesSchema>;
+export type MemberDietPreferences = typeof memberDietPreferences.$inferSelect;
+
+// Meal Favorites - tracks user favorite meals
+export const mealFavorites = pgTable("meal_favorites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  mealId: uuid("meal_id").notNull(),
+  mealType: text("meal_type").notNull(), // breakfast, lunch, snack, dinner
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMealFavoritesSchema = createInsertSchema(mealFavorites).omit({ id: true, createdAt: true });
+export type InsertMealFavorites = z.infer<typeof insertMealFavoritesSchema>;
+export type MealFavorites = typeof mealFavorites.$inferSelect;
+
+// Meal Exclusions - tracks meals user wants to exclude
+export const mealExclusions = pgTable("meal_exclusions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  mealId: uuid("meal_id").notNull(),
+  mealType: text("meal_type").notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMealExclusionsSchema = createInsertSchema(mealExclusions).omit({ id: true, createdAt: true });
+export type InsertMealExclusions = z.infer<typeof insertMealExclusionsSchema>;
+export type MealExclusions = typeof mealExclusions.$inferSelect;

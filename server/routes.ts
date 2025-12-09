@@ -10208,6 +10208,536 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // === AI DIET PLANNER API ENDPOINTS ===
+
+  // Get user's body composition for TDEE calculation
+  app.get('/api/diet-planner/body-composition', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const result = await db!.execute(sql`
+        SELECT * FROM body_composition_reports 
+        WHERE user_id = ${req.session.userId}
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `);
+
+      if (result.rows.length === 0) {
+        return res.json({ ok: true, bodyComposition: null });
+      }
+
+      res.json({ ok: true, bodyComposition: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error fetching body composition:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Get user's diet preferences
+  app.get('/api/diet-planner/preferences', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const result = await db!.execute(sql`
+        SELECT * FROM member_diet_preferences 
+        WHERE user_id = ${req.session.userId}
+        LIMIT 1
+      `);
+
+      if (result.rows.length === 0) {
+        return res.json({ 
+          ok: true, 
+          preferences: {
+            dietaryPreference: 'non-veg',
+            festivalMode: 'none',
+            preferredCuisine: 'indian'
+          }
+        });
+      }
+
+      res.json({ ok: true, preferences: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error fetching diet preferences:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Save user's diet preferences
+  app.post('/api/diet-planner/preferences', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { dietaryPreference, festivalMode, excludedIngredients, preferredCuisine, allergies } = req.body;
+
+      await db!.execute(sql`
+        INSERT INTO member_diet_preferences (user_id, dietary_preference, festival_mode, excluded_ingredients, preferred_cuisine, allergies)
+        VALUES (${req.session.userId}, ${dietaryPreference || 'non-veg'}, ${festivalMode || 'none'}, ${excludedIngredients || null}, ${preferredCuisine || 'indian'}, ${allergies || null})
+        ON CONFLICT (user_id) DO UPDATE SET
+          dietary_preference = EXCLUDED.dietary_preference,
+          festival_mode = EXCLUDED.festival_mode,
+          excluded_ingredients = EXCLUDED.excluded_ingredients,
+          preferred_cuisine = EXCLUDED.preferred_cuisine,
+          allergies = EXCLUDED.allergies,
+          updated_at = NOW()
+      `);
+
+      res.json({ ok: true, message: 'Preferences saved' });
+    } catch (error: any) {
+      console.error('Error saving diet preferences:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Generate AI Diet Plan
+  app.post('/api/diet-planner/generate', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { goal, duration, dietaryPreference, festivalMode, tdee: providedTdee } = req.body;
+
+      // Validate inputs
+      if (!goal || !['fat_loss', 'muscle_gain', 'trim_tone'].includes(goal)) {
+        return res.status(400).json({ ok: false, error: 'Invalid goal. Must be fat_loss, muscle_gain, or trim_tone' });
+      }
+      if (!duration || ![7, 30].includes(duration)) {
+        return res.status(400).json({ ok: false, error: 'Duration must be 7 or 30 days' });
+      }
+      if (!dietaryPreference || !['veg', 'eggetarian', 'non-veg'].includes(dietaryPreference)) {
+        return res.status(400).json({ ok: false, error: 'Invalid dietary preference' });
+      }
+
+      // Get or calculate TDEE
+      let tdee = providedTdee;
+      if (!tdee) {
+        const bcResult = await db!.execute(sql`
+          SELECT bmr, lifestyle FROM body_composition_reports 
+          WHERE user_id = ${req.session.userId}
+          ORDER BY created_at DESC 
+          LIMIT 1
+        `);
+
+        if (bcResult.rows.length > 0 && bcResult.rows[0].bmr) {
+          const bmr = Number(bcResult.rows[0].bmr);
+          const lifestyle = String(bcResult.rows[0].lifestyle || 'moderately_active');
+          
+          // Activity multipliers for TDEE calculation
+          const multipliers: Record<string, number> = {
+            'sedentary': 1.2,
+            'lightly_active': 1.375,
+            'moderately_active': 1.55,
+            'very_active': 1.725,
+            'extra_active': 1.9
+          };
+          
+          tdee = Math.round(bmr * (multipliers[lifestyle] || 1.55));
+        } else {
+          // Default TDEE if no body composition data
+          tdee = 2000;
+        }
+      }
+
+      // Apply goal offset
+      let targetCalories: number;
+      let macroProtein: number, macroCarbs: number, macroFat: number;
+      
+      switch (goal) {
+        case 'fat_loss':
+          targetCalories = tdee - 200;
+          macroProtein = 30;
+          macroCarbs = 40;
+          macroFat = 30;
+          break;
+        case 'muscle_gain':
+          targetCalories = tdee + 200;
+          macroProtein = 30;
+          macroCarbs = 45;
+          macroFat = 25;
+          break;
+        case 'trim_tone':
+        default:
+          targetCalories = tdee;
+          macroProtein = 30;
+          macroCarbs = 40;
+          macroFat = 30;
+          break;
+      }
+
+      // Meal type calorie distribution (approximate)
+      const mealDistribution = {
+        breakfast: 0.25,
+        lunch: 0.30,
+        snack: 0.10,
+        dinner: 0.35
+      };
+
+      // Build category filter based on cumulative logic
+      let categoryFilter: string[];
+      if (dietaryPreference === 'veg') {
+        categoryFilter = ['veg'];
+      } else if (dietaryPreference === 'eggetarian') {
+        categoryFilter = ['veg', 'eggetarian'];
+      } else {
+        categoryFilter = ['veg', 'eggetarian', 'non-veg'];
+      }
+
+      // Fetch meals from breakfast table for all meal types
+      // Using breakfast meals as foundation since it has the most data
+      const mealsResult = await db!.execute(sql`
+        SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
+        FROM meals_breakfast 
+        WHERE category = ANY(${categoryFilter})
+        ORDER BY RANDOM()
+      `);
+
+      const availableMeals = mealsResult.rows || [];
+
+      if (availableMeals.length === 0) {
+        return res.status(400).json({ ok: false, error: 'No meals available for the selected dietary preference' });
+      }
+
+      // Deactivate previous plans for this user
+      await db!.execute(sql`
+        UPDATE ai_diet_plans 
+        SET is_active = false 
+        WHERE user_id = ${req.session.userId}
+      `);
+
+      // Create the plan
+      const planName = `${goal.replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())} - ${duration} Day Plan`;
+      const planResult = await db!.execute(sql`
+        INSERT INTO ai_diet_plans (
+          user_id, name, goal, duration_days, target_calories, tdee, 
+          dietary_preference, festival_mode, macro_protein, macro_carbs, macro_fat
+        )
+        VALUES (
+          ${req.session.userId}, ${planName}, ${goal}, ${duration}, ${targetCalories}, ${tdee},
+          ${dietaryPreference}, ${festivalMode || 'none'}, ${macroProtein}, ${macroCarbs}, ${macroFat}
+        )
+        RETURNING id
+      `);
+
+      const planId = planResult.rows[0].id;
+
+      // Generate meal items for each day
+      const mealTypes = ['breakfast', 'lunch', 'snack', 'dinner'];
+      const planItems: any[] = [];
+
+      for (let day = 1; day <= duration; day++) {
+        for (const mealType of mealTypes) {
+          // Pick a random meal
+          const randomIndex = Math.floor(Math.random() * availableMeals.length);
+          const meal = availableMeals[randomIndex];
+          
+          // Calculate target calories for this meal type
+          const targetMealCalories = Math.round(targetCalories * mealDistribution[mealType as keyof typeof mealDistribution]);
+
+          // Insert meal item
+          await db!.execute(sql`
+            INSERT INTO ai_diet_plan_items (
+              plan_id, day_number, meal_type, meal_id, meal_name, 
+              calories, protein, carbs, fat, category
+            )
+            VALUES (
+              ${planId}, ${day}, ${mealType}, ${meal.id}, ${meal.name},
+              ${Number(meal.calories)}, ${Number(meal.protein)}, ${Number(meal.carbs)}, ${Number(meal.fats)}, ${meal.category}
+            )
+          `);
+
+          planItems.push({
+            dayNumber: day,
+            mealType,
+            mealId: meal.id,
+            mealName: meal.name,
+            calories: Number(meal.calories),
+            protein: Number(meal.protein),
+            carbs: Number(meal.carbs),
+            fat: Number(meal.fats),
+            category: meal.category
+          });
+        }
+      }
+
+      // Fetch the complete plan with items
+      const fullPlan = {
+        id: planId,
+        name: planName,
+        goal,
+        durationDays: duration,
+        targetCalories,
+        tdee,
+        dietaryPreference,
+        festivalMode: festivalMode || 'none',
+        macroProtein,
+        macroCarbs,
+        macroFat,
+        items: planItems
+      };
+
+      res.json({ ok: true, plan: fullPlan });
+    } catch (error: any) {
+      console.error('Error generating AI diet plan:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Get user's active plan
+  app.get('/api/diet-planner/plans', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const plansResult = await db!.execute(sql`
+        SELECT * FROM ai_diet_plans 
+        WHERE user_id = ${req.session.userId}
+        ORDER BY created_at DESC
+      `);
+
+      res.json({ ok: true, plans: plansResult.rows });
+    } catch (error: any) {
+      console.error('Error fetching diet plans:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Get specific plan with items
+  app.get('/api/diet-planner/plans/:planId', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId } = req.params;
+
+      const planResult = await db!.execute(sql`
+        SELECT * FROM ai_diet_plans 
+        WHERE id = ${planId} AND user_id = ${req.session.userId}
+      `);
+
+      if (planResult.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Plan not found' });
+      }
+
+      const itemsResult = await db!.execute(sql`
+        SELECT * FROM ai_diet_plan_items 
+        WHERE plan_id = ${planId}
+        ORDER BY day_number, 
+          CASE meal_type 
+            WHEN 'breakfast' THEN 1 
+            WHEN 'lunch' THEN 2 
+            WHEN 'snack' THEN 3 
+            WHEN 'dinner' THEN 4 
+          END
+      `);
+
+      res.json({ 
+        ok: true, 
+        plan: planResult.rows[0],
+        items: itemsResult.rows
+      });
+    } catch (error: any) {
+      console.error('Error fetching diet plan:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Swap meal in plan
+  app.patch('/api/diet-planner/plans/:planId/items/:itemId/swap', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId, itemId } = req.params;
+
+      // Verify plan ownership
+      const planResult = await db!.execute(sql`
+        SELECT dietary_preference FROM ai_diet_plans 
+        WHERE id = ${planId} AND user_id = ${req.session.userId}
+      `);
+
+      if (planResult.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Plan not found' });
+      }
+
+      const dietaryPreference = planResult.rows[0].dietary_preference;
+
+      // Build category filter
+      let categoryFilter: string[];
+      if (dietaryPreference === 'veg') {
+        categoryFilter = ['veg'];
+      } else if (dietaryPreference === 'eggetarian') {
+        categoryFilter = ['veg', 'eggetarian'];
+      } else {
+        categoryFilter = ['veg', 'eggetarian', 'non-veg'];
+      }
+
+      // Get a new random meal
+      const mealsResult = await db!.execute(sql`
+        SELECT id, name, protein, carbs, fats, calories, category
+        FROM meals_breakfast 
+        WHERE category = ANY(${categoryFilter})
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+
+      if (mealsResult.rows.length === 0) {
+        return res.status(400).json({ ok: false, error: 'No replacement meals available' });
+      }
+
+      const newMeal = mealsResult.rows[0];
+
+      // Update the item
+      await db!.execute(sql`
+        UPDATE ai_diet_plan_items 
+        SET meal_id = ${newMeal.id}, 
+            meal_name = ${newMeal.name},
+            calories = ${Number(newMeal.calories)},
+            protein = ${Number(newMeal.protein)},
+            carbs = ${Number(newMeal.carbs)},
+            fat = ${Number(newMeal.fats)},
+            category = ${newMeal.category}
+        WHERE id = ${itemId} AND plan_id = ${planId}
+      `);
+
+      res.json({ 
+        ok: true, 
+        message: 'Meal swapped successfully',
+        newMeal: {
+          id: newMeal.id,
+          name: newMeal.name,
+          calories: Number(newMeal.calories),
+          protein: Number(newMeal.protein),
+          carbs: Number(newMeal.carbs),
+          fat: Number(newMeal.fats),
+          category: newMeal.category
+        }
+      });
+    } catch (error: any) {
+      console.error('Error swapping meal:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Toggle meal favorite
+  app.post('/api/diet-planner/plans/:planId/items/:itemId/favorite', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId, itemId } = req.params;
+
+      // Verify plan ownership
+      const planResult = await db!.execute(sql`
+        SELECT id FROM ai_diet_plans 
+        WHERE id = ${planId} AND user_id = ${req.session.userId}
+      `);
+
+      if (planResult.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Plan not found' });
+      }
+
+      // Toggle favorite status
+      await db!.execute(sql`
+        UPDATE ai_diet_plan_items 
+        SET is_favorite = NOT is_favorite
+        WHERE id = ${itemId} AND plan_id = ${planId}
+      `);
+
+      // Get updated status
+      const itemResult = await db!.execute(sql`
+        SELECT is_favorite FROM ai_diet_plan_items 
+        WHERE id = ${itemId}
+      `);
+
+      res.json({ 
+        ok: true, 
+        isFavorite: itemResult.rows[0]?.is_favorite || false
+      });
+    } catch (error: any) {
+      console.error('Error toggling favorite:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Toggle meal excluded
+  app.post('/api/diet-planner/plans/:planId/items/:itemId/exclude', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId, itemId } = req.params;
+
+      // Verify plan ownership
+      const planResult = await db!.execute(sql`
+        SELECT id FROM ai_diet_plans 
+        WHERE id = ${planId} AND user_id = ${req.session.userId}
+      `);
+
+      if (planResult.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Plan not found' });
+      }
+
+      // Toggle excluded status
+      await db!.execute(sql`
+        UPDATE ai_diet_plan_items 
+        SET is_excluded = NOT is_excluded
+        WHERE id = ${itemId} AND plan_id = ${planId}
+      `);
+
+      // Get updated status
+      const itemResult = await db!.execute(sql`
+        SELECT is_excluded FROM ai_diet_plan_items 
+        WHERE id = ${itemId}
+      `);
+
+      res.json({ 
+        ok: true, 
+        isExcluded: itemResult.rows[0]?.is_excluded || false
+      });
+    } catch (error: any) {
+      console.error('Error toggling exclusion:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Delete a diet plan
+  app.delete('/api/diet-planner/plans/:planId', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId } = req.params;
+
+      // Verify ownership and delete
+      const result = await db!.execute(sql`
+        DELETE FROM ai_diet_plans 
+        WHERE id = ${planId} AND user_id = ${req.session.userId}
+        RETURNING id
+      `);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Plan not found' });
+      }
+
+      res.json({ ok: true, message: 'Plan deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting diet plan:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
