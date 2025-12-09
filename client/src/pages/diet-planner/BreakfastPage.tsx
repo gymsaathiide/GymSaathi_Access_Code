@@ -38,7 +38,7 @@ const categoryConfig = {
 
 export default function BreakfastPage() {
   const { toast } = useToast();
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('non-veg');
   const [activePlan, setActivePlan] = useState<{ duration: 7 | 30; category: string; meals: MealPlanItem[] } | null>(null);
   const [editingMeal, setEditingMeal] = useState<BreakfastMeal | null>(null);
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null);
@@ -215,7 +215,9 @@ export default function BreakfastPage() {
 
   const handleRegeneratePlan = () => {
     if (!activePlan) return;
-    generatePlanMutation.mutate({ duration: activePlan.duration, category: activePlan.category });
+    // Normalize 'all' to 'non-veg' for consistency
+    const normalizedCategory = activePlan.category === 'all' ? 'non-veg' : activePlan.category;
+    generatePlanMutation.mutate({ duration: activePlan.duration, category: normalizedCategory });
   };
 
   const handleClearPlan = () => {
@@ -278,7 +280,11 @@ export default function BreakfastPage() {
               <h1 className="text-3xl font-bold text-white">Breakfast</h1>
               <p className="text-white/60 text-sm mt-1">
                 {activePlan 
-                  ? `${activePlan.duration}-day plan (${activePlan.category === 'all' ? 'All Categories' : categoryConfig[activePlan.category as keyof typeof categoryConfig]?.label || activePlan.category})`
+                  ? `${activePlan.duration}-day plan (${
+                      activePlan.category === 'veg' ? 'Veg Only' :
+                      activePlan.category === 'eggetarian' ? 'Veg + Egg' :
+                      'All Categories'
+                    })`
                   : 'Generate a meal plan to get started'
                 }
               </p>
@@ -287,15 +293,20 @@ export default function BreakfastPage() {
         </div>
 
         <div className="flex flex-col gap-4 mb-6">
-          {/* Category Toggle Switches - Horizontal row on all screens */}
-          <div className="grid grid-cols-4 gap-2 sm:flex sm:items-center sm:gap-4">
-            {/* Veg Toggle */}
+          {/* Category Toggle Switches - Cumulative filtering:
+              - Veg: Only vegetarian meals
+              - Egg: Vegetarian + Egg-based meals
+              - Non-Veg: All meals (Veg + Egg + Non-Veg)
+          */}
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-4">
+            {/* Veg Toggle - Only Vegetarian */}
             <label className="relative flex flex-col sm:flex-row items-center cursor-pointer gap-1 sm:gap-0">
               <input 
                 className="sr-only peer" 
-                type="checkbox" 
+                type="radio" 
+                name="categoryFilter"
                 checked={categoryFilter === 'veg'}
-                onChange={() => setCategoryFilter(categoryFilter === 'veg' ? 'all' : 'veg')}
+                onChange={() => setCategoryFilter('veg')}
               />
               <div className={`w-12 h-6 sm:w-16 sm:h-8 rounded-full transition-all duration-500 flex items-center px-0.5 sm:px-1 ${
                 categoryFilter === 'veg' 
@@ -313,13 +324,14 @@ export default function BreakfastPage() {
               </span>
             </label>
 
-            {/* Eggetarian Toggle */}
+            {/* Eggetarian Toggle - Veg + Egg meals */}
             <label className="relative flex flex-col sm:flex-row items-center cursor-pointer gap-1 sm:gap-0">
               <input 
                 className="sr-only peer" 
-                type="checkbox" 
+                type="radio" 
+                name="categoryFilter"
                 checked={categoryFilter === 'eggetarian'}
-                onChange={() => setCategoryFilter(categoryFilter === 'eggetarian' ? 'all' : 'eggetarian')}
+                onChange={() => setCategoryFilter('eggetarian')}
               />
               <div className={`w-12 h-6 sm:w-16 sm:h-8 rounded-full transition-all duration-500 flex items-center px-0.5 sm:px-1 ${
                 categoryFilter === 'eggetarian' 
@@ -337,39 +349,30 @@ export default function BreakfastPage() {
               </span>
             </label>
 
-            {/* Non-Veg Toggle */}
+            {/* Non-Veg Toggle - All meals (Veg + Egg + Non-Veg) */}
             <label className="relative flex flex-col sm:flex-row items-center cursor-pointer gap-1 sm:gap-0">
               <input 
                 className="sr-only peer" 
-                type="checkbox" 
-                checked={categoryFilter === 'non-veg'}
-                onChange={() => setCategoryFilter(categoryFilter === 'non-veg' ? 'all' : 'non-veg')}
+                type="radio" 
+                name="categoryFilter"
+                checked={categoryFilter === 'non-veg' || categoryFilter === 'all'}
+                onChange={() => setCategoryFilter('non-veg')}
               />
               <div className={`w-12 h-6 sm:w-16 sm:h-8 rounded-full transition-all duration-500 flex items-center px-0.5 sm:px-1 ${
-                categoryFilter === 'non-veg' 
+                categoryFilter === 'non-veg' || categoryFilter === 'all'
                   ? 'bg-gradient-to-r from-red-400 to-red-600' 
                   : 'bg-[hsl(0,0%,15%)] border border-white/10'
               }`}>
                 <div className={`h-5 w-5 sm:h-6 sm:w-6 rounded-full bg-white flex items-center justify-center transition-all duration-500 shadow-md ${
-                  categoryFilter === 'non-veg' ? 'translate-x-5 sm:translate-x-8' : 'translate-x-0'
+                  categoryFilter === 'non-veg' || categoryFilter === 'all' ? 'translate-x-5 sm:translate-x-8' : 'translate-x-0'
                 }`}>
-                  <Drumstick className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${categoryFilter === 'non-veg' ? 'text-red-500' : 'text-gray-400'}`} />
+                  <Drumstick className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${categoryFilter === 'non-veg' || categoryFilter === 'all' ? 'text-red-500' : 'text-gray-400'}`} />
                 </div>
               </div>
-              <span className={`sm:ml-2 text-[10px] sm:text-sm font-medium transition-colors ${categoryFilter === 'non-veg' ? 'text-red-400' : 'text-white/50'}`}>
+              <span className={`sm:ml-2 text-[10px] sm:text-sm font-medium transition-colors ${categoryFilter === 'non-veg' || categoryFilter === 'all' ? 'text-red-400' : 'text-white/50'}`}>
                 Non-Veg
               </span>
             </label>
-
-            {/* All Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCategoryFilter('all')}
-              className={`h-auto py-1 px-2 sm:py-2 sm:px-3 text-[10px] sm:text-sm ${categoryFilter === 'all' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
-            >
-              All
-            </Button>
           </div>
 
           {/* Action Buttons - Grid on mobile, flex on larger screens */}

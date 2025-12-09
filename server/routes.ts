@@ -10149,95 +10149,50 @@ Return ONLY the JSON object, no other text.`;
 
       let selectedMeals: any[] = [];
 
-      // Handle "all" category with balanced distribution across veg, eggetarian, non-veg
-      if (category === 'all') {
-        // Fetch meals from each category
-        const vegQuery = await db!.execute(sql`SELECT * FROM meals_breakfast WHERE category = 'veg' ORDER BY RANDOM()`);
-        const eggQuery = await db!.execute(sql`SELECT * FROM meals_breakfast WHERE category = 'eggetarian' ORDER BY RANDOM()`);
-        const nonVegQuery = await db!.execute(sql`SELECT * FROM meals_breakfast WHERE category = 'non-veg' ORDER BY RANDOM()`);
-
-        const vegMeals = vegQuery.rows || [];
-        const eggMeals = eggQuery.rows || [];
-        const nonVegMeals = nonVegQuery.rows || [];
-
-        // Combine all available meals
-        const allAvailableMeals = [...vegMeals, ...eggMeals, ...nonVegMeals];
-        
-        if (allAvailableMeals.length === 0) {
-          return res.status(400).json({ ok: false, error: 'No meals available in database' });
-        }
-
-        // Calculate how many meals to pick from each category (balanced distribution)
-        const mealsPerCategory = Math.floor(duration / 3);
-        const remainder = duration % 3;
-
-        // Helper function to randomly pick N meals from an array (with repetition if needed)
-        const pickRandomMeals = (meals: any[], count: number) => {
-          const picked = [];
-          for (let i = 0; i < count; i++) {
-            if (meals.length > 0) {
-              const randomIndex = Math.floor(Math.random() * meals.length);
-              picked.push(meals[randomIndex]);
-            }
-          }
-          return picked;
-        };
-
-        // Pick meals from each category (only if category has meals)
-        if (vegMeals.length > 0) {
-          selectedMeals.push(...pickRandomMeals(vegMeals, mealsPerCategory + (remainder > 0 ? 1 : 0)));
-        }
-        if (eggMeals.length > 0) {
-          selectedMeals.push(...pickRandomMeals(eggMeals, mealsPerCategory + (remainder > 1 ? 1 : 0)));
-        }
-        if (nonVegMeals.length > 0) {
-          selectedMeals.push(...pickRandomMeals(nonVegMeals, mealsPerCategory));
-        }
-
-        // If we don't have enough meals, fill the gap with random meals from all available
-        // Safety check to prevent infinite loop
-        if (selectedMeals.length < duration && allAvailableMeals.length === 0) {
-          return res.status(400).json({ ok: false, error: 'Insufficient meals to generate plan' });
-        }
-        
-        let maxIterations = duration * 2; // Defensive counter
-        while (selectedMeals.length < duration && maxIterations > 0) {
-          if (allAvailableMeals.length === 0) {
-            return res.status(400).json({ ok: false, error: 'No meals available to complete plan' });
-          }
-          const randomIndex = Math.floor(Math.random() * allAvailableMeals.length);
-          selectedMeals.push(allAvailableMeals[randomIndex]);
-          maxIterations--;
-        }
-        
-        // Final validation
-        if (selectedMeals.length < duration) {
-          return res.status(500).json({ ok: false, error: 'Failed to generate complete meal plan' });
-        }
-
-        // Shuffle the array to randomize order (Fisher-Yates shuffle)
-        for (let i = selectedMeals.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [selectedMeals[i], selectedMeals[j]] = [selectedMeals[j], selectedMeals[i]];
-        }
-      } else {
-        // Single category filter
-        const mealsQuery = await db!.execute(sql`
+      // Cumulative category filtering (union-based, not proportional):
+      // - 'veg' = only vegetarian meals
+      // - 'eggetarian' = vegetarian + egg-based meals (union)
+      // - 'non-veg' or 'all' = vegetarian + egg-based + non-vegetarian meals (all)
+      // 
+      // Each tier includes ALL meals from lower tiers. Meals are selected randomly
+      // from the combined pool, not proportionally distributed across categories.
+      
+      // Normalize 'all' to 'non-veg' for consistent handling
+      const normalizedCategory = category === 'all' ? 'non-veg' : category;
+      
+      // Build the WHERE clause based on cumulative categories
+      let mealsQuery;
+      if (normalizedCategory === 'veg') {
+        mealsQuery = await db!.execute(sql`
           SELECT * FROM meals_breakfast 
-          WHERE category = ${category}
+          WHERE category = 'veg' 
           ORDER BY RANDOM()
         `);
-        const availableMeals = mealsQuery.rows || [];
-        
-        if (availableMeals.length === 0) {
-          return res.status(400).json({ ok: false, error: 'No meals available for the selected category' });
-        }
+      } else if (normalizedCategory === 'eggetarian') {
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meals_breakfast 
+          WHERE category IN ('veg', 'eggetarian') 
+          ORDER BY RANDOM()
+        `);
+      } else {
+        // 'non-veg' includes all categories
+        mealsQuery = await db!.execute(sql`
+          SELECT * FROM meals_breakfast 
+          WHERE category IN ('veg', 'eggetarian', 'non-veg') 
+          ORDER BY RANDOM()
+        `);
+      }
 
-        // Pick random meals with repetition if needed
-        for (let i = 0; i < duration; i++) {
-          const randomIndex = Math.floor(Math.random() * availableMeals.length);
-          selectedMeals.push(availableMeals[randomIndex]);
-        }
+      const allAvailableMeals = mealsQuery.rows || [];
+      
+      if (allAvailableMeals.length === 0) {
+        return res.status(400).json({ ok: false, error: 'No meals available for the selected category' });
+      }
+
+      // Pick random meals from the combined pool (with repetition if needed)
+      for (let i = 0; i < duration; i++) {
+        const randomIndex = Math.floor(Math.random() * allAvailableMeals.length);
+        selectedMeals.push(allAvailableMeals[randomIndex]);
       }
 
       // Generate meal plan with day numbers
