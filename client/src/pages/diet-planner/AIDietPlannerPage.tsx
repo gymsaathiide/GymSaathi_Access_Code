@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 type MealTab = 'breakfast' | 'lunch' | 'dinner';
 type DietGoal = 'fat_loss' | 'muscle_gain' | 'trim_tone';
 type DietaryPreference = 'veg' | 'eggetarian' | 'non-veg';
-type FestivalMode = 'none' | 'navratri' | 'ekadashi' | 'fasting';
 type Duration = 7 | 30;
 
 interface PlanItem {
@@ -34,7 +33,6 @@ interface DietPlan {
   targetCalories: number;
   tdee: number;
   dietaryPreference: DietaryPreference;
-  festivalMode: FestivalMode;
   macroProtein: number;
   macroCarbs: number;
   macroFat: number;
@@ -49,7 +47,6 @@ export default function AIDietPlannerPage() {
   const [selectedGoal, setSelectedGoal] = useState<DietGoal>('trim_tone');
   const [selectedDuration, setSelectedDuration] = useState<Duration>(7);
   const [selectedDietary, setSelectedDietary] = useState<DietaryPreference>('non-veg');
-  const [selectedFestival, setSelectedFestival] = useState<FestivalMode>('none');
   
   // State for generated plan
   const [activePlan, setActivePlan] = useState<DietPlan | null>(null);
@@ -87,7 +84,7 @@ export default function AIDietPlannerPage() {
   const targetCalories = getTargetCalories();
 
   const generatePlanMutation = useMutation({
-    mutationFn: async (params: { goal: DietGoal; duration: Duration; dietaryPreference: DietaryPreference; festivalMode: FestivalMode }) => {
+    mutationFn: async (params: { goal: DietGoal; duration: Duration; dietaryPreference: DietaryPreference }) => {
       const res = await fetch('/api/diet-planner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,21 +170,10 @@ export default function AIDietPlannerPage() {
   });
 
   const handleGenerate = () => {
-    // Log all selected values for debugging
-    console.log({
-      mealTab: activeMealTab,
-      goal: selectedGoal,
-      targetCalories,
-      duration: selectedDuration,
-      dietaryPreference: selectedDietary,
-      festivalMode: selectedFestival
-    });
-
     generatePlanMutation.mutate({
       goal: selectedGoal,
       duration: selectedDuration,
-      dietaryPreference: selectedDietary,
-      festivalMode: selectedFestival
+      dietaryPreference: selectedDietary
     });
   };
 
@@ -236,15 +222,6 @@ export default function AIDietPlannerPage() {
       case 'veg': return 'Veg';
       case 'eggetarian': return 'Egg';
       case 'non-veg': return 'Non-Veg';
-    }
-  };
-
-  const getFestivalLabel = () => {
-    switch (selectedFestival) {
-      case 'none': return 'None';
-      case 'navratri': return 'Navratri';
-      case 'ekadashi': return 'Ekadashi';
-      case 'fasting': return 'Fasting';
     }
   };
 
@@ -531,11 +508,6 @@ export default function AIDietPlannerPage() {
           </div>
 
           {/* Dietary Preference */}
-          {/* Filter logic:
-              - Veg: Show only vegetarian meals
-              - Egg: Show veg + egg-based meals (cumulative)
-              - Non-Veg: Show all meals - veg + egg + non-veg (cumulative)
-          */}
           <div>
             <h3 className="text-white font-semibold mb-3">Dietary preference</h3>
             <div className="flex gap-3">
@@ -572,42 +544,12 @@ export default function AIDietPlannerPage() {
             </div>
           </div>
 
-          {/* Festival Mode */}
-          {/* When any festival mode except None is selected, filter for festival-friendly meals */}
-          <div>
-            <h3 className="text-white font-semibold mb-3">Festival mode</h3>
-            <div className="flex flex-wrap gap-2">
-              {(['none', 'navratri', 'ekadashi', 'fasting'] as FestivalMode[]).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setSelectedFestival(mode)}
-                  className={`py-2 px-4 rounded-full text-sm font-medium transition-all ${
-                    selectedFestival === mode
-                      ? 'bg-purple-500 text-white'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-                  }`}
-                >
-                  {mode === 'none' && '✨ None'}
-                  {mode === 'navratri' && '🙏 Navratri'}
-                  {mode === 'ekadashi' && '🌙 Ekadashi'}
-                  {mode === 'fasting' && '🍃 Fasting'}
-                </button>
-              ))}
-            </div>
-            {selectedFestival !== 'none' && (
-              <p className="text-purple-400 text-xs mt-2">
-                We will only use festival-friendly meals for your plan.
-              </p>
-            )}
-          </div>
-
           {/* Plan Summary */}
           <div className="bg-white/5 rounded-xl p-4 border border-white/10">
             <p className="text-white/60 text-sm text-center">
               <span className="text-white font-medium">Target:</span> {targetCalories} kcal/day · 
               <span className="text-white font-medium"> Duration:</span> {selectedDuration} days · 
-              <span className="text-white font-medium"> Preference:</span> {getDietaryLabel()} · 
-              <span className="text-white font-medium"> Mode:</span> {getFestivalLabel()}
+              <span className="text-white font-medium"> Preference:</span> {getDietaryLabel()}
             </p>
           </div>
 
