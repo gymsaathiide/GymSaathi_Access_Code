@@ -1,112 +1,236 @@
 import { ArrowLeft } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 
-function BreakfastButton() {
+function BreakfastCard() {
   return (
-    <button className="group relative outline-0 h-[100px] w-[100px] sm:h-[120px] sm:w-[120px] border border-solid border-transparent rounded-xl flex items-center justify-center aspect-square cursor-pointer transition-transform duration-200 active:scale-[0.95] bg-[linear-gradient(45deg,#ff9f1c,#ffbf69)] shadow-[0_4px_15px_rgba(255,159,28,0.4)]">
-      <div className="absolute z-10 h-[70px] w-[70px] sm:h-[85px] sm:w-[85px] transition-all duration-300">
-        <div className="absolute left-[10%] top-[35%] h-[38%] w-[38%] rounded-full bg-white border-2 border-amber-300 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1 group-hover:-rotate-6">
-          <div className="h-1/2 w-1/2 rounded-full bg-amber-300 shadow-sm"></div>
-        </div>
-        <div className="absolute right-[5%] top-[18%] h-[40%] w-[40%] rounded-full bg-white border-2 border-amber-400 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:rotate-3">
-          <div className="flex flex-col items-center gap-[2px]">
-            <span className="h-[6px] w-[75%] rounded-full bg-amber-500"></span>
-            <span className="h-[6px] w-[80%] rounded-full bg-amber-400"></span>
-            <span className="h-[5px] w-[70%] rounded-full bg-amber-300"></span>
+    <Link href="/member/diet-planner/breakfast">
+      <div className="relative group/main flex flex-wrap w-56 items-center justify-center cursor-pointer">
+        <div className="main_back absolute w-44 h-44 rounded-[10px] rotate-90 bg-[linear-gradient(270deg,#f97316,#fbbf24,#fb923c)] shadow-[inset_0_0_180px_5px_#ffffff] -z-20 transition-opacity duration-300 group-hover/main:opacity-0"></div>
+        
+        <p className="text absolute text-[0.7rem] font-bold tracking-[0.33em] text-black text-center transition-opacity duration-400 z-30 group-hover/main:opacity-0">
+          HOVER<br /><br />FOR<br /><br />BREAKFAST
+        </p>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-tl-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-green-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-green-700 group-hover/main:text-white">VEG</span>
+            <span className="text-xl">🥗</span>
           </div>
         </div>
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-[8%] h-[42%] w-[42%] rounded-full bg-white border-2 border-amber-300 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-2 group-hover:rotate-1">
-          <div className="h-[70%] w-[70%] rounded-[40%] bg-amber-200 border border-amber-400 flex items-center justify-center">
-            <div className="h-1/2 w-1/2 rounded-md bg-amber-500"></div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-amber-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-amber-700 group-hover/main:text-white">EGGETARIAN</span>
+            <span className="text-xl">🍳</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-tr-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-red-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-red-700 group-hover/main:text-white">NON-VEG</span>
+            <span className="text-xl">🍗</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-orange-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-orange-700 group-hover/main:text-white">PANCAKES</span>
+            <span className="text-xl">🥞</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:border-transparent group-hover/main:bg-gradient-to-br from-orange-500 via-amber-400 to-yellow-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-slate-700 group-hover/main:text-white">ALL</span>
+            <span className="text-xl">🌅</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-yellow-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-yellow-700 group-hover/main:text-white">TOAST</span>
+            <span className="text-xl">🍞</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-bl-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-emerald-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-emerald-700 group-hover/main:text-white">SMOOTHIE</span>
+            <span className="text-xl">🥤</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-sky-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-sky-800 group-hover/main:text-white">OATS</span>
+            <span className="text-xl">🥣</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-br-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-pink-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-pink-800 group-hover/main:text-white">FRUITS</span>
+            <span className="text-xl">🍎</span>
           </div>
         </div>
       </div>
-      <span className="text-[24px] sm:text-[28px] font-extrabold leading-none text-white tracking-tight transition-all duration-200 group-hover:opacity-0">
-        🌅
-      </span>
-    </button>
+    </Link>
   );
 }
 
-function LunchButton() {
+function LunchCard() {
   return (
-    <button className="group relative outline-0 h-[100px] w-[100px] sm:h-[120px] sm:w-[120px] border border-solid border-transparent rounded-xl flex items-center justify-center aspect-square cursor-pointer transition-transform duration-200 active:scale-[0.95] bg-[linear-gradient(45deg,#06b6d4,#22d3ee)] shadow-[0_4px_15px_rgba(6,182,212,0.4)]">
-      <div className="absolute z-10 h-[70px] w-[70px] sm:h-[85px] sm:w-[85px] transition-all duration-300">
-        <div className="absolute left-[5%] top-[25%] h-[45%] w-[45%] rounded-full bg-white border-2 border-cyan-300 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1 group-hover:-rotate-6">
-          <div className="h-[60%] w-[60%] rounded-full bg-green-400 flex items-center justify-center">
-            <div className="h-1/2 w-1/2 rounded-full bg-green-600"></div>
+    <Link href="/member/diet-planner/lunch">
+      <div className="relative group/main flex flex-wrap w-56 items-center justify-center cursor-pointer">
+        <div className="main_back absolute w-44 h-44 rounded-[10px] rotate-90 bg-[linear-gradient(270deg,#06b6d4,#22d3ee,#67e8f9)] shadow-[inset_0_0_180px_5px_#ffffff] -z-20 transition-opacity duration-300 group-hover/main:opacity-0"></div>
+        
+        <p className="text absolute text-[0.7rem] font-bold tracking-[0.33em] text-black text-center transition-opacity duration-400 z-30 group-hover/main:opacity-0">
+          HOVER<br /><br />FOR<br /><br />LUNCH
+        </p>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-tl-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-green-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-green-700 group-hover/main:text-white">VEG</span>
+            <span className="text-xl">🥗</span>
           </div>
         </div>
-        <div className="absolute right-[8%] top-[15%] h-[38%] w-[38%] rounded-full bg-white border-2 border-cyan-400 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:rotate-3">
-          <div className="h-[65%] w-[65%] rounded-md bg-orange-300 flex items-center justify-center">
-            <div className="h-1/2 w-3/4 rounded-sm bg-orange-500"></div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-amber-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-amber-700 group-hover/main:text-white">EGGETARIAN</span>
+            <span className="text-xl">🍳</span>
           </div>
         </div>
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-[5%] h-[40%] w-[50%] rounded-full bg-white border-2 border-cyan-300 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-2 group-hover:rotate-1">
-          <div className="flex gap-1">
-            <div className="h-4 w-2 rounded-sm bg-yellow-400"></div>
-            <div className="h-4 w-2 rounded-sm bg-red-400"></div>
-            <div className="h-4 w-2 rounded-sm bg-green-500"></div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-tr-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-red-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-red-700 group-hover/main:text-white">NON-VEG</span>
+            <span className="text-xl">🍗</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-orange-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-orange-700 group-hover/main:text-white">RICE</span>
+            <span className="text-xl">🍚</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:border-transparent group-hover/main:bg-gradient-to-br from-cyan-500 via-teal-400 to-emerald-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-slate-700 group-hover/main:text-white">ALL</span>
+            <span className="text-xl">☀️</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-yellow-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-yellow-700 group-hover/main:text-white">ROTI</span>
+            <span className="text-xl">🫓</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-bl-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-emerald-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-emerald-700 group-hover/main:text-white">DAL</span>
+            <span className="text-xl">🍲</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-sky-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-sky-800 group-hover/main:text-white">PROTEIN</span>
+            <span className="text-xl">🥙</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-br-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-pink-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-pink-800 group-hover/main:text-white">THALI</span>
+            <span className="text-xl">🍽️</span>
           </div>
         </div>
       </div>
-      <span className="text-[24px] sm:text-[28px] font-extrabold leading-none text-white tracking-tight transition-all duration-200 group-hover:opacity-0">
-        ☀️
-      </span>
-    </button>
+    </Link>
   );
 }
 
-function DinnerButton() {
+function DinnerCard() {
   return (
-    <button className="group relative outline-0 h-[100px] w-[100px] sm:h-[120px] sm:w-[120px] border border-solid border-transparent rounded-xl flex items-center justify-center aspect-square cursor-pointer transition-transform duration-200 active:scale-[0.95] bg-[linear-gradient(45deg,#8b5cf6,#a78bfa)] shadow-[0_4px_15px_rgba(139,92,246,0.4)]">
-      <div className="absolute z-10 h-[70px] w-[70px] sm:h-[85px] sm:w-[85px] transition-all duration-300">
-        <div className="absolute left-[8%] top-[20%] h-[42%] w-[42%] rounded-full bg-white border-2 border-violet-300 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1 group-hover:-rotate-6">
-          <div className="h-[55%] w-[55%] rounded-full bg-red-400 flex items-center justify-center">
-            <div className="h-1/2 w-1/2 rounded-full bg-red-600"></div>
+    <Link href="/member/diet-planner/dinner">
+      <div className="relative group/main flex flex-wrap w-56 items-center justify-center cursor-pointer">
+        <div className="main_back absolute w-44 h-44 rounded-[10px] rotate-90 bg-[linear-gradient(270deg,#8b5cf6,#a855f7,#c084fc)] shadow-[inset_0_0_180px_5px_#ffffff] -z-20 transition-opacity duration-300 group-hover/main:opacity-0"></div>
+        
+        <p className="text absolute text-[0.7rem] font-bold tracking-[0.33em] text-black text-center transition-opacity duration-400 z-30 group-hover/main:opacity-0">
+          HOVER<br /><br />FOR<br /><br />DINNER
+        </p>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-tl-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-green-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-green-700 group-hover/main:text-white">VEG</span>
+            <span className="text-xl">🥗</span>
           </div>
         </div>
-        <div className="absolute right-[5%] top-[25%] h-[35%] w-[35%] rounded-full bg-white border-2 border-violet-400 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:rotate-3">
-          <div className="h-[60%] w-[60%] rounded-md bg-amber-600"></div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-amber-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-amber-700 group-hover/main:text-white">EGGETARIAN</span>
+            <span className="text-xl">🍳</span>
+          </div>
         </div>
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-[8%] h-[45%] w-[48%] rounded-full bg-white border-2 border-violet-300 shadow-md flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-2 group-hover:rotate-1">
-          <div className="flex flex-col items-center gap-[2px]">
-            <div className="h-3 w-6 rounded-t-full bg-amber-200"></div>
-            <div className="h-2 w-5 bg-amber-300"></div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-tr-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-red-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-red-700 group-hover/main:text-white">NON-VEG</span>
+            <span className="text-xl">🍗</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-orange-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-orange-700 group-hover/main:text-white">SOUP</span>
+            <span className="text-xl">🍜</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:border-transparent group-hover/main:bg-gradient-to-br from-violet-500 via-purple-400 to-fuchsia-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-slate-700 group-hover/main:text-white">ALL</span>
+            <span className="text-xl">🌙</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-yellow-400">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-yellow-700 group-hover/main:text-white">LIGHT</span>
+            <span className="text-xl">🥒</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-bl-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-emerald-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-emerald-700 group-hover/main:text-white">CURRY</span>
+            <span className="text-xl">🍛</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-sky-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-sky-800 group-hover/main:text-white">PROTEIN</span>
+            <span className="text-xl">🥩</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center w-[60px] h-[60px] rounded-br-[10px] bg-white/60 border border-transparent backdrop-blur-sm transition-all duration-300 group-hover/main:m-0.5 group-hover/main:rounded-[10px] group-hover/main:shadow-[0_4px_30px_rgba(0,0,0,0.1)] group-hover/main:border-white/30 group-hover/main:bg-white/20 hover:bg-pink-500">
+          <div className="flex flex-col items-center opacity-0 transition-opacity duration-200 group-hover/main:opacity-100">
+            <span className="text-[0.55rem] font-semibold text-pink-800 group-hover/main:text-white">DESSERT</span>
+            <span className="text-xl">🍰</span>
           </div>
         </div>
       </div>
-      <span className="text-[24px] sm:text-[28px] font-extrabold leading-none text-white tracking-tight transition-all duration-200 group-hover:opacity-0">
-        🌙
-      </span>
-    </button>
+    </Link>
   );
 }
-
-const mealCards = [
-  {
-    title: "Breakfast",
-    url: "/member/diet-planner/breakfast",
-    description: "Start your day right",
-    ButtonComponent: BreakfastButton,
-    gradient: "from-orange-500 to-amber-400"
-  },
-  {
-    title: "Lunch",
-    url: "/member/diet-planner/lunch",
-    description: "Fuel your afternoon",
-    ButtonComponent: LunchButton,
-    gradient: "from-cyan-500 to-teal-400"
-  },
-  {
-    title: "Dinner",
-    url: "/member/diet-planner/dinner",
-    description: "End your day healthy",
-    ButtonComponent: DinnerButton,
-    gradient: "from-violet-500 to-purple-400"
-  }
-];
 
 export default function DietPlannerPage() {
   return (
@@ -124,80 +248,62 @@ export default function DietPlannerPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {mealCards.map((meal) => (
-            <Link key={meal.title} href={meal.url}>
-              <Card className="group/card relative overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/20">
-                <div className={`absolute inset-0 bg-gradient-to-br ${meal.gradient} opacity-0 group-hover/card:opacity-10 transition-opacity duration-300`} />
-                
-                <CardContent className="p-6 sm:p-8 relative z-10">
-                  <div className="flex flex-col items-center text-center space-y-4">
-                    <meal.ButtonComponent />
-                    
-                    <div className="space-y-2">
-                      <h3 className={`text-2xl font-bold text-white group-hover/card:text-transparent group-hover/card:bg-clip-text group-hover/card:bg-gradient-to-r ${meal.gradient.replace('from-', 'group-hover/card:from-').replace('to-', 'group-hover/card:to-')} transition-all duration-300`}>
-                        {meal.title}
-                      </h3>
-                      <p className="text-white/60 text-sm">{meal.description}</p>
-                    </div>
-
-                    <div className="pt-2">
-                      <div className="flex items-center gap-2 text-orange-400 font-medium text-sm group-hover/card:gap-3 transition-all duration-300">
-                        <span>Explore Menu</span>
-                        <svg className="w-4 h-4 group-hover/card:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="flex flex-wrap justify-center gap-8 md:gap-12 lg:gap-16">
+          <div className="flex flex-col items-center gap-4">
+            <BreakfastCard />
+            <h3 className="text-xl font-bold text-white">Breakfast</h3>
+            <p className="text-white/60 text-sm">Start your day right</p>
+          </div>
+          
+          <div className="flex flex-col items-center gap-4">
+            <LunchCard />
+            <h3 className="text-xl font-bold text-white">Lunch</h3>
+            <p className="text-white/60 text-sm">Fuel your afternoon</p>
+          </div>
+          
+          <div className="flex flex-col items-center gap-4">
+            <DinnerCard />
+            <h3 className="text-xl font-bold text-white">Dinner</h3>
+            <p className="text-white/60 text-sm">End your day healthy</p>
+          </div>
         </div>
 
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🥗</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-1">Vegetarian</h4>
-                  <p className="text-white/60 text-sm">Plant-based options for every meal</p>
-                </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🥗</span>
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h4 className="font-semibold text-white mb-1">Vegetarian</h4>
+                <p className="text-white/60 text-sm">Plant-based options for every meal</p>
+              </div>
+            </div>
+          </div>
 
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🥚</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-1">Eggetarian</h4>
-                  <p className="text-white/60 text-sm">Includes eggs for extra protein</p>
-                </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🥚</span>
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h4 className="font-semibold text-white mb-1">Eggetarian</h4>
+                <p className="text-white/60 text-sm">Includes eggs for extra protein</p>
+              </div>
+            </div>
+          </div>
 
-          <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-2xl">🍗</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-1">Non-Vegetarian</h4>
-                  <p className="text-white/60 text-sm">Meat and poultry selections</p>
-                </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🍗</span>
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h4 className="font-semibold text-white mb-1">Non-Vegetarian</h4>
+                <p className="text-white/60 text-sm">Meat and poultry selections</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
