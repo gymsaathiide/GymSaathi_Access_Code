@@ -1,0 +1,203 @@
+Design an AI Diet Planner module for the Member Dashboard. Provide a high-fidelity UI mockup, responsive front-end implementation notes, and a full functional spec (including data schema, API contracts, filtering logic, accessibility, and edge cases). Deliverables should include: Figma/PNG mockups, component list, interactions, sample JSON payloads, and automated test cases.
+
+1. High-level overview
+
+Section name: Diet Planner (member-facing).
+
+Primary purpose: generate a personalized meal plan (7/30 days) adapting to user goal and dietary preferences.
+
+Goals and calorie offsets:
+
+Fat Loss: TDEE − 200 kcal.
+
+Muscle Gain: TDEE + 200 kcal.
+
+Trim & Tone: TDEE (maintenance) — no offset.
+
+The plan generation must be AI-driven (suggested meals, macro split, swaps) and deterministic for same inputs.
+
+2. UI components & layout
+
+Goal cards (three cards horizontally):
+
+Title, icon, subtitle (e.g., “TDEE − 200 kcal”), selection state (selected card shows “Selected” and prominent styling).
+
+Clicking selects the goal and updates the subtitle calorie math shown.
+
+Plan Duration selector:
+
+Two buttons/cards: 7 days and 30 days. Selected state persists.
+
+Dietary Preferences block:
+
+A row with three toggle-buttons for dietary preference categories (Veg, Egg, Non-Veg). Each behaves as exclusive or cumulative according to rules below.
+
+Additional single-value selectors (e.g., Vegetarian, Vegan, Gluten-free, Regional cuisine toggles) — shown as pill buttons.
+
+Festival Mode chips (None, Navratri, Ekadashi, Fasting) — toggleable; when active, filter out ineligible meals.
+
+Clickable selector:
+
+One clickable selector (example: “Indian cuisine” or “Meal type: Standard/Low-FODMAP”) — used for an extra filter.
+
+Generate button:
+
+Primary CTA: “Generate 7-day Plan” or “Generate 30-day Plan” depending on duration.
+
+Loading state and success/failed states, with toast notifications and inline error messages.
+
+Plan Preview & Meal List (post-generation):
+
+Day-by-day breakdown with breakfast, lunch, snack, dinner and calorie/macro totals per meal and per day.
+
+Swap / favorite / exclude controls on each meal item.
+
+Filter toggles remain active and dynamically re-filter plan on change.
+
+3. Preference filtering logic (exact rules requested)
+
+There are three toggles: Veg, Egg, Non-Veg. Behavior:
+
+Veg active (only Veg selected)
+
+Show only vegetarian meal items. Exclude any meal containing eggs or animal meat/fish.
+
+Egg active (only Egg selected)
+
+Show vegetarian meals and egg-based meals (i.e., veg + eggs). Exclude non-egg non-veg items that contain meat/fish.
+
+Non-Veg active (only Non-Veg selected)
+
+Show vegetarian + egg-based + non-vegetarian meals (all categories). Non-Veg is the superset.
+
+Multiple toggles selected (if user toggles more than one): follow inclusive union logic:
+
+Veg + Egg → veg + egg meals.
+
+Egg + Non-Veg → veg + egg + non-veg (same as non-veg superset).
+
+Veg + Non-Veg → veg + non-veg (equivalent to all).
+
+All three → all meals.
+
+Festival Mode and other dietary chips always act as additional filters applied on top of the above.
+
+4. Calorie & macro rules
+
+For each user, compute TDEE (from user profile or API). Apply goal offset:
+
+Fat Loss: target_daily_calories = TDEE − 200
+
+Muscle Gain: target_daily_calories = TDEE + 200
+
+Trim & Tone: target_daily_calories = TDEE
+
+Macro distribution defaults (adjustable):
+
+Fat Loss: protein 30–35%, carbs 35–40%, fat 25–30%
+
+Muscle Gain: protein 25–30%, carbs 45–50%, fat 20–25%
+
+Trim & Tone: balanced 30/40/30 (protein/carbs/fat) or configurable
+
+Meal-level allocation: distribute daily calories across meals (e.g., Breakfast 25%, Lunch 30%, Snack 10%, Dinner 35%). Allow alternate presets.
+
+Allow manual calorie tolerance (±5%) and display warning if impossible constraints.
+
+5. Data model (sample)
+
+MealItem
+
+{
+  "id": "meal_001",
+  "name": "Paneer Bhurji with Roti",
+  "category_tags": ["vegetarian"],
+  "contains_egg": false,
+  "contains_nonveg": false,
+  "cuisine": "Indian",
+  "calories": 420,
+  "macros": {"protein": 25, "carbs": 45, "fat": 18},
+  "ingredients": ["paneer","onion","tomato","spices"],
+  "festival_excluded": ["Navratri"],
+  "allergen_info": ["dairy"]
+}
+
+
+PlanRequest
+
+{
+  "user_id": "user_123",
+  "tdee": 2200,
+  "goal": "fat_loss", // fat_loss | muscle_gain | trim_tone
+  "duration_days": 7,
+  "diet_toggles": {"veg": true, "egg": false, "nonveg": false},
+  "additional_filters": {
+    "cuisine": "Indian",
+    "festival_mode": "navratri",
+    "exclude_ingredients": ["peanuts"]
+  }
+}
+
+6. API endpoints (examples)
+
+POST /api/diet/plan/generate — takes PlanRequest; returns PlanResponse with day-wise meals and calorie/macro breakdown.
+
+GET /api/meals?filters=... — returns meals for preview and filtering.
+
+POST /api/diet/plan/save — saves plan to user account.
+
+7. Acceptance criteria & UX details
+
+When a toggle state changes, the meal list and any generated plan preview must update immediately (or re-generate with a clear “Re-generate” CTA if full regeneration is heavy).
+
+If Veg is active alone → no eggs or meat appear anywhere.
+
+If Egg is active alone → vegetarian + egg meals appear; meat/fish excluded.
+
+If Non-Veg active → include all categories.
+
+Festival modes must remove incompatible meals and show a toast: “Navratri mode active — non-compliant meals removed.”
+
+Provide fallback messaging when filters exclude all meals: “No meals found matching these filters. Try disabling festival mode or expanding dietary choices.”
+
+Accessibility: keyboard-navigable toggles, ARIA labels, color contrast compliant.
+
+Mobile: Stack goal cards vertically, keep the Generate CTA sticky at bottom.
+
+8. Edge cases & validations
+
+If user TDEE is missing → prompt to calculate TDEE or block generation.
+
+If duration is 30 days and server load high → queue generation and show progress, but keep UI responsive.
+
+If user excludes core ingredients that conflict with dietary needs (e.g., excludes all protein sources) → show a validation explaining the conflict.
+
+If festival mode combined with strict diet (e.g., Navratri + Vegan + exclude dairy) produces zero results → suggest relaxing one filter.
+
+9. Testing & examples
+
+Provide test cases:
+
+TDEE 2200, goal fat_loss, toggles: Veg only → daily target 2000; plan contains only vegetarian meals; no eggs or meat.
+
+TDEE 2000, goal muscle_gain, toggles: Egg only → target 2200; plan includes vegetarian meals and egg-based meals; no meat.
+
+TDEE 2500, goal trim_tone, toggles: Non-Veg active → target 2500; plan includes all meals.
+
+Festival Navratri active + Non-Veg active → festival overrides and removes non-compliant meals; show warning that non-veg removed.
+
+Include unit tests for filter logic and integration tests for plan generation endpoint.
+
+10. Deliverable checklist for the AI/designer
+
+Visual mockups (desktop + mobile) matching screenshot style.
+
+Component library (cards, toggle chips, plan rows).
+
+Interaction spec (detailed animation and state changes).
+
+API contract and sample JSON.
+
+Acceptance criteria and test cases.
+
+README with instructions for local run and simulated data.
