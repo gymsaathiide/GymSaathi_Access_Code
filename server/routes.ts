@@ -10379,23 +10379,43 @@ Return ONLY the JSON object, no other text.`;
       };
 
       // Build category filter based on cumulative logic
-      let categoryFilter: string[];
+      let categoryFilter: string;
       if (dietaryPreference === 'veg') {
-        categoryFilter = ['veg'];
+        categoryFilter = 'veg';
       } else if (dietaryPreference === 'eggetarian') {
-        categoryFilter = ['veg', 'eggetarian'];
+        categoryFilter = 'veg,eggetarian';
       } else {
-        categoryFilter = ['veg', 'eggetarian', 'non-veg'];
+        categoryFilter = 'veg,eggetarian,non-veg';
       }
 
       // Fetch meals from breakfast table for all meal types
       // Using breakfast meals as foundation since it has the most data
-      const mealsResult = await db!.execute(sql`
-        SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
-        FROM meals_breakfast 
-        WHERE category = ANY(${categoryFilter})
-        ORDER BY RANDOM()
-      `);
+      // Use IN clause with split values for proper PostgreSQL compatibility
+      const categories = categoryFilter.split(',');
+      let mealsResult;
+      
+      if (categories.length === 1) {
+        mealsResult = await db!.execute(sql`
+          SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
+          FROM meals_breakfast 
+          WHERE category = ${categories[0]}
+          ORDER BY RANDOM()
+        `);
+      } else if (categories.length === 2) {
+        mealsResult = await db!.execute(sql`
+          SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
+          FROM meals_breakfast 
+          WHERE category IN (${categories[0]}, ${categories[1]})
+          ORDER BY RANDOM()
+        `);
+      } else {
+        mealsResult = await db!.execute(sql`
+          SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
+          FROM meals_breakfast 
+          WHERE category IN (${categories[0]}, ${categories[1]}, ${categories[2]})
+          ORDER BY RANDOM()
+        `);
+      }
 
       const availableMeals = mealsResult.rows || [];
 
