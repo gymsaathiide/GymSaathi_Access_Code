@@ -103,8 +103,13 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
         -   Regenerate button maintains category and duration for consistency
         -   Clear Plan button returns to empty state
         -   State management: activePlan stores {duration, category, meals}
-        -   Database table: `meals_breakfast` (300 meals)
+        -   Database tables: 
+            -   `meals_breakfast` (300 meals)
+            -   `meals_lunch` (150 meals - rice, roti, curries, dal)
+            -   `meals_dinner` (150 meals - lighter meals, soups, khichdi)
+            -   `meals_snacks` (100 meals - protein shakes, fruits, nuts)
         -   API endpoint: `POST /api/meals/breakfast/generate-plan` (uses SQL IN clause for cumulative filtering)
+        -   AI Diet Planner fetches from dedicated tables based on meal type (breakfast → meals_breakfast, lunch → meals_lunch, etc.)
     -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
     -   **Workout Planner**: Exercise library with warm-up, strength, cardio, and stretching exercises
     -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion

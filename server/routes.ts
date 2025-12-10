@@ -10386,39 +10386,61 @@ Return ONLY the JSON object, no other text.`;
         categoryFilter = 'veg,eggetarian,non-veg';
       }
 
-      // Fetch meals from breakfast table for all meal types
-      // Using breakfast meals as foundation since it has the most data
-      // Use IN clause with split values for proper PostgreSQL compatibility
+      // Fetch meals from appropriate tables based on meal type
+      // Each meal type has its own dedicated table with appropriate items
       const categories = categoryFilter.split(',');
-      let mealsResult;
       
-      if (categories.length === 1) {
-        mealsResult = await db!.execute(sql`
-          SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
-          FROM meals_breakfast 
-          WHERE category = ${categories[0]}
-          ORDER BY RANDOM()
-        `);
-      } else if (categories.length === 2) {
-        mealsResult = await db!.execute(sql`
-          SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
-          FROM meals_breakfast 
-          WHERE category IN (${categories[0]}, ${categories[1]})
-          ORDER BY RANDOM()
-        `);
-      } else {
-        mealsResult = await db!.execute(sql`
-          SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
-          FROM meals_breakfast 
-          WHERE category IN (${categories[0]}, ${categories[1]}, ${categories[2]})
-          ORDER BY RANDOM()
-        `);
-      }
+      // Helper function to fetch meals from a specific table
+      const fetchMealsFromTable = async (tableName: string, cats: string[]) => {
+        if (cats.length === 1) {
+          return await db!.execute(sql`
+            SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
+            FROM ${sql.raw(tableName)}
+            WHERE category = ${cats[0]}
+            ORDER BY RANDOM()
+          `);
+        } else if (cats.length === 2) {
+          return await db!.execute(sql`
+            SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
+            FROM ${sql.raw(tableName)}
+            WHERE category IN (${cats[0]}, ${cats[1]})
+            ORDER BY RANDOM()
+          `);
+        } else {
+          return await db!.execute(sql`
+            SELECT id, name, description, ingredients, protein, carbs, fats, calories, category
+            FROM ${sql.raw(tableName)}
+            WHERE category IN (${cats[0]}, ${cats[1]}, ${cats[2]})
+            ORDER BY RANDOM()
+          `);
+        }
+      };
+      
+      // Fetch meals from each dedicated table
+      const [breakfastResult, lunchResult, snacksResult, dinnerResult] = await Promise.all([
+        fetchMealsFromTable('meals_breakfast', categories),
+        fetchMealsFromTable('meals_lunch', categories),
+        fetchMealsFromTable('meals_snacks', categories),
+        fetchMealsFromTable('meals_dinner', categories)
+      ]);
+      
+      const mealsByType: Record<string, any[]> = {
+        breakfast: breakfastResult.rows || [],
+        lunch: lunchResult.rows || [],
+        snack: snacksResult.rows || [],
+        dinner: dinnerResult.rows || []
+      };
 
-      const availableMeals = mealsResult.rows || [];
-
-      if (availableMeals.length === 0) {
-        return res.status(400).json({ ok: false, error: 'No meals available for the selected dietary preference' });
+      // Check if we have meals for each type
+      const missingTypes = Object.entries(mealsByType)
+        .filter(([_, meals]) => meals.length === 0)
+        .map(([type]) => type);
+      
+      if (missingTypes.length > 0) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: `No meals available for: ${missingTypes.join(', ')}. Please add meals to the database.` 
+        });
       }
 
       // Deactivate previous plans for this user
@@ -10450,9 +10472,10 @@ Return ONLY the JSON object, no other text.`;
 
       for (let day = 1; day <= duration; day++) {
         for (const mealType of mealTypes) {
-          // Pick a random meal
-          const randomIndex = Math.floor(Math.random() * availableMeals.length);
-          const meal = availableMeals[randomIndex];
+          // Pick a random meal from the appropriate table
+          const mealsForType = mealsByType[mealType];
+          const randomIndex = Math.floor(Math.random() * mealsForType.length);
+          const meal = mealsForType[randomIndex];
           
           // Calculate target calories for this meal type
           const targetMealCalories = Math.round(targetCalories * mealDistribution[mealType as keyof typeof mealDistribution]);
@@ -10581,7 +10604,7 @@ Return ONLY the JSON object, no other text.`;
     try {
       const { planId, itemId } = req.params;
 
-      // Verify plan ownership
+      // Verify plan ownership and get dietary preference
       const planResult = await db!.execute(sql`
         SELECT dietary_preference FROM ai_diet_plans 
         WHERE id = ${planId} AND user_id = ${req.session.userId}
@@ -10593,12 +10616,33 @@ Return ONLY the JSON object, no other text.`;
 
       const dietaryPreference = planResult.rows[0].dietary_preference;
 
-      // Get a new random meal using IN clause for proper SQL compatibility
+      // Get the current item's meal type so we can fetch from the correct table
+      const itemResult = await db!.execute(sql`
+        SELECT meal_type FROM ai_diet_plan_items 
+        WHERE id = ${itemId} AND plan_id = ${planId}
+      `);
+
+      if (itemResult.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Item not found' });
+      }
+
+      const mealType = String(itemResult.rows[0].meal_type);
+      
+      // Determine which table to fetch from based on meal type
+      const tableMap: Record<string, string> = {
+        'breakfast': 'meals_breakfast',
+        'lunch': 'meals_lunch',
+        'snack': 'meals_snacks',
+        'dinner': 'meals_dinner'
+      };
+      const tableName = tableMap[mealType] || 'meals_breakfast';
+
+      // Get a new random meal from the appropriate table
       let mealsResult;
       if (dietaryPreference === 'veg') {
         mealsResult = await db!.execute(sql`
           SELECT id, name, protein, carbs, fats, calories, category
-          FROM meals_breakfast 
+          FROM ${sql.raw(tableName)}
           WHERE category = 'veg'
           ORDER BY RANDOM()
           LIMIT 1
@@ -10606,7 +10650,7 @@ Return ONLY the JSON object, no other text.`;
       } else if (dietaryPreference === 'eggetarian') {
         mealsResult = await db!.execute(sql`
           SELECT id, name, protein, carbs, fats, calories, category
-          FROM meals_breakfast 
+          FROM ${sql.raw(tableName)}
           WHERE category IN ('veg', 'eggetarian')
           ORDER BY RANDOM()
           LIMIT 1
@@ -10614,7 +10658,7 @@ Return ONLY the JSON object, no other text.`;
       } else {
         mealsResult = await db!.execute(sql`
           SELECT id, name, protein, carbs, fats, calories, category
-          FROM meals_breakfast 
+          FROM ${sql.raw(tableName)}
           WHERE category IN ('veg', 'eggetarian', 'non-veg')
           ORDER BY RANDOM()
           LIMIT 1
