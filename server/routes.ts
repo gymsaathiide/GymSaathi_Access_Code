@@ -10459,8 +10459,8 @@ Return ONLY the JSON object, no other text.`;
           // Calculate target calories for this meal type
           const targetMealCalories = Math.round(targetCalories * mealDistribution[mealType as keyof typeof mealDistribution]);
 
-          // Insert meal item
-          await db!.execute(sql`
+          // Insert meal item and get the generated ID
+          const itemResult = await db!.execute(sql`
             INSERT INTO ai_diet_plan_items (
               plan_id, day_number, meal_type, meal_id, meal_name, 
               calories, protein, carbs, fat, category
@@ -10469,9 +10469,12 @@ Return ONLY the JSON object, no other text.`;
               ${planId}, ${day}, ${mealType}, ${meal.id}, ${meal.name},
               ${Number(meal.calories)}, ${Number(meal.protein)}, ${Number(meal.carbs)}, ${Number(meal.fats)}, ${meal.category}
             )
+            RETURNING id, is_favorite, is_excluded
           `);
 
+          const insertedItem = itemResult.rows[0];
           planItems.push({
+            id: insertedItem.id,
             dayNumber: day,
             mealType,
             mealId: meal.id,
@@ -10480,7 +10483,9 @@ Return ONLY the JSON object, no other text.`;
             protein: Number(meal.protein),
             carbs: Number(meal.carbs),
             fat: Number(meal.fats),
-            category: meal.category
+            category: meal.category,
+            isFavorite: insertedItem.is_favorite || false,
+            isExcluded: insertedItem.is_excluded || false
           });
         }
       }
