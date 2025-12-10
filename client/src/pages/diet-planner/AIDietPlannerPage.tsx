@@ -489,27 +489,27 @@ export default function AIDietPlannerPage() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-indigo-500/20 border border-cyan-500/30 p-5">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-cyan-400" />
-                <span className="text-cyan-400 text-xs font-medium uppercase tracking-wide">Your TDEE</span>
-              </div>
-              <button
-                onClick={handleRefreshBodyComposition}
-                disabled={isRefreshing}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
-                title="Refresh body composition data"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </button>
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-4 h-4 text-cyan-400" />
+              <span className="text-cyan-400 text-xs font-medium uppercase tracking-wide">Your TDEE</span>
             </div>
             <p className="text-4xl font-bold text-white mb-1">
               {tdee.toLocaleString()}
               <span className="text-lg font-normal text-white/60 ml-1">kcal</span>
             </p>
-            <p className="text-white/50 text-xs">
+            <p className="text-white/50 text-xs mb-3">
               BMR {bodyComposition?.bmr ? Math.round(Number(bodyComposition.bmr)).toLocaleString() : '—'} × {activityMultiplier} ({getLifestyleLabel(bodyComposition?.lifestyle || 'moderately_active')})
             </p>
+            <button
+              onClick={handleRefreshBodyComposition}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="text-cyan-400 text-sm font-medium">
+                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+              </span>
+            </button>
           </div>
         </div>
 
