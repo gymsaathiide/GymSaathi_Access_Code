@@ -928,6 +928,81 @@ export const insertMealsBreakfastSchema = createInsertSchema(mealsBreakfast).omi
 export type InsertMealsBreakfast = z.infer<typeof insertMealsBreakfastSchema>;
 export type MealsBreakfast = typeof mealsBreakfast.$inferSelect;
 
+// === LUNCH MEALS DATABASE ===
+
+// Lunch category enum (veg, eggetarian, non-veg)
+export const lunchCategoryEnum = pgEnum('lunch_category', ['veg', 'eggetarian', 'non-veg']);
+
+// Lunch Meals Table
+export const mealsLunch = pgTable("meals_lunch", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  ingredients: text("ingredients"),
+  protein: decimal("protein", { precision: 6, scale: 2 }).notNull(),
+  carbs: decimal("carbs", { precision: 6, scale: 2 }).notNull(),
+  fats: decimal("fats", { precision: 6, scale: 2 }).notNull(),
+  calories: decimal("calories", { precision: 6, scale: 2 }).notNull(),
+  category: lunchCategoryEnum("category").notNull(),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMealsLunchSchema = createInsertSchema(mealsLunch).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMealsLunch = z.infer<typeof insertMealsLunchSchema>;
+export type MealsLunch = typeof mealsLunch.$inferSelect;
+
+// === DINNER MEALS DATABASE ===
+
+// Dinner category enum (veg, eggetarian, non-veg)
+export const dinnerCategoryEnum = pgEnum('dinner_category', ['veg', 'eggetarian', 'non-veg']);
+
+// Dinner Meals Table
+export const mealsDinner = pgTable("meals_dinner", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  ingredients: text("ingredients"),
+  protein: decimal("protein", { precision: 6, scale: 2 }).notNull(),
+  carbs: decimal("carbs", { precision: 6, scale: 2 }).notNull(),
+  fats: decimal("fats", { precision: 6, scale: 2 }).notNull(),
+  calories: decimal("calories", { precision: 6, scale: 2 }).notNull(),
+  category: dinnerCategoryEnum("category").notNull(),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMealsDinnerSchema = createInsertSchema(mealsDinner).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMealsDinner = z.infer<typeof insertMealsDinnerSchema>;
+export type MealsDinner = typeof mealsDinner.$inferSelect;
+
+// === SNACKS MEALS DATABASE ===
+
+// Snacks category enum (veg, eggetarian, non-veg)
+export const snacksCategoryEnum = pgEnum('snacks_category', ['veg', 'eggetarian', 'non-veg']);
+
+// Snacks Meals Table
+export const mealsSnacks = pgTable("meals_snacks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  ingredients: text("ingredients"),
+  protein: decimal("protein", { precision: 6, scale: 2 }).notNull(),
+  carbs: decimal("carbs", { precision: 6, scale: 2 }).notNull(),
+  fats: decimal("fats", { precision: 6, scale: 2 }).notNull(),
+  calories: decimal("calories", { precision: 6, scale: 2 }).notNull(),
+  category: snacksCategoryEnum("category").notNull(),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMealsSnacksSchema = createInsertSchema(mealsSnacks).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMealsSnacks = z.infer<typeof insertMealsSnacksSchema>;
+export type MealsSnacks = typeof mealsSnacks.$inferSelect;
+
 // === AI DIET PLANNER - FULL SYSTEM ===
 
 // Festival mode enum for dietary restrictions during festivals
