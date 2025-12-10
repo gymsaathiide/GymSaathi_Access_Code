@@ -10133,6 +10133,123 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // Generic meal management endpoints for all meal types
+  const mealTableMap: Record<string, string> = {
+    'breakfast': 'meals_breakfast',
+    'lunch': 'meals_lunch',
+    'snacks': 'meals_snacks',
+    'dinner': 'meals_dinner'
+  };
+
+  // Get all meals by type (lunch, snacks, dinner)
+  app.get('/api/meals/:mealType', async (req, res) => {
+    const { mealType } = req.params;
+    
+    if (!mealTableMap[mealType]) {
+      return res.status(400).json({ error: 'Invalid meal type' });
+    }
+
+    try {
+      const tableName = mealTableMap[mealType];
+      const result = await db!.execute(sql`
+        SELECT * FROM ${sql.raw(tableName)} ORDER BY name ASC
+      `);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error(`Error fetching ${mealType} meals:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update meal by type
+  app.put('/api/meals/:mealType/:id', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { mealType, id } = req.params;
+    
+    if (!mealTableMap[mealType]) {
+      return res.status(400).json({ error: 'Invalid meal type' });
+    }
+
+    try {
+      const { name, category, calories, protein, carbs, fats } = req.body;
+      const tableName = mealTableMap[mealType];
+      
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      
+      if (!['veg', 'eggetarian', 'non-veg'].includes(category)) {
+        return res.status(400).json({ error: 'Category must be veg, eggetarian, or non-veg' });
+      }
+      
+      const safeParseNum = (val: any): number => {
+        const num = parseFloat(val);
+        return isNaN(num) || num < 0 ? 0 : num;
+      };
+      
+      const caloriesVal = safeParseNum(calories);
+      const proteinVal = safeParseNum(protein);
+      const carbsVal = safeParseNum(carbs);
+      const fatsVal = safeParseNum(fats);
+      
+      const result = await db!.execute(sql`
+        UPDATE ${sql.raw(tableName)}
+        SET 
+          name = ${name.trim()},
+          category = ${category},
+          calories = ${caloriesVal},
+          protein = ${proteinVal},
+          carbs = ${carbsVal},
+          fats = ${fatsVal},
+          updated_at = NOW()
+        WHERE id = ${id}
+        RETURNING *
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return res.status(404).json({ error: 'Meal not found' });
+      }
+      
+      res.json({ ok: true, meal: result.rows[0] });
+    } catch (error: any) {
+      console.error(`Error updating ${mealType} meal:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete meal by type
+  app.delete('/api/meals/:mealType/:id', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { mealType, id } = req.params;
+    
+    if (!mealTableMap[mealType]) {
+      return res.status(400).json({ error: 'Invalid meal type' });
+    }
+
+    try {
+      const tableName = mealTableMap[mealType];
+      
+      const result = await db!.execute(sql`
+        DELETE FROM ${sql.raw(tableName)} WHERE id = ${id} RETURNING id
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        return res.status(404).json({ error: 'Meal not found' });
+      }
+      
+      res.json({ ok: true, message: 'Meal deleted successfully' });
+    } catch (error: any) {
+      console.error(`Error deleting ${mealType} meal:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Generate meal plan (7 or 30 days)
   app.post('/api/meals/breakfast/generate-plan', async (req, res) => {
     if (!req.session?.userId) {

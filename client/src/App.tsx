@@ -37,6 +37,7 @@ import Trainers from './pages/Trainers';
 import AdminMore from './pages/AdminMore';
 import ShopRevenueDashboard from './pages/ShopRevenueDashboard';
 import { BodyCompositionPage, DietPlannerPage, AIDietPlannerPage, WorkoutPlannerPage, DailyNutritionPage, HistoryPage, BreakfastPage, LunchPage, DinnerPage } from './pages/diet-planner';
+import ManageMealsPage from './pages/ManageMealsPage';
 
 function TestDashboard() {
   const { user } = useAuth();
@@ -99,6 +100,7 @@ function ProtectedApp() {
         <Route path="/analytics" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Analytics /></ProtectedRoute>} />
         <Route path="/audit" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SecurityAuditDashboard /></ProtectedRoute>} />
         <Route path="/integrations" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Integrations /></ProtectedRoute>} />
+        <Route path="/manage-meals" component={() => <ProtectedRoute allowedRoles={['superadmin']}><ManageMealsPage /></ProtectedRoute>} />
         <Route path="/users" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SuperadminUsers /></ProtectedRoute>} />
         <Route path="/settings" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SuperadminSettings /></ProtectedRoute>} />
 
