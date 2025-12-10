@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { ArrowLeft, Flame, Dumbbell, Target, Loader2, Check, Heart, Repeat, Ban, Sparkles, ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { ArrowLeft, Flame, Dumbbell, Target, Loader2, Check, Heart, Repeat, Ban, Sparkles, ChevronLeft, ChevronRight, Zap, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,6 +40,7 @@ interface DietPlan {
 
 export default function AIDietPlannerPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [selectedGoal, setSelectedGoal] = useState<DietGoal>('trim_tone');
   const [selectedDuration, setSelectedDuration] = useState<Duration>(7);
@@ -47,6 +48,7 @@ export default function AIDietPlannerPage() {
   
   const [activePlan, setActivePlan] = useState<DietPlan | null>(null);
   const [activeDay, setActiveDay] = useState<number>(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: bodyComposition } = useQuery({
     queryKey: ['body-composition'],
@@ -57,9 +59,44 @@ export default function AIDietPlannerPage() {
     }
   });
 
+  // Activity multipliers based on lifestyle (matching BodyCompositionPage options)
+  const getActivityMultiplier = (lifestyle: string): number => {
+    switch (lifestyle) {
+      case 'sedentary': return 1.2;
+      case 'moderately_active': return 1.55;
+      case 'super_active': return 1.9;
+      default: return 1.55; // Default to moderate if unknown
+    }
+  };
+
+  const getLifestyleLabel = (lifestyle: string): string => {
+    switch (lifestyle) {
+      case 'sedentary': return 'Sedentary';
+      case 'moderately_active': return 'Moderate';
+      case 'super_active': return 'Super Active';
+      default: return 'Moderate';
+    }
+  };
+
+  const activityMultiplier = bodyComposition?.lifestyle 
+    ? getActivityMultiplier(bodyComposition.lifestyle) 
+    : 1.55;
+
   const tdee = bodyComposition?.bmr 
-    ? Math.round(Number(bodyComposition.bmr) * 1.55) 
+    ? Math.round(Number(bodyComposition.bmr) * activityMultiplier) 
     : 2384;
+
+  const handleRefreshBodyComposition = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['body-composition'] });
+      toast({ title: 'Updated!', description: 'Body composition data refreshed.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to refresh data', variant: 'destructive' });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const getTargetCalories = () => {
     switch (selectedGoal) {
@@ -452,15 +489,27 @@ export default function AIDietPlannerPage() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-indigo-500/20 border border-cyan-500/30 p-5">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
           <div className="relative">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-4 h-4 text-cyan-400" />
-              <span className="text-cyan-400 text-xs font-medium uppercase tracking-wide">Your TDEE</span>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-cyan-400" />
+                <span className="text-cyan-400 text-xs font-medium uppercase tracking-wide">Your TDEE</span>
+              </div>
+              <button
+                onClick={handleRefreshBodyComposition}
+                disabled={isRefreshing}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
+                title="Refresh body composition data"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
             <p className="text-4xl font-bold text-white mb-1">
               {tdee.toLocaleString()}
               <span className="text-lg font-normal text-white/60 ml-1">kcal</span>
             </p>
-            <p className="text-white/50 text-xs">Total Daily Energy Expenditure</p>
+            <p className="text-white/50 text-xs">
+              BMR {bodyComposition?.bmr ? Math.round(Number(bodyComposition.bmr)).toLocaleString() : '—'} × {activityMultiplier} ({getLifestyleLabel(bodyComposition?.lifestyle || 'moderately_active')})
+            </p>
           </div>
         </div>
 

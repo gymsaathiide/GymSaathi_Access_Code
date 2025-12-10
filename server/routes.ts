@@ -8978,7 +8978,7 @@ Return ONLY the JSON object, no other text.`;
       const lifestyleFactors: Record<string, number> = {
         sedentary: 1.2,
         moderately_active: 1.55,
-        super_active: 1.75
+        super_active: 1.9
       };
       
       const factor = lifestyleFactors[bodyComp.lifestyle as string] || 1.55;
@@ -9332,7 +9332,7 @@ Return ONLY the JSON object, no other text.`;
       const lifestyleFactors: Record<string, number> = {
         sedentary: 1.2,
         moderately_active: 1.55,
-        super_active: 1.75
+        super_active: 1.9
       };
       
       const factor = lifestyleFactors[lifestyle] || 1.55;
@@ -10328,13 +10328,11 @@ Return ONLY the JSON object, no other text.`;
           const bmr = Number(bcResult.rows[0].bmr);
           const lifestyle = String(bcResult.rows[0].lifestyle || 'moderately_active');
           
-          // Activity multipliers for TDEE calculation
+          // Activity multipliers for TDEE calculation (matching BodyCompositionPage options)
           const multipliers: Record<string, number> = {
             'sedentary': 1.2,
-            'lightly_active': 1.375,
             'moderately_active': 1.55,
-            'very_active': 1.725,
-            'extra_active': 1.9
+            'super_active': 1.9
           };
           
           tdee = Math.round(bmr * (multipliers[lifestyle] || 1.55));
