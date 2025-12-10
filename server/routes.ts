@@ -10595,24 +10595,33 @@ Return ONLY the JSON object, no other text.`;
 
       const dietaryPreference = planResult.rows[0].dietary_preference;
 
-      // Build category filter
-      let categoryFilter: string[];
+      // Get a new random meal using IN clause for proper SQL compatibility
+      let mealsResult;
       if (dietaryPreference === 'veg') {
-        categoryFilter = ['veg'];
+        mealsResult = await db!.execute(sql`
+          SELECT id, name, protein, carbs, fats, calories, category
+          FROM meals_breakfast 
+          WHERE category = 'veg'
+          ORDER BY RANDOM()
+          LIMIT 1
+        `);
       } else if (dietaryPreference === 'eggetarian') {
-        categoryFilter = ['veg', 'eggetarian'];
+        mealsResult = await db!.execute(sql`
+          SELECT id, name, protein, carbs, fats, calories, category
+          FROM meals_breakfast 
+          WHERE category IN ('veg', 'eggetarian')
+          ORDER BY RANDOM()
+          LIMIT 1
+        `);
       } else {
-        categoryFilter = ['veg', 'eggetarian', 'non-veg'];
+        mealsResult = await db!.execute(sql`
+          SELECT id, name, protein, carbs, fats, calories, category
+          FROM meals_breakfast 
+          WHERE category IN ('veg', 'eggetarian', 'non-veg')
+          ORDER BY RANDOM()
+          LIMIT 1
+        `);
       }
-
-      // Get a new random meal
-      const mealsResult = await db!.execute(sql`
-        SELECT id, name, protein, carbs, fats, calories, category
-        FROM meals_breakfast 
-        WHERE category = ANY(${categoryFilter})
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
 
       if (mealsResult.rows.length === 0) {
         return res.status(400).json({ ok: false, error: 'No replacement meals available' });
@@ -10637,13 +10646,15 @@ Return ONLY the JSON object, no other text.`;
         ok: true, 
         message: 'Meal swapped successfully',
         newMeal: {
-          id: newMeal.id,
-          name: newMeal.name,
+          mealId: newMeal.id,
+          mealName: newMeal.name,
           calories: Number(newMeal.calories),
           protein: Number(newMeal.protein),
           carbs: Number(newMeal.carbs),
           fat: Number(newMeal.fats),
-          category: newMeal.category
+          category: newMeal.category,
+          isFavorite: false,
+          isExcluded: false
         }
       });
     } catch (error: any) {
