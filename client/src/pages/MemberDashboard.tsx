@@ -8,7 +8,7 @@ import { Calendar, TrendingUp, ShoppingBag, User, QrCode, Clock, LogIn, LogOut, 
 import QrScanner from '@/components/QrScanner';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { startOfWeek, endOfWeek, isWithinInterval, format } from 'date-fns';
+import { startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
 
 type TodayStatus = {
   status: 'not_checked_in' | 'in_gym' | 'checked_out';
@@ -58,24 +58,24 @@ export default function MemberDashboard() {
   });
 
   const now = new Date();
-  const weekStart = startOfWeek(now);
-  const weekEnd = endOfWeek(now);
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
 
-  const classesThisWeek = classes.filter((cls: any) => {
+  const classesThisMonth = classes.filter((cls: any) => {
     const classDate = new Date(cls.startTime);
-    return isWithinInterval(classDate, { start: weekStart, end: weekEnd });
+    return isWithinInterval(classDate, { start: monthStart, end: monthEnd });
   });
 
   // Define ongoing classes: classes whose start time is in the past
-  // AND are NOT within the current week's `classesThisWeek` filter.
+  // AND are NOT within the current month's `classesThisMonth` filter.
   // This avoids double counting and addresses the user's issue with a past class not showing.
   const ongoingClasses = classes.filter((cls: any) => {
     const classDate = new Date(cls.startTime);
-    return classDate < now && !isWithinInterval(classDate, { start: weekStart, end: weekEnd });
+    return classDate < now && !isWithinInterval(classDate, { start: monthStart, end: monthEnd });
   });
 
-  const scheduledClassesThisWeek = classesThisWeek.filter((cls: any) => cls.status === 'scheduled');
-  const upcomingClassesCount = scheduledClassesThisWeek.length;
+  const scheduledClassesThisMonth = classesThisMonth.filter((cls: any) => cls.status === 'scheduled');
+  const upcomingClassesCount = scheduledClassesThisMonth.length;
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -249,25 +249,25 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-classes-this-week">
+        <Card data-testid="card-classes-this-month">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Classes This Week</CardTitle>
+            <CardTitle className="text-sm font-medium">Classes This Month</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="text-classes-count">
               {classesLoading
                 ? '...'
-                : classesThisWeek.length + ongoingClasses.length}
+                : classesThisMonth.length + ongoingClasses.length}
             </div>
             <p className="text-xs text-muted-foreground">
               {classesLoading
                 ? 'Loading...'
                 : ongoingClasses.length > 0
-                  ? `${ongoingClasses.length} ongoing, ${scheduledClassesThisWeek.length} scheduled`
+                  ? `${ongoingClasses.length} ongoing, ${scheduledClassesThisMonth.length} scheduled`
                   : upcomingClassesCount > 0
                     ? `${upcomingClassesCount} scheduled`
-                    : format(weekStart, 'MMM d') + ' - ' + format(weekEnd, 'MMM d')}
+                    : format(monthStart, 'MMM d') + ' - ' + format(monthEnd, 'MMM d')}
             </p>
           </CardContent>
         </Card>

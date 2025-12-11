@@ -13,7 +13,7 @@ import { ClassForm } from '@/components/ClassForm';
 import { ClassTypeForm } from '@/components/ClassTypeForm';
 import { BookingDialog } from '@/components/BookingDialog';
 import { Plus, Calendar as CalendarIcon, Clock, Users, Trash2, Edit, CheckCircle } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 export default function Classes() {
   const { user } = useAuth();
@@ -80,19 +80,19 @@ export default function Classes() {
   });
 
   const now = new Date();
-  const weekStart = startOfWeek(now);
-  const weekEnd = endOfWeek(now);
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
 
-  const classesThisWeek = filteredClasses.filter((cls: any) => {
+  const classesThisMonth = filteredClasses.filter((cls: any) => {
     const classDate = new Date(cls.startTime);
-    return isWithinInterval(classDate, { start: weekStart, end: weekEnd });
+    return isWithinInterval(classDate, { start: monthStart, end: monthEnd });
   });
 
   const bookedClassIds = new Set(myBookings.map((b: any) => b.classId));
-  const myBookedClassesThisWeek = classesThisWeek.filter((cls: any) => bookedClassIds.has(cls.id));
+  const myBookedClassesThisMonth = classesThisMonth.filter((cls: any) => bookedClassIds.has(cls.id));
 
-  const totalSpots = classesThisWeek.reduce((sum: number, cls: any) => sum + cls.capacity, 0);
-  const bookedSpots = classesThisWeek.reduce((sum: number, cls: any) => sum + cls.bookedCount, 0);
+  const totalSpots = classesThisMonth.reduce((sum: number, cls: any) => sum + cls.capacity, 0);
+  const bookedSpots = classesThisMonth.reduce((sum: number, cls: any) => sum + cls.bookedCount, 0);
   const availableSpots = totalSpots - bookedSpots;
 
   const getStatusColor = (cls: any) => {
@@ -194,15 +194,15 @@ export default function Classes() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card data-testid="card-classes-this-week">
+        <Card data-testid="card-classes-this-month">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Classes This Week</CardTitle>
+            <CardTitle className="text-sm font-medium">Classes This Month</CardTitle>
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-classes-count">{classesThisWeek.length}</div>
+            <div className="text-2xl font-bold" data-testid="text-classes-count">{classesThisMonth.length}</div>
             <p className="text-xs text-muted-foreground">
-              {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d')}
+              {format(monthStart, 'MMM d')} - {format(monthEnd, 'MMM d')}
             </p>
           </CardContent>
         </Card>
@@ -214,8 +214,8 @@ export default function Classes() {
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-bookings-count">{myBookedClassesThisWeek.length}</div>
-              <p className="text-xs text-muted-foreground">Classes booked this week</p>
+              <div className="text-2xl font-bold" data-testid="text-bookings-count">{myBookedClassesThisMonth.length}</div>
+              <p className="text-xs text-muted-foreground">Classes booked this month</p>
             </CardContent>
           </Card>
         )}
