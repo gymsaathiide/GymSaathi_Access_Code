@@ -66,6 +66,14 @@ export default function MemberDashboard() {
     return isWithinInterval(classDate, { start: weekStart, end: weekEnd });
   });
 
+  // Define ongoing classes: classes whose start time is in the past
+  // AND are NOT within the current week's `classesThisWeek` filter.
+  // This avoids double counting and addresses the user's issue with a past class not showing.
+  const ongoingClasses = classes.filter((cls: any) => {
+    const classDate = new Date(cls.startTime);
+    return classDate < now && !isWithinInterval(classDate, { start: weekStart, end: weekEnd });
+  });
+
   const scheduledClassesThisWeek = classesThisWeek.filter((cls: any) => cls.status === 'scheduled');
   const upcomingClassesCount = scheduledClassesThisWeek.length;
 
@@ -129,8 +137,8 @@ export default function MemberDashboard() {
           </p>
         </div>
         {isInGym ? (
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             variant="destructive"
             onClick={handleCheckout}
             disabled={checkoutMutation.isPending}
@@ -144,8 +152,8 @@ export default function MemberDashboard() {
             Check Out
           </Button>
         ) : (
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             onClick={() => setScannerOpen(true)}
             className="gap-2"
           >
@@ -157,8 +165,8 @@ export default function MemberDashboard() {
 
       {todayStatus && (
         <Card className={
-          todayStatus.status === 'in_gym' 
-            ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+          todayStatus.status === 'in_gym'
+            ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
             : todayStatus.status === 'checked_out'
             ? todayStatus.record?.exitType === 'auto'
               ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
@@ -241,21 +249,25 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+        <Card data-testid="card-classes-this-week">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Classes This Week</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {classesLoading ? '...' : classesThisWeek.length}
+            <div className="text-2xl font-bold" data-testid="text-classes-count">
+              {classesLoading
+                ? '...'
+                : classesThisWeek.length + ongoingClasses.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              {classesLoading 
+              {classesLoading
                 ? 'Loading...'
-                : upcomingClassesCount > 0 
-                  ? `${upcomingClassesCount} scheduled`
-                  : format(weekStart, 'MMM d') + ' - ' + format(weekEnd, 'MMM d')}
+                : ongoingClasses.length > 0
+                  ? `${ongoingClasses.length} ongoing, ${scheduledClassesThisWeek.length} scheduled`
+                  : upcomingClassesCount > 0
+                    ? `${upcomingClassesCount} scheduled`
+                    : format(weekStart, 'MMM d') + ' - ' + format(weekEnd, 'MMM d')}
             </p>
           </CardContent>
         </Card>
