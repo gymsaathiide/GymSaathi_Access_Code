@@ -10431,59 +10431,82 @@ Return ONLY the JSON object, no other text.`;
         return res.status(400).json({ ok: false, error: 'Invalid dietary preference' });
       }
 
-      // Get or calculate TDEE
+      // Get body composition data for TDEE and macro calculations
       let tdee = providedTdee;
-      if (!tdee) {
-        const bcResult = await db!.execute(sql`
-          SELECT bmr, lifestyle FROM body_composition_reports 
-          WHERE user_id = ${req.session.userId}
-          ORDER BY created_at DESC 
-          LIMIT 1
-        `);
+      let bodyWeight = 70; // Default body weight in kg
+      let lifestyle = 'moderately_active';
+      
+      const bcResult = await db!.execute(sql`
+        SELECT bmr, lifestyle, weight FROM body_composition_reports 
+        WHERE user_id = ${req.session.userId}
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `);
 
-        if (bcResult.rows.length > 0 && bcResult.rows[0].bmr) {
+      if (bcResult.rows.length > 0) {
+        if (bcResult.rows[0].bmr) {
           const bmr = Number(bcResult.rows[0].bmr);
-          const lifestyle = String(bcResult.rows[0].lifestyle || 'moderately_active');
+          lifestyle = String(bcResult.rows[0].lifestyle || 'moderately_active');
           
-          // Activity multipliers for TDEE calculation (matching BodyCompositionPage options)
+          // Activity multipliers for TDEE calculation
           const multipliers: Record<string, number> = {
             'sedentary': 1.2,
             'moderately_active': 1.55,
             'super_active': 1.9
           };
           
-          tdee = Math.round(bmr * (multipliers[lifestyle] || 1.55));
-        } else {
-          // Default TDEE if no body composition data
-          tdee = 2000;
+          if (!tdee) {
+            tdee = Math.round(bmr * (multipliers[lifestyle] || 1.55));
+          }
+        }
+        if (bcResult.rows[0].weight) {
+          bodyWeight = Number(bcResult.rows[0].weight);
         }
       }
-
-      // Apply goal offset
-      let targetCalories: number;
-      let macroProtein: number, macroCarbs: number, macroFat: number;
       
+      if (!tdee) {
+        tdee = 2000; // Default TDEE if no body composition data
+      }
+
+      // Apply goal offset to get target calories
+      let targetCalories: number;
       switch (goal) {
         case 'fat_loss':
           targetCalories = tdee - 200;
-          macroProtein = 30;
-          macroCarbs = 40;
-          macroFat = 30;
           break;
         case 'muscle_gain':
           targetCalories = tdee + 200;
-          macroProtein = 30;
-          macroCarbs = 45;
-          macroFat = 25;
           break;
         case 'trim_tone':
         default:
           targetCalories = tdee;
-          macroProtein = 30;
-          macroCarbs = 40;
-          macroFat = 30;
           break;
       }
+
+      // Calculate macros using correct formulas:
+      // 1. Protein (g) = Body Weight (kg) × Lifestyle Factor (sedentary 1.3, moderate 1.6, super active 2.0)
+      // 2. Fat (g) = (Target Calories × 0.25) / 9
+      // 3. Carbs (g) = (Target Calories - Protein Calories - Fat Calories) / 4
+      
+      const proteinFactors: Record<string, number> = {
+        'sedentary': 1.3,
+        'moderately_active': 1.6,
+        'super_active': 2.0
+      };
+      
+      const proteinFactor = proteinFactors[lifestyle] || 1.6;
+      
+      // Protein calculation: Body Weight × Lifestyle Factor
+      const macroProtein = Math.round(bodyWeight * proteinFactor);
+      const proteinCalories = macroProtein * 4;
+      
+      // Fat calculation: 25% of target calories
+      const fatCalories = Math.round(targetCalories * 0.25);
+      const macroFat = Math.round(fatCalories / 9);
+      
+      // Carbs calculation: Remaining calories after protein and fat
+      const carbCalories = targetCalories - proteinCalories - fatCalories;
+      const macroCarbs = Math.round(carbCalories / 4);
 
       // Meal type calorie distribution (approximate)
       const mealDistribution = {
