@@ -10612,13 +10612,31 @@ Return ONLY the JSON object, no other text.`;
 
       for (let day = 1; day <= duration; day++) {
         for (const mealType of mealTypes) {
-          // Pick a random meal from the appropriate table
+          // Pick a valid meal from the appropriate table (with positive calories)
           const mealsForType = mealsByType[mealType];
-          const randomIndex = Math.floor(Math.random() * mealsForType.length);
-          const meal = mealsForType[randomIndex];
+          const validMeals = mealsForType.filter((m: any) => Number(m.calories) > 0);
+          
+          if (validMeals.length === 0) {
+            console.warn(`No valid meals with calories for ${mealType}`);
+            continue;
+          }
+          
+          const randomIndex = Math.floor(Math.random() * validMeals.length);
+          const meal = validMeals[randomIndex];
           
           // Calculate target calories for this meal type
           const targetMealCalories = Math.round(targetCalories * mealDistribution[mealType as keyof typeof mealDistribution]);
+
+          // Scale the meal's nutritional values to match target calories
+          const originalCalories = Number(meal.calories);
+          const scalingFactor = targetMealCalories / originalCalories;
+          
+          // Scale macros first, then derive calories from macros for consistency
+          const scaledProtein = Math.round(Number(meal.protein) * scalingFactor);
+          const scaledCarbs = Math.round(Number(meal.carbs) * scalingFactor);
+          const scaledFat = Math.round(Number(meal.fats) * scalingFactor);
+          // Derive calories from macros: protein*4 + carbs*4 + fat*9
+          const scaledCalories = (scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9);
 
           // Insert meal item and get the generated ID
           const itemResult = await db!.execute(sql`
@@ -10628,7 +10646,7 @@ Return ONLY the JSON object, no other text.`;
             )
             VALUES (
               ${planId}, ${day}, ${mealType}, ${meal.id}, ${meal.name},
-              ${Number(meal.calories)}, ${Number(meal.protein)}, ${Number(meal.carbs)}, ${Number(meal.fats)}, ${meal.category}
+              ${scaledCalories}, ${scaledProtein}, ${scaledCarbs}, ${scaledFat}, ${meal.category}
             )
             RETURNING id, is_favorite, is_excluded
           `);
@@ -10640,10 +10658,10 @@ Return ONLY the JSON object, no other text.`;
             mealType,
             mealId: meal.id,
             mealName: meal.name,
-            calories: Number(meal.calories),
-            protein: Number(meal.protein),
-            carbs: Number(meal.carbs),
-            fat: Number(meal.fats),
+            calories: scaledCalories,
+            protein: scaledProtein,
+            carbs: scaledCarbs,
+            fat: scaledFat,
             category: meal.category,
             isFavorite: insertedItem.is_favorite || false,
             isExcluded: insertedItem.is_excluded || false
@@ -10744,9 +10762,9 @@ Return ONLY the JSON object, no other text.`;
     try {
       const { planId, itemId } = req.params;
 
-      // Verify plan ownership and get dietary preference
+      // Verify plan ownership and get dietary preference and target calories
       const planResult = await db!.execute(sql`
-        SELECT dietary_preference FROM ai_diet_plans 
+        SELECT dietary_preference, target_calories FROM ai_diet_plans 
         WHERE id = ${planId} AND user_id = ${req.session.userId}
       `);
 
@@ -10755,6 +10773,15 @@ Return ONLY the JSON object, no other text.`;
       }
 
       const dietaryPreference = planResult.rows[0].dietary_preference;
+      const targetCalories = Number(planResult.rows[0].target_calories);
+      
+      // Meal type calorie distribution
+      const mealDistribution: Record<string, number> = {
+        breakfast: 0.25,
+        lunch: 0.30,
+        snack: 0.10,
+        dinner: 0.35
+      };
 
       // Get the current item's meal type so we can fetch from the correct table
       const itemResult = await db!.execute(sql`
@@ -10811,15 +10838,33 @@ Return ONLY the JSON object, no other text.`;
 
       const newMeal = mealsResult.rows[0];
 
-      // Update the item
+      // Calculate target calories for this meal type and scale nutritional values
+      const targetMealCalories = Math.round(targetCalories * (mealDistribution[mealType] || 0.25));
+      const originalCalories = Number(newMeal.calories);
+      
+      // Validate meal has valid calories before scaling
+      if (!originalCalories || originalCalories <= 0) {
+        return res.status(400).json({ ok: false, error: 'Selected meal has invalid calorie data. Please try again.' });
+      }
+      
+      const scalingFactor = targetMealCalories / originalCalories;
+      
+      // Scale macros first, then derive calories from macros for consistency
+      const scaledProtein = Math.round(Number(newMeal.protein) * scalingFactor);
+      const scaledCarbs = Math.round(Number(newMeal.carbs) * scalingFactor);
+      const scaledFat = Math.round(Number(newMeal.fats) * scalingFactor);
+      // Derive calories from macros: protein*4 + carbs*4 + fat*9
+      const scaledCalories = (scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9);
+
+      // Update the item with scaled values
       await db!.execute(sql`
         UPDATE ai_diet_plan_items 
         SET meal_id = ${newMeal.id}, 
             meal_name = ${newMeal.name},
-            calories = ${Number(newMeal.calories)},
-            protein = ${Number(newMeal.protein)},
-            carbs = ${Number(newMeal.carbs)},
-            fat = ${Number(newMeal.fats)},
+            calories = ${scaledCalories},
+            protein = ${scaledProtein},
+            carbs = ${scaledCarbs},
+            fat = ${scaledFat},
             category = ${newMeal.category}
         WHERE id = ${itemId} AND plan_id = ${planId}
       `);
@@ -10830,10 +10875,10 @@ Return ONLY the JSON object, no other text.`;
         newMeal: {
           mealId: newMeal.id,
           mealName: newMeal.name,
-          calories: Number(newMeal.calories),
-          protein: Number(newMeal.protein),
-          carbs: Number(newMeal.carbs),
-          fat: Number(newMeal.fats),
+          calories: scaledCalories,
+          protein: scaledProtein,
+          carbs: scaledCarbs,
+          fat: scaledFat,
           category: newMeal.category,
           isFavorite: false,
           isExcluded: false
