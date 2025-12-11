@@ -59,8 +59,8 @@ export default function AIDietPlannerPage() {
     }
   });
 
-  // Load saved active plan on mount
-  const { data: savedPlanData, isLoading: isLoadingPlan } = useQuery({
+  // Load saved active plan on mount - use isFetching to block during refetch
+  const { data: savedPlanData, isLoading: isLoadingPlan, isFetching: isFetchingPlan } = useQuery({
     queryKey: ['active-diet-plan'],
     queryFn: async () => {
       const res = await fetch('/api/diet-planner/active-plan', { credentials: 'include' });
@@ -71,8 +71,9 @@ export default function AIDietPlannerPage() {
   });
 
   // Set active plan when saved plan is loaded - normalize nutritional data
+  // Also handles when plan is cleared (savedPlanData becomes null)
   useEffect(() => {
-    if (savedPlanData && !activePlan) {
+    if (savedPlanData) {
       const normalizedPlan = {
         ...savedPlanData,
         items: savedPlanData.items.map((item: any) => ({
@@ -84,6 +85,8 @@ export default function AIDietPlannerPage() {
         }))
       };
       setActivePlan(normalizedPlan);
+    } else if (savedPlanData === null) {
+      setActivePlan(null);
     }
   }, [savedPlanData]);
 
@@ -507,7 +510,21 @@ export default function AIDietPlannerPage() {
     );
   }
 
-  // Configuration View - Mobile optimized
+  // Loading state - show spinner while checking for saved plan
+  // Also block if savedPlanData exists but activePlan hasn't been set yet (effect hasn't run)
+  const isHydrating = savedPlanData && !activePlan;
+  if (isLoadingPlan || isFetchingPlan || isHydrating) {
+    return (
+      <div className="min-h-screen bg-[#1b233d] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
+          <p className="text-white/60 text-sm">Loading your plan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Configuration View - Mobile optimized (shown ONLY when no saved plan exists in DB)
   return (
     <div className="min-h-screen bg-[#1b233d]">
       {/* Header */}
