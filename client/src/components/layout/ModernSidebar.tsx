@@ -40,7 +40,6 @@ const superadminItems = [
   { title: "Branding", url: "/branding", icon: Palette },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Security Audit", url: "/audit", icon: Shield },
-  { title: "Integrations", url: "/integrations", icon: Plug },
   { title: "Manage Meals", url: "/manage-meals", icon: Utensils },
   { title: "User Management", url: "/users", icon: UserCog },
   { title: "Settings", url: "/settings", icon: Settings },
