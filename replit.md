@@ -115,6 +115,15 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
     -   Database tables: body_composition_reports, meals_breakfast, diet_plans, meals, meal_logs, user_foods, daily_tracking, workout_plans, workout_exercises
     -   Routes: `/member/diet-planner/*` (Diet Planner with meal cards, Breakfast, Lunch, Dinner, Daily Nutrition, Workout Plan)
+-   **Manage Meals** (Superadmin): Comprehensive meal database management with:
+    -   4 clickable cards for Breakfast, Lunch, Snacks, and Dinner
+    -   View all meals from each database table with search functionality
+    -   Edit meal details (name, category, calories, protein, carbs, fats)
+    -   Delete meals with confirmation dialog
+    -   Category badges (green=veg, yellow=eggetarian, red=non-veg)
+    -   Nutritional info display for each meal
+    -   Backend validation with safe numeric parsing (supports decimals)
+    -   Route: `/manage-meals` (Superadmin only)
 -   **Permanent Member Deletion** (Admin): Complete member data removal with:
     -   Delete button with confirmation dialog in Members page
     -   Permanent deletion of member record and linked user account
