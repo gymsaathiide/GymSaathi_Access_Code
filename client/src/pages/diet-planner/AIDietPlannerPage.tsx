@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Flame, Dumbbell, Target, Loader2, Check, Heart, Repeat, Ban, Sparkles, ChevronLeft, ChevronRight, Zap, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -58,6 +58,24 @@ export default function AIDietPlannerPage() {
       return data.bodyComposition;
     }
   });
+
+  // Load saved active plan on mount
+  const { data: savedPlanData, isLoading: isLoadingPlan } = useQuery({
+    queryKey: ['active-diet-plan'],
+    queryFn: async () => {
+      const res = await fetch('/api/diet-planner/active-plan', { credentials: 'include' });
+      const data = await res.json();
+      return data.plan;
+    },
+    staleTime: 0,
+  });
+
+  // Set active plan when saved plan is loaded
+  useEffect(() => {
+    if (savedPlanData && !activePlan) {
+      setActivePlan(savedPlanData);
+    }
+  }, [savedPlanData]);
 
   // Activity multipliers based on lifestyle (matching BodyCompositionPage options)
   const getActivityMultiplier = (lifestyle: string): number => {
@@ -126,6 +144,7 @@ export default function AIDietPlannerPage() {
     onSuccess: (data) => {
       setActivePlan(data.plan);
       setActiveDay(1);
+      queryClient.invalidateQueries({ queryKey: ['active-diet-plan'] });
       toast({ title: 'Plan generated!', description: `Your ${data.plan.durationDays}-day meal plan is ready.` });
     },
     onError: (error: Error) => {
@@ -149,6 +168,7 @@ export default function AIDietPlannerPage() {
         );
         setActivePlan({ ...activePlan, items: updatedItems });
       }
+      queryClient.invalidateQueries({ queryKey: ['active-diet-plan'] });
       toast({ title: 'Meal swapped!' });
     }
   });
@@ -169,6 +189,7 @@ export default function AIDietPlannerPage() {
         );
         setActivePlan({ ...activePlan, items: updatedItems });
       }
+      queryClient.invalidateQueries({ queryKey: ['active-diet-plan'] });
     }
   });
 
@@ -188,6 +209,7 @@ export default function AIDietPlannerPage() {
         );
         setActivePlan({ ...activePlan, items: updatedItems });
       }
+      queryClient.invalidateQueries({ queryKey: ['active-diet-plan'] });
       toast({ 
         title: data.isExcluded ? 'Meal excluded' : 'Meal restored',
         description: data.isExcluded ? 'This meal will be skipped' : 'This meal is back in your plan'
@@ -203,9 +225,25 @@ export default function AIDietPlannerPage() {
     });
   };
 
-  const handleClearPlan = () => {
+  const handleClearPlan = async () => {
+    if (activePlan?.id) {
+      try {
+        const res = await fetch(`/api/diet-planner/plans/${activePlan.id}/deactivate`, {
+          method: 'PATCH',
+          credentials: 'include'
+        });
+        if (!res.ok) {
+          toast({ title: 'Error', description: 'Failed to clear plan from server. Try again.', variant: 'destructive' });
+          return;
+        }
+      } catch (e) {
+        toast({ title: 'Error', description: 'Network error. Please try again.', variant: 'destructive' });
+        return;
+      }
+    }
     setActivePlan(null);
     setActiveDay(1);
+    queryClient.invalidateQueries({ queryKey: ['active-diet-plan'] });
     toast({ title: 'Plan cleared' });
   };
 

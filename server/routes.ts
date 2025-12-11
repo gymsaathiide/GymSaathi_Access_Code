@@ -10692,7 +10692,65 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
-  // Get user's active plan
+  // Get user's active diet plan with items
+  app.get('/api/diet-planner/active-plan', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const planResult = await db!.execute(sql`
+        SELECT * FROM ai_diet_plans 
+        WHERE user_id = ${req.session.userId} AND is_active = true
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+
+      if (planResult.rows.length === 0) {
+        return res.json({ ok: true, plan: null });
+      }
+
+      const plan = planResult.rows[0] as any;
+      
+      const itemsResult = await db!.execute(sql`
+        SELECT id, day_number as "dayNumber", meal_type as "mealType", meal_id as "mealId", 
+               meal_name as "mealName", calories, protein, carbs, fat, category,
+               is_favorite as "isFavorite", is_excluded as "isExcluded"
+        FROM ai_diet_plan_items 
+        WHERE plan_id = ${plan.id}
+        ORDER BY day_number, 
+          CASE meal_type 
+            WHEN 'breakfast' THEN 1 
+            WHEN 'lunch' THEN 2 
+            WHEN 'snack' THEN 3 
+            WHEN 'dinner' THEN 4 
+          END
+      `);
+
+      res.json({ 
+        ok: true, 
+        plan: {
+          id: plan.id,
+          name: plan.name,
+          goal: plan.goal,
+          durationDays: plan.duration_days,
+          targetCalories: plan.target_calories,
+          tdee: plan.tdee,
+          dietaryPreference: plan.dietary_preference,
+          festivalMode: plan.festival_mode,
+          macroProtein: plan.macro_protein,
+          macroCarbs: plan.macro_carbs,
+          macroFat: plan.macro_fat,
+          items: itemsResult.rows
+        }
+      });
+    } catch (error: any) {
+      console.error('Error fetching active diet plan:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Get all user's plans
   app.get('/api/diet-planner/plans', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -10749,6 +10807,28 @@ Return ONLY the JSON object, no other text.`;
       });
     } catch (error: any) {
       console.error('Error fetching diet plan:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Deactivate a diet plan
+  app.patch('/api/diet-planner/plans/:planId/deactivate', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId } = req.params;
+
+      await db!.execute(sql`
+        UPDATE ai_diet_plans 
+        SET is_active = false, updated_at = NOW()
+        WHERE id = ${planId} AND user_id = ${req.session.userId}
+      `);
+
+      res.json({ ok: true, message: 'Plan deactivated' });
+    } catch (error: any) {
+      console.error('Error deactivating diet plan:', error);
       res.status(500).json({ ok: false, error: error.message });
     }
   });
