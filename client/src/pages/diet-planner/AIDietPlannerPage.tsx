@@ -255,10 +255,10 @@ export default function AIDietPlannerPage() {
   const getDailyTotals = (day: number) => {
     const meals = getDayMeals(day).filter(m => !m.isExcluded);
     return {
-      calories: meals.reduce((sum, m) => sum + m.calories, 0),
-      protein: meals.reduce((sum, m) => sum + m.protein, 0),
-      carbs: meals.reduce((sum, m) => sum + m.carbs, 0),
-      fat: meals.reduce((sum, m) => sum + m.fat, 0)
+      calories: meals.reduce((sum, m) => sum + (m.calories || 0), 0),
+      protein: meals.reduce((sum, m) => sum + (m.protein || 0), 0),
+      carbs: meals.reduce((sum, m) => sum + (m.carbs || 0), 0),
+      fat: meals.reduce((sum, m) => sum + (m.fat || 0), 0)
     };
   };
 
