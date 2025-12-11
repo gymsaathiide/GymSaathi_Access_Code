@@ -70,10 +70,20 @@ export default function AIDietPlannerPage() {
     staleTime: 0,
   });
 
-  // Set active plan when saved plan is loaded
+  // Set active plan when saved plan is loaded - normalize nutritional data
   useEffect(() => {
     if (savedPlanData && !activePlan) {
-      setActivePlan(savedPlanData);
+      const normalizedPlan = {
+        ...savedPlanData,
+        items: savedPlanData.items.map((item: any) => ({
+          ...item,
+          calories: Number(item.calories) || 0,
+          protein: Number(item.protein) || 0,
+          carbs: Number(item.carbs) || 0,
+          fat: Number(item.fat) || 0,
+        }))
+      };
+      setActivePlan(normalizedPlan);
     }
   }, [savedPlanData]);
 
