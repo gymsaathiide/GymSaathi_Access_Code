@@ -242,57 +242,102 @@ export default function ManageMealsPage() {
         </div>
       ) : (
         <ScrollArea className="h-[calc(100vh-280px)]">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-4">
-            {filteredMeals.map((meal) => (
-              <Card key={meal.id} className="bg-white/5 border-white/10">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-white truncate">{meal.name}</h3>
-                      <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full border ${getCategoryBadgeColor(meal.category)}`}>
-                        {meal.category}
-                      </span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pr-4">
+            {/* Veg Column */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-green-500/30">
+                <div className="w-3 h-3 rounded-full bg-green-500" />
+                <h3 className="font-semibold text-green-400">Vegetarian</h3>
+                <span className="text-white/40 text-sm">({filteredMeals.filter(m => m.category === 'veg').length})</span>
+              </div>
+              {filteredMeals.filter(m => m.category === 'veg').map((meal) => (
+                <Card key={meal.id} className="bg-white/5 border-green-500/20 hover:border-green-500/40 transition-colors">
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-medium text-white text-sm leading-tight flex-1 min-w-0 pr-2">{meal.name}</h4>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-cyan-400 hover:bg-cyan-500/10" onClick={() => handleEdit(meal)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDelete(meal)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-1 ml-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-white/60 hover:text-cyan-400 hover:bg-cyan-500/10"
-                        onClick={() => handleEdit(meal)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-white/60 hover:text-red-400 hover:bg-red-500/10"
-                        onClick={() => handleDelete(meal)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div className="flex gap-2 text-xs text-white/60">
+                      <span className="text-orange-400">{meal.calories}kcal</span>
+                      <span>P:{meal.protein}g</span>
+                      <span>C:{meal.carbs}g</span>
+                      <span>F:{meal.fats}g</span>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <div className="text-orange-400 font-semibold">{meal.calories}</div>
-                      <div className="text-white/40">kcal</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Eggetarian Column */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-yellow-500/30">
+                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                <h3 className="font-semibold text-yellow-400">Eggetarian</h3>
+                <span className="text-white/40 text-sm">({filteredMeals.filter(m => m.category === 'eggetarian').length})</span>
+              </div>
+              {filteredMeals.filter(m => m.category === 'eggetarian').map((meal) => (
+                <Card key={meal.id} className="bg-white/5 border-yellow-500/20 hover:border-yellow-500/40 transition-colors">
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-medium text-white text-sm leading-tight flex-1 min-w-0 pr-2">{meal.name}</h4>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-cyan-400 hover:bg-cyan-500/10" onClick={() => handleEdit(meal)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDelete(meal)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <div className="text-cyan-400 font-semibold">{meal.protein}g</div>
-                      <div className="text-white/40">protein</div>
+                    <div className="flex gap-2 text-xs text-white/60">
+                      <span className="text-orange-400">{meal.calories}kcal</span>
+                      <span>P:{meal.protein}g</span>
+                      <span>C:{meal.carbs}g</span>
+                      <span>F:{meal.fats}g</span>
                     </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <div className="text-yellow-400 font-semibold">{meal.carbs}g</div>
-                      <div className="text-white/40">carbs</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Non-Veg Column */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-red-500/30">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <h3 className="font-semibold text-red-400">Non-Vegetarian</h3>
+                <span className="text-white/40 text-sm">({filteredMeals.filter(m => m.category === 'non-veg').length})</span>
+              </div>
+              {filteredMeals.filter(m => m.category === 'non-veg').map((meal) => (
+                <Card key={meal.id} className="bg-white/5 border-red-500/20 hover:border-red-500/40 transition-colors">
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-medium text-white text-sm leading-tight flex-1 min-w-0 pr-2">{meal.name}</h4>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-cyan-400 hover:bg-cyan-500/10" onClick={() => handleEdit(meal)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/60 hover:text-red-400 hover:bg-red-500/10" onClick={() => handleDelete(meal)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <div className="text-pink-400 font-semibold">{meal.fats}g</div>
-                      <div className="text-white/40">fats</div>
+                    <div className="flex gap-2 text-xs text-white/60">
+                      <span className="text-orange-400">{meal.calories}kcal</span>
+                      <span>P:{meal.protein}g</span>
+                      <span>C:{meal.carbs}g</span>
+                      <span>F:{meal.fats}g</span>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </ScrollArea>
       )}
