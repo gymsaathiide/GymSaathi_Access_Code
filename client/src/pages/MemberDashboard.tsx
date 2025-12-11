@@ -8,6 +8,7 @@ import { Calendar, TrendingUp, ShoppingBag, User, QrCode, Clock, LogIn, LogOut, 
 import QrScanner from '@/components/QrScanner';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { startOfWeek, endOfWeek, isWithinInterval, format } from 'date-fns';
 
 type TodayStatus = {
   status: 'not_checked_in' | 'in_gym' | 'checked_out';
@@ -49,6 +50,24 @@ export default function MemberDashboard() {
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
   });
+
+  const { data: classes = [], isLoading: classesLoading } = useQuery<any[]>({
+    queryKey: ['/api/classes'],
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
+
+  const now = new Date();
+  const weekStart = startOfWeek(now);
+  const weekEnd = endOfWeek(now);
+
+  const classesThisWeek = classes.filter((cls: any) => {
+    const classDate = new Date(cls.startTime);
+    return isWithinInterval(classDate, { start: weekStart, end: weekEnd });
+  });
+
+  const scheduledClassesThisWeek = classesThisWeek.filter((cls: any) => cls.status === 'scheduled');
+  const upcomingClassesCount = scheduledClassesThisWeek.length;
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -228,9 +247,15 @@ export default function MemberDashboard() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">
+              {classesLoading ? '...' : classesThisWeek.length}
+            </div>
             <p className="text-xs text-muted-foreground">
-              3 more scheduled
+              {classesLoading 
+                ? 'Loading...'
+                : upcomingClassesCount > 0 
+                  ? `${upcomingClassesCount} scheduled`
+                  : format(weekStart, 'MMM d') + ' - ' + format(weekEnd, 'MMM d')}
             </p>
           </CardContent>
         </Card>
