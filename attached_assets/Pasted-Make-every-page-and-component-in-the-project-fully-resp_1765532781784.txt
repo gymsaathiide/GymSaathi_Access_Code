@@ -1,0 +1,107 @@
+Make every page and component in the project fully responsive and polished across mobile, tablet, laptop and desktop. Right now many pages (example: dashboard cards, mobile bottom nav, Diet Planner, header/sidebar) show alignment, spacing and overflow issues on mobile. Fix the UI in code and provide a high-fidelity Figma design that matches the new UI.
+
+Scope (must include)
+
+Global responsive system and tokens
+
+Define breakpoints: mobile (≤640px), tablet (641–1024px), laptop (1025–1366px), desktop (>1366px).
+
+Standardize spacing, typography scale, container widths, and touch targets.
+
+Provide a small design tokens file (colors, spacing, radii, font sizes) to ensure visual consistency.
+
+Pages & components to fix (all must be audited and fixed)
+
+Dashboard (all cards, stats, My Diet Plan card).
+
+Diet Planner (goal cards, duration selector, diet toggles, plan preview, Generate CTA).
+
+Header + ModernSidebar (collapsed/expanded, mobile slide-in).
+
+MobileBottomNav (avoid overlap, sticky behaviour, safe area).
+
+Forms, modals, lists, tables, and toast messages.
+
+Any other commonly used layout component (containers, grids, cards).
+
+Behavior & UX requirements
+
+Mobile-first design approach; components scale up for larger screens.
+
+Sidebar collapses to icons on small screens; mobile menu must slide over content with a dismissible overlay.
+
+Primary CTA (Generate / Create My Plan) should never be hidden by bottom nav; make it sticky or floating with safe spacing from nav.
+
+All cards must maintain consistent padding, border-radius and shadow; text should not overflow containers; long text truncates with ellipsis where appropriate.
+
+Ensure min touch target 40–48px for interactive controls.
+
+Maintain current functionality and API calls — do not change logic or data flow.
+
+Accessibility & performance
+
+Ensure WCAG AA contrast for text and controls.
+
+All interactive elements must be keyboard-accessible with proper ARIA attributes.
+
+Optimize images and remove layout-shifting (CLS) issues.
+
+Ensure the mobile render is performant (no huge reflows).
+
+Deliverables
+
+Updated frontend code (React + TypeScript) implementing responsive styles (Tailwind/CSS Modules). Provide a runnable Replit project with branches/commits.
+
+A component/style guide (tokens + usage examples).
+
+A high-fidelity Figma file (desktop + tablet + mobile layouts for each page above) illustrating final visuals and responsive behavior.
+
+Screenshots (or recordings) showing pages at these widths: 360px, 412px, 768px, 1024px, 1280px, 1440px.
+
+A short QA checklist and automated responsive test cases (e.g., Cypress or Puppeteer scripts that validate alignment and visibility at key breakpoints).
+
+Migration notes: list of changed files and any new utility classes/tokens.
+
+Acceptance criteria (must pass these)
+
+Dashboard cards align in a single column on narrow screens and in a responsive grid on larger screens; no overlapping or overflow.
+
+Mobile bottom nav never covers important CTAs; create My Plan/Generate CTA visible and accessible at all times.
+
+Diet Planner layout matches design tokens, and toggles, selectors, and Generate CTA are usable on mobile without horizontal scrolling.
+
+Sidebar hides or collapses gracefully; header elements reflow without overlap.
+
+All pages pass keyboard navigation and basic a11y checks.
+
+All layouts render correctly at the specified widths and screenshots match the provided Figma mockups within reasonable tolerance.
+
+Prioritization & timeline (suggested)
+
+Phase 1 (48–72 hrs): Critical fixes — dashboard, mobile bottom nav, Diet Planner main screen, floating CTA behavior; produce Figma mobile + desktop comps.
+
+Phase 2 (next 48 hrs): Global tokens, Sidebar/Header responsiveness, forms/modals, QA tests and screenshots.
+
+Phase 3: Finish remaining pages, polish, provide final deliverables and README.
+
+Example issues to resolve (for reference)
+
+Cards stacking too tightly and content clipped on 360–412px widths.
+
+Bottom nav overlapping CTAs and content at the bottom of the screen.
+
+Sidebar content hidden behind header or not collapsing properly on mobile.
+
+Long text overflowing card containers and causing horizontal scroll.
+
+Implementation notes (for the developer who will work this)
+
+Use mobile-first Tailwind responsive utilities (or equivalent) and a max-width container for content (e.g., max-w-[1400px] mx-auto).
+
+Prefer CSS Grid for dashboards and card layouts; use flexbox for horizontal controls and navs.
+
+Use position: sticky carefully for headers and floating CTA; ensure z-index layers prevent overlap but also not block clicks.
+
+For bottom safe area on iOS, respect env(safe-area-inset-bottom) padding.
+
+Keep changes isolated to styling/layout files — no functional change allowed.

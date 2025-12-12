@@ -166,37 +166,38 @@ export default function MemberDashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-member-title">Member Dashboard</h1>
-          <p className="text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6 pb-mobile-nav md:pb-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold truncate" data-testid="text-member-title">Member Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground truncate">
             Welcome, {user?.name}! Track your fitness journey.
           </p>
         </div>
         {isInGym ? (
           <Button
-            size="lg"
+            size="default"
             variant="destructive"
             onClick={handleCheckout}
             disabled={checkoutMutation.isPending}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto text-sm sm:text-base"
           >
             {checkoutMutation.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
             ) : (
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
             )}
             Check Out
           </Button>
         ) : (
           <Button
-            size="lg"
+            size="default"
             onClick={() => setScannerOpen(true)}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto text-sm sm:text-base"
           >
-            <QrCode className="h-5 w-5" />
-            Scan QR to Check In
+            <QrCode className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="hidden xs:inline">Scan QR to Check In</span>
+            <span className="xs:hidden">Check In</span>
           </Button>
         )}
       </div>
@@ -273,32 +274,32 @@ export default function MemberDashboard() {
         </Card>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Membership</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <Card className="min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium truncate">Membership</CardTitle>
+            <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Active</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold">Active</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Expires in 23 days
             </p>
           </CardContent>
         </Card>
 
-        <Card data-testid="card-classes-this-month">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Classes This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+        <Card data-testid="card-classes-this-month" className="min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium truncate">Classes This Month</CardTitle>
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-classes-count">
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold" data-testid="text-classes-count">
               {classesLoading
                 ? '...'
                 : classesThisMonth.length + ongoingClasses.length}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">
               {classesLoading
                 ? 'Loading...'
                 : ongoingClasses.length > 0
@@ -310,27 +311,27 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Progress</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        <Card className="min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium truncate">Progress</CardTitle>
+            <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+2.5kg</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold">+2.5kg</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Muscle gain this month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Shop Orders</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+        <Card className="min-w-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium truncate">Shop Orders</CardTitle>
+            <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold">2</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               In transit
             </p>
           </CardContent>
@@ -386,103 +387,104 @@ export default function MemberDashboard() {
       )}
 
       <Card className="overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Utensils className="h-5 w-5 text-orange-500" />
-              <CardTitle>My Diet Plan</CardTitle>
+        <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Utensils className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0" />
+              <CardTitle className="text-sm sm:text-base truncate">My Diet Plan</CardTitle>
             </div>
             {activeDietPlan && (
               <Link href="/member/diet-planner/ai-planner">
-                <Button variant="ghost" size="sm" className="gap-1 text-orange-500 hover:text-orange-600">
-                  View Full Plan
-                  <ChevronRight className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="gap-1 text-orange-500 hover:text-orange-600 text-xs sm:text-sm px-2 sm:px-3 h-8">
+                  <span className="hidden xs:inline">View Full Plan</span>
+                  <span className="xs:hidden">View</span>
+                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </Link>
             )}
           </div>
           {activeDietPlan && (
-            <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-              <Badge variant="outline" className="text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-1 text-xs sm:text-sm text-muted-foreground">
+              <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2">
                 {activeDietPlan.goal.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </Badge>
-              <span>{activeDietPlan.durationDays} days</span>
-              <span className="text-orange-500 font-medium">{activeDietPlan.targetCalories} kcal/day</span>
+              <span className="text-[10px] sm:text-xs">{activeDietPlan.durationDays} days</span>
+              <span className="text-orange-500 font-medium text-[10px] sm:text-xs">{activeDietPlan.targetCalories} kcal/day</span>
             </div>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
           {dietPlanLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-6 sm:py-8">
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
             </div>
           ) : activeDietPlan ? (
-            <div className="space-y-4">
-              <div className="text-sm font-medium text-muted-foreground">Today's Meals (Day 1)</div>
-              <div className="grid gap-3">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="text-xs sm:text-sm font-medium text-muted-foreground">Today's Meals (Day 1)</div>
+              <div className="grid gap-2 sm:gap-3">
                 {activeDietPlan.items
                   .filter(item => item.dayNumber === 1)
                   .map((item) => (
                     <div
                       key={item.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                      className={`flex items-center justify-between p-2.5 sm:p-3 rounded-lg border ${
                         item.isExcluded 
                           ? 'bg-red-500/10 border-red-500/30 opacity-60' 
                           : 'bg-muted/50 border-border'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${
                           item.category === 'veg' ? 'bg-green-500' :
                           item.category === 'eggetarian' ? 'bg-yellow-500' : 'bg-red-500'
                         }`} />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-muted-foreground capitalize">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground capitalize">
                               {item.mealType}
                             </span>
                             {item.isFavorite && (
-                              <Sparkles className="h-3 w-3 text-yellow-500" />
+                              <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-yellow-500 flex-shrink-0" />
                             )}
                           </div>
-                          <p className={`font-medium text-sm ${item.isExcluded ? 'line-through' : ''}`}>
+                          <p className={`font-medium text-xs sm:text-sm truncate ${item.isExcluded ? 'line-through' : ''}`}>
                             {item.mealName}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Flame className="h-3.5 w-3.5 text-orange-500" />
+                      <div className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm flex-shrink-0 ml-2">
+                        <Flame className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-orange-500" />
                         <span className="font-medium">{item.calories}</span>
-                        <span className="text-muted-foreground text-xs">kcal</span>
+                        <span className="text-muted-foreground text-[10px] sm:text-xs hidden xs:inline">kcal</span>
                       </div>
                     </div>
                   ))}
               </div>
               <div className="flex items-center justify-between pt-2 border-t">
-                <span className="text-sm text-muted-foreground">Day 1 Total</span>
-                <div className="flex items-center gap-1">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  <span className="font-bold">
+                <span className="text-xs sm:text-sm text-muted-foreground">Day 1 Total</span>
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  <Flame className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500" />
+                  <span className="font-bold text-sm sm:text-base">
                     {activeDietPlan.items
                       .filter(item => item.dayNumber === 1 && !item.isExcluded)
                       .reduce((sum, item) => sum + (Number(item.calories) || 0), 0)}
                   </span>
-                  <span className="text-sm text-muted-foreground">kcal</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">kcal</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="text-center py-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <Utensils className="h-8 w-8 text-orange-500" />
+            <div className="text-center py-4 sm:py-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Utensils className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500" />
               </div>
-              <h3 className="font-semibold mb-2">No Diet Plan Yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="font-semibold mb-1.5 sm:mb-2 text-sm sm:text-base">No Diet Plan Yet</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 px-2">
                 Get a personalized meal plan based on your fitness goals
               </p>
               <Link href="/member/diet-planner/ai-planner">
-                <Button className="gap-2 bg-orange-500 hover:bg-orange-600">
-                  <Sparkles className="h-4 w-4" />
+                <Button className="gap-2 bg-orange-500 hover:bg-orange-600 text-sm sm:text-base h-9 sm:h-10 px-4 sm:px-6">
+                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Create My Plan
                 </Button>
               </Link>

@@ -224,19 +224,33 @@
   }
 
   .mobile-bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-[hsl(233,47%,12%)] border-t border-white/10;
-    @apply flex justify-around items-center py-2 px-4 z-50;
+    @apply fixed bottom-0 left-0 right-0 bg-[hsl(220,26%,12%)];
+    @apply flex justify-around items-stretch z-50;
     @apply md:hidden;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+    padding-top: 0.5rem;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   .mobile-nav-item {
-    @apply flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-xl;
-    @apply text-white/60 transition-all;
+    @apply flex flex-col items-center justify-center gap-0.5 py-1.5 px-2 rounded-lg;
+    @apply text-white/50 transition-all duration-200;
+    min-width: 3rem;
+    min-height: 2.75rem;
+  }
+
+  .mobile-nav-item:active {
+    @apply scale-95;
   }
 
   .mobile-nav-item.active {
-    @apply text-white bg-white/10;
+    @apply text-orange-400;
+    background: rgba(249, 115, 22, 0.1);
   }
 
   .dashboard-header {
@@ -281,5 +295,25 @@
 
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .pb-mobile-nav {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .pb-mobile-nav {
+      padding-bottom: 0;
+    }
+  }
+
+  .has-mobile-nav {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .has-mobile-nav {
+      padding-bottom: 0;
+    }
   }
 }
