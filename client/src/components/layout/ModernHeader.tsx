@@ -173,7 +173,7 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
   };
 
   return (
-    <header className="h-16 border-b px-4 md:px-6 flex items-center justify-between gap-4 bg-[hsl(220,26%,12%)] border-white/5">
+    <header className="h-12 sm:h-14 px-2 sm:px-3 md:px-4 flex items-center justify-between gap-2 sm:gap-3 bg-transparent w-full">
       <div className="flex items-center gap-4">
         {showMenuButton && (
           <button
