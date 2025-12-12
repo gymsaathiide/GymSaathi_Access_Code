@@ -54,10 +54,11 @@ export default function MemberDietDashboard() {
     queryFn: async () => {
       const res = await fetch('/api/diet-planner/active-plan', { credentials: 'include' });
       const data = await res.json();
-      if (data.plan && data.plan.items) {
+      if (data.plan) {
+        const items = Array.isArray(data.plan.items) ? data.plan.items : [];
         return {
           ...data.plan,
-          items: data.plan.items.map((item: any) => ({
+          items: items.map((item: any) => ({
             ...item,
             calories: Number(item.calories) || 0,
             protein: Number(item.protein) || 0,
@@ -95,7 +96,7 @@ export default function MemberDietDashboard() {
   }, [activePlan]);
 
   const getDayMeals = (day: number) => {
-    if (!activePlan) return [];
+    if (!activePlan || !activePlan.items) return [];
     return activePlan.items.filter(item => item.dayNumber === day && !item.isExcluded);
   };
 
@@ -124,10 +125,6 @@ export default function MemberDietDashboard() {
       return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
     });
   };
-
-  const dailyTotals = getDailyTotals(activeDay);
-  const dayMeals = getDayMeals(activeDay);
-  const mealsByType = getMealsByType(dayMeals);
 
   if (isLoading) {
     return (
@@ -161,6 +158,10 @@ export default function MemberDietDashboard() {
   }
 
   const GoalIcon = goalIcons[activePlan.goal] || Target;
+  const dailyTotals = getDailyTotals(activeDay);
+  const dayMeals = getDayMeals(activeDay);
+  const mealsByType = getMealsByType(dayMeals);
+  const targetCalories = activePlan.targetCalories || 0;
 
   return (
     <MemberLayout 
@@ -198,14 +199,14 @@ export default function MemberDietDashboard() {
             <div className="flex-1 flex justify-center">
               <CalorieRing 
                 current={Math.round(dailyTotals.calories)} 
-                target={activePlan.targetCalories}
+                target={targetCalories}
                 size={110}
               />
             </div>
             
             <div className="text-center sm:text-right">
               <p className="text-2xl font-bold text-orange-600">
-                {activePlan.targetCalories.toLocaleString()}
+                {targetCalories.toLocaleString()}
               </p>
               <p className="text-xs text-gray-500">kcal target</p>
             </div>
