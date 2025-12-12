@@ -4,11 +4,12 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, TrendingUp, ShoppingBag, User, QrCode, Clock, LogIn, LogOut, Timer, Loader2 } from 'lucide-react';
+import { Calendar, TrendingUp, ShoppingBag, User, QrCode, Clock, LogIn, LogOut, Timer, Loader2, Utensils, ChevronRight, Flame, Sparkles } from 'lucide-react';
 import QrScanner from '@/components/QrScanner';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
+import { Link } from 'wouter';
 
 type TodayStatus = {
   status: 'not_checked_in' | 'in_gym' | 'checked_out';
@@ -34,6 +35,30 @@ type AttendanceRecord = {
   createdAt: string;
 };
 
+type DietPlanItem = {
+  id: string;
+  dayNumber: number;
+  mealType: 'breakfast' | 'lunch' | 'snack' | 'dinner';
+  mealName: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  category: string;
+  isFavorite: boolean;
+  isExcluded: boolean;
+};
+
+type DietPlan = {
+  id: string;
+  name: string;
+  goal: string;
+  durationDays: number;
+  targetCalories: number;
+  dietaryPreference: string;
+  items: DietPlanItem[];
+};
+
 export default function MemberDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -56,6 +81,19 @@ export default function MemberDashboard() {
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
+
+  const { data: dietPlanData, isLoading: dietPlanLoading } = useQuery<{ plan: DietPlan | null }>({
+    queryKey: ['active-diet-plan'],
+    queryFn: async () => {
+      const res = await fetch('/api/diet-planner/active-plan', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch diet plan');
+      return res.json();
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
+  const activeDietPlan = dietPlanData?.plan;
 
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -347,15 +385,109 @@ export default function MemberDashboard() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Workout Plan</CardTitle>
-          <CardDescription>Your personalized training program</CardDescription>
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Utensils className="h-5 w-5 text-orange-500" />
+              <CardTitle>My Diet Plan</CardTitle>
+            </div>
+            {activeDietPlan && (
+              <Link href="/member/diet-planner/ai-planner">
+                <Button variant="ghost" size="sm" className="gap-1 text-orange-500 hover:text-orange-600">
+                  View Full Plan
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+          </div>
+          {activeDietPlan && (
+            <CardDescription className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="text-xs">
+                {activeDietPlan.goal.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+              </Badge>
+              <span>{activeDietPlan.durationDays} days</span>
+              <span className="text-orange-500 font-medium">{activeDietPlan.targetCalories} kcal/day</span>
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Features coming soon: Class booking, shop, workout tracking, progress analytics, and more...
-          </p>
+          {dietPlanLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : activeDietPlan ? (
+            <div className="space-y-4">
+              <div className="text-sm font-medium text-muted-foreground">Today's Meals (Day 1)</div>
+              <div className="grid gap-3">
+                {activeDietPlan.items
+                  .filter(item => item.dayNumber === 1)
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        item.isExcluded 
+                          ? 'bg-red-500/10 border-red-500/30 opacity-60' 
+                          : 'bg-muted/50 border-border'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          item.category === 'veg' ? 'bg-green-500' :
+                          item.category === 'eggetarian' ? 'bg-yellow-500' : 'bg-red-500'
+                        }`} />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-muted-foreground capitalize">
+                              {item.mealType}
+                            </span>
+                            {item.isFavorite && (
+                              <Sparkles className="h-3 w-3 text-yellow-500" />
+                            )}
+                          </div>
+                          <p className={`font-medium text-sm ${item.isExcluded ? 'line-through' : ''}`}>
+                            {item.mealName}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Flame className="h-3.5 w-3.5 text-orange-500" />
+                        <span className="font-medium">{item.calories}</span>
+                        <span className="text-muted-foreground text-xs">kcal</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t">
+                <span className="text-sm text-muted-foreground">Day 1 Total</span>
+                <div className="flex items-center gap-1">
+                  <Flame className="h-4 w-4 text-orange-500" />
+                  <span className="font-bold">
+                    {activeDietPlan.items
+                      .filter(item => item.dayNumber === 1 && !item.isExcluded)
+                      .reduce((sum, item) => sum + (Number(item.calories) || 0), 0)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">kcal</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Utensils className="h-8 w-8 text-orange-500" />
+              </div>
+              <h3 className="font-semibold mb-2">No Diet Plan Yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Get a personalized meal plan based on your fitness goals
+              </p>
+              <Link href="/member/diet-planner/ai-planner">
+                <Button className="gap-2 bg-orange-500 hover:bg-orange-600">
+                  <Sparkles className="h-4 w-4" />
+                  Create My Plan
+                </Button>
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -73,6 +73,18 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
     -   Mobile-responsive card view for small screens, table view for desktop
     -   Routes: `/settings` and `/users` (Super Admin only)
 -   **Diet Planner System** (Member Dashboard): Comprehensive nutrition and fitness planning with:
+    -   **Dashboard Diet Plan Preview**: Member dashboard shows latest active diet plan with:
+        -   Day 1 meal preview (Breakfast, Lunch, Snack, Dinner)
+        -   Calorie summary per meal with category indicators (veg/egg/non-veg)
+        -   Favorite and excluded meal states displayed
+        -   Quick "View Full Plan" link to AI Diet Planner page
+        -   Empty state with "Create My Plan" button when no plan exists
+        -   Auto-updates when new plan is generated (cache invalidation)
+    -   **Plan Replacement Behavior**: When regenerating a diet plan:
+        -   New plan automatically deactivates all previous plans for the user
+        -   Only the latest active plan is shown across all views
+        -   UI refreshes immediately after generation (React Query cache invalidation)
+        -   No historical plans visible (single active plan per member)
     -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals (uses OpenAI Vision for image parsing)
     -   **Meal Database System**: Card-based navigation to Breakfast, Lunch, and Dinner meal databases
     -   **AI Diet Planner**: Full-day personalized meal plan generator with:
