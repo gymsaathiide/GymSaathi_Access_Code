@@ -575,130 +575,125 @@ export default function AIDietPlannerPage() {
 
   // Configuration View - Premium Design
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0f1628] via-[#141c32] to-[#1a2340]">
-      {/* Premium Header */}
-      <div className="sticky top-0 z-20 backdrop-blur-xl bg-[#0f1628]/80 border-b border-white/5">
-        <div className="px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
-          <div className="flex items-center gap-2.5 sm:gap-3 max-w-4xl mx-auto">
-            <Link href="/member/diet-planner">
-              <button className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 hover:bg-white/5 rounded-lg sm:rounded-xl transition-all duration-200 active:scale-95">
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
-              </button>
-            </Link>
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-sm sm:text-lg font-bold text-white tracking-tight">AI Diet Planner</h1>
-                <p className="text-white/40 text-[10px] sm:text-xs">Personalised meal plans</p>
-              </div>
-            </div>
+    <div className="space-y-4 sm:space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <Link href="/member/diet-planner">
+          <button className="p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition-all duration-200 active:scale-95">
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
+          </button>
+        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-white tracking-tight">AI Diet Planner</h1>
+            <p className="text-white/40 text-[10px] sm:text-xs">Personalised meal plans</p>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6 pb-28 sm:pb-32 max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      <div className="space-y-3 sm:space-y-4 pb-20 md:pb-4">
         
         {/* TDEE Card - Premium Glass */}
         <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-transparent rounded-2xl sm:rounded-3xl" />
-          <div className="absolute top-0 right-0 w-32 sm:w-48 h-32 sm:h-48 bg-cyan-500/10 rounded-full blur-3xl -mr-12 sm:-mr-16 -mt-12 sm:-mt-16" />
-          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-white/10">
-            <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
-                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-transparent rounded-xl sm:rounded-2xl" />
+          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/10">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                 </div>
                 <div>
                   <p className="text-cyan-400 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Your TDEE</p>
-                  <p className="text-white/40 text-[10px] sm:text-xs mt-0.5 hidden xs:block">Total Daily Energy Expenditure</p>
+                  <p className="text-white/40 text-[10px] hidden xs:block">Total Daily Energy</p>
                 </div>
               </div>
               <button
                 onClick={handleRefreshBodyComposition}
                 disabled={isRefreshing}
-                className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all duration-200 disabled:opacity-50 active:scale-95 flex-shrink-0"
+                className="p-1.5 sm:p-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all duration-200 disabled:opacity-50 active:scale-95 flex-shrink-0"
               >
-                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
             </div>
-            <div className="flex items-baseline gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-              <p className="text-4xl sm:text-5xl font-bold text-white tracking-tight">
+            <div className="flex items-baseline gap-1 sm:gap-1.5 mb-1.5 sm:mb-2">
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-tight">
                 {tdee.toLocaleString()}
               </p>
-              <span className="text-lg sm:text-xl font-medium text-white/40">kcal</span>
+              <span className="text-sm sm:text-base font-medium text-white/40">kcal</span>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-white/50 text-xs sm:text-sm">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-white/50 text-[10px] sm:text-xs">
               <span>BMR {bodyComposition?.bmr ? Math.round(Number(bodyComposition.bmr)).toLocaleString() : '—'}</span>
               <span className="text-white/20">×</span>
               <span className="text-cyan-400">{activityMultiplier}</span>
-              <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-white/5 text-[10px] sm:text-xs">
+              <span className="px-1 sm:px-1.5 py-0.5 rounded bg-white/5 text-[10px]">
                 {getLifestyleLabel(bodyComposition?.lifestyle || 'moderately_active')}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Goal Selection - Premium Cards */}
+        {/* Goal Selection - Compact Cards */}
         <div>
-          <h3 className="text-white font-semibold mb-3 sm:mb-4 text-xs sm:text-sm flex items-center gap-2">
-            <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
+          <h3 className="text-white font-semibold mb-2 sm:mb-3 text-xs sm:text-sm flex items-center gap-1.5">
+            <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/40" />
             Select Your Goal
           </h3>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {[
-              { id: 'fat_loss' as DietGoal, icon: Flame, label: 'Fat Loss', sub: '-200 kcal', color: 'rose', gradient: 'from-rose-500 to-red-500' },
-              { id: 'muscle_gain' as DietGoal, icon: Dumbbell, label: 'Build', sub: '+200 kcal', color: 'blue', gradient: 'from-blue-500 to-indigo-500' },
+              { id: 'fat_loss' as DietGoal, icon: Flame, label: 'Fat Loss', sub: '-200', color: 'rose', gradient: 'from-rose-500 to-red-500' },
+              { id: 'muscle_gain' as DietGoal, icon: Dumbbell, label: 'Build', sub: '+200', color: 'blue', gradient: 'from-blue-500 to-indigo-500' },
               { id: 'trim_tone' as DietGoal, icon: Target, label: 'Maintain', sub: 'TDEE', color: 'emerald', gradient: 'from-emerald-500 to-teal-500' }
             ].map(goal => (
               <button
                 key={goal.id}
                 onClick={() => setSelectedGoal(goal.id)}
-                className={`relative p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 text-center overflow-hidden group ${
+                className={`relative p-2 sm:p-3 rounded-lg sm:rounded-xl border transition-all duration-200 text-center overflow-hidden group ${
                   selectedGoal === goal.id
                     ? `border-${goal.color}-500 bg-${goal.color}-500/10`
-                    : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
+                    : 'border-white/10 bg-white/[0.02] hover:border-white/20'
                 }`}
               >
                 {selectedGoal === goal.id && (
-                  <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-gradient-to-br ${goal.gradient} flex items-center justify-center`}>
-                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                  <div className={`absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-gradient-to-br ${goal.gradient} flex items-center justify-center`}>
+                    <Check className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
                   </div>
                 )}
-                <goal.icon className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 mx-auto mb-1.5 sm:mb-2 transition-colors duration-200 ${
+                <goal.icon className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-1.5 transition-colors duration-200 ${
                   selectedGoal === goal.id ? `text-${goal.color}-400` : 'text-white/40 group-hover:text-white/60'
                 }`} />
-                <p className="text-white text-xs sm:text-sm font-semibold mb-0.5">{goal.label}</p>
-                <p className="text-white/40 text-[10px] sm:text-xs">{goal.sub}</p>
+                <p className="text-white text-[10px] sm:text-xs font-semibold">{goal.label}</p>
+                <p className="text-white/40 text-[9px] sm:text-[10px]">{goal.sub}</p>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Duration - Premium Pills */}
+        {/* Duration - Compact Pills */}
         <div>
-          <h3 className="text-white font-semibold mb-3 sm:mb-4 text-xs sm:text-sm flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
+          <h3 className="text-white font-semibold mb-2 sm:mb-3 text-xs sm:text-sm flex items-center gap-1.5">
+            <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/40" />
             Plan Duration
           </h3>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
             {[7, 30].map(dur => (
               <button
                 key={dur}
                 onClick={() => setSelectedDuration(dur as Duration)}
-                className={`relative py-4 sm:py-5 rounded-xl sm:rounded-2xl font-medium transition-all duration-300 overflow-hidden ${
+                className={`relative py-3 sm:py-4 rounded-lg sm:rounded-xl font-medium transition-all duration-200 overflow-hidden ${
                   selectedDuration === dur
-                    ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30'
-                    : 'bg-white/[0.03] text-white/60 hover:bg-white/[0.06] border border-white/10 hover:border-white/20'
+                    ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25'
+                    : 'bg-white/[0.03] text-white/60 hover:bg-white/[0.06] border border-white/10'
                 }`}
               >
-                <span className="text-2xl sm:text-3xl font-bold">{dur}</span>
-                <span className="text-xs sm:text-sm ml-1 font-medium">days</span>
+                <span className="text-xl sm:text-2xl font-bold">{dur}</span>
+                <span className="text-[10px] sm:text-xs ml-0.5 font-medium">days</span>
                 {selectedDuration === dur && (
-                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                  <div className="absolute top-1 right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
                   </div>
                 )}
               </button>
@@ -706,14 +701,14 @@ export default function AIDietPlannerPage() {
           </div>
         </div>
 
-        {/* Dietary Preference - Premium Toggle Group */}
+        {/* Dietary Preference - Compact Toggle */}
         <div>
-          <h3 className="text-white font-semibold mb-3 sm:mb-4 text-xs sm:text-sm flex items-center gap-2">
-            <UtensilsCrossed className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
+          <h3 className="text-white font-semibold mb-2 sm:mb-3 text-xs sm:text-sm flex items-center gap-1.5">
+            <UtensilsCrossed className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/40" />
             Dietary Preference
           </h3>
-          <div className="bg-white/[0.02] rounded-xl sm:rounded-2xl p-1 sm:p-1.5 border border-white/10">
-            <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
+          <div className="bg-white/[0.02] rounded-lg sm:rounded-xl p-1 border border-white/10">
+            <div className="grid grid-cols-3 gap-1">
               {[
                 { id: 'veg' as DietaryPreference, icon: Salad, label: 'Veg', color: 'emerald' },
                 { id: 'eggetarian' as DietaryPreference, icon: Egg, label: 'Egg', color: 'amber' },
@@ -722,82 +717,79 @@ export default function AIDietPlannerPage() {
                 <button
                   key={diet.id}
                   onClick={() => setSelectedDietary(diet.id)}
-                  className={`py-3 sm:py-4 rounded-lg sm:rounded-xl font-medium transition-all duration-300 flex flex-col items-center gap-1.5 sm:gap-2 ${
+                  className={`py-2 sm:py-3 rounded-md sm:rounded-lg font-medium transition-all duration-200 flex flex-col items-center gap-1 ${
                     selectedDietary === diet.id
-                      ? `bg-${diet.color}-500 text-white shadow-lg shadow-${diet.color}-500/30`
-                      : 'bg-transparent text-white/50 hover:bg-white/5 hover:text-white/70'
+                      ? `bg-${diet.color}-500 text-white shadow-md shadow-${diet.color}-500/25`
+                      : 'bg-transparent text-white/50 hover:bg-white/5'
                   }`}
                 >
-                  <diet.icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="text-[10px] sm:text-xs font-semibold">{diet.label}</span>
+                  <diet.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="text-[9px] sm:text-[10px] font-semibold">{diet.label}</span>
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Summary Card - Premium Glass */}
+        {/* Summary Card - Compact */}
         <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent rounded-xl sm:rounded-2xl" />
-          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10">
-            <h3 className="text-white/60 text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-3 sm:mb-4">Plan Summary</h3>
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent rounded-lg sm:rounded-xl" />
+          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/10">
+            <h3 className="text-white/60 text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-2 sm:mb-3">Plan Summary</h3>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
               <div>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl bg-orange-500/10 flex items-center justify-center">
-                  <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-1 sm:mb-1.5 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                  <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
                 </div>
-                <p className="text-xl sm:text-2xl font-bold text-orange-400">{targetCalories.toLocaleString()}</p>
-                <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">kcal/day</p>
+                <p className="text-base sm:text-lg font-bold text-orange-400">{targetCalories.toLocaleString()}</p>
+                <p className="text-white/40 text-[9px] sm:text-[10px]">kcal/day</p>
               </div>
               <div>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-1 sm:mb-1.5 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                 </div>
-                <p className="text-xl sm:text-2xl font-bold text-white">{selectedDuration}</p>
-                <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">days</p>
+                <p className="text-base sm:text-lg font-bold text-white">{selectedDuration}</p>
+                <p className="text-white/40 text-[9px] sm:text-[10px]">days</p>
               </div>
               <div>
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl flex items-center justify-center ${
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-1 sm:mb-1.5 rounded-lg flex items-center justify-center ${
                   selectedDietary === 'veg' ? 'bg-emerald-500/10' :
                   selectedDietary === 'eggetarian' ? 'bg-amber-500/10' : 'bg-rose-500/10'
                 }`}>
-                  {selectedDietary === 'veg' ? <Salad className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" /> :
-                   selectedDietary === 'eggetarian' ? <Egg className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" /> :
-                   <Beef className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400" />}
+                  {selectedDietary === 'veg' ? <Salad className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" /> :
+                   selectedDietary === 'eggetarian' ? <Egg className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" /> :
+                   <Beef className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />}
                 </div>
-                <p className={`text-xl sm:text-2xl font-bold ${
+                <p className={`text-base sm:text-lg font-bold ${
                   selectedDietary === 'veg' ? 'text-emerald-400' :
                   selectedDietary === 'eggetarian' ? 'text-amber-400' : 'text-rose-400'
                 }`}>{getDietaryLabel(selectedDietary)}</p>
-                <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">diet</p>
+                <p className="text-white/40 text-[9px] sm:text-[10px]">diet</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Fixed Bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 p-3 sm:p-4 bg-gradient-to-t from-[#0f1628] via-[#0f1628]/95 to-transparent">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            onClick={handleGenerate}
-            disabled={generatePlanMutation.isPending}
-            className="w-full py-5 sm:py-6 text-sm sm:text-base font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 hover:from-orange-600 hover:via-amber-600 hover:to-orange-500 rounded-xl sm:rounded-2xl shadow-2xl shadow-orange-500/30 border-0 transition-all duration-300 active:scale-[0.98]"
-          >
-            {generatePlanMutation.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-                <span className="hidden sm:inline">Generating your plan...</span>
-                <span className="sm:hidden">Generating...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Generate My Plan
-              </>
-            )}
-          </Button>
-        </div>
+        {/* Generate Button - Inline for mobile */}
+        <Button
+          onClick={handleGenerate}
+          disabled={generatePlanMutation.isPending}
+          className="w-full py-4 sm:py-5 text-sm sm:text-base font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 hover:from-orange-600 hover:via-amber-600 hover:to-orange-500 rounded-lg sm:rounded-xl shadow-lg shadow-orange-500/25 border-0 transition-all duration-200 active:scale-[0.98]"
+        >
+          {generatePlanMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <span className="hidden xs:inline">Generating your plan...</span>
+              <span className="xs:hidden">Generating...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              <span className="hidden xs:inline">Generate My Plan</span>
+              <span className="xs:hidden">Generate Plan</span>
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );
