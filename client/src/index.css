@@ -1,4 +1,5 @@
 @import './components/admin-dashboard/dashboard-theme.css';
+@import './components/member-dashboard/member-theme.css';
 
 @tailwind base;
 @tailwind components;
