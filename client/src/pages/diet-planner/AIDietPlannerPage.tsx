@@ -625,14 +625,6 @@ export default function AIDietPlannerPage() {
               </p>
               <span className="text-sm sm:text-base font-medium text-white/40">kcal</span>
             </div>
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-white/50 text-[10px] sm:text-xs">
-              <span>BMR {bodyComposition?.bmr ? Math.round(Number(bodyComposition.bmr)).toLocaleString() : '—'}</span>
-              <span className="text-white/20">×</span>
-              <span className="text-cyan-400">{activityMultiplier}</span>
-              <span className="px-1 sm:px-1.5 py-0.5 rounded bg-white/5 text-[10px]">
-                {getLifestyleLabel(bodyComposition?.lifestyle || 'moderately_active')}
-              </span>
-            </div>
           </div>
         </div>
 
