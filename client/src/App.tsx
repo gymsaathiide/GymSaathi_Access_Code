@@ -37,6 +37,7 @@ import Trainers from './pages/Trainers';
 import AdminMore from './pages/AdminMore';
 import ShopRevenueDashboard from './pages/ShopRevenueDashboard';
 import { BodyCompositionPage, DietPlannerPage, AIDietPlannerPage, WorkoutPlannerPage, HistoryPage, BreakfastPage, LunchPage, DinnerPage } from './pages/diet-planner';
+import MemberDietDashboard from './pages/diet-planner/MemberDietDashboard';
 import ManageMealsPage from './pages/ManageMealsPage';
 
 function TestDashboard() {

@@ -66,8 +66,10 @@
   }
 
   .day-picker {
-    @apply flex gap-2 overflow-x-auto scrollbar-hide py-2;
+    @apply flex gap-2 overflow-x-auto py-2;
     -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   .day-picker::-webkit-scrollbar {
