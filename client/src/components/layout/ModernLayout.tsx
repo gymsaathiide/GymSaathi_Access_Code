@@ -88,10 +88,10 @@ export function ModernLayout({ children }: ModernLayoutProps) {
         </header>
 
         {/* Content area */}
-        <main className="flex-1 overflow-auto py-6 px-4 sm:px-6 md:px-8">
+        <main className={`flex-1 overflow-auto py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 ${showMobileNav ? 'pb-24 md:pb-6' : ''}`}>
           <div className="mx-auto w-full max-w-[1400px]">
             {/* Content container with subtle elevation for readability */}
-            <div className="min-h-[60vh] rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] border border-slate-800/50 shadow-[0_6px_30px_rgba(2,6,23,0.6)] p-5 md:p-7 lg:p-8 transition-all">
+            <div className="min-h-[60vh] rounded-xl sm:rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] border border-slate-800/50 shadow-[0_6px_30px_rgba(2,6,23,0.6)] p-3 xs:p-4 sm:p-5 md:p-7 lg:p-8 transition-all">
               {children}
             </div>
           </div>

@@ -166,7 +166,7 @@ export default function MemberDashboard() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-mobile-nav md:pb-0">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold truncate" data-testid="text-member-title">Member Dashboard</h1>
