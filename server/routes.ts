@@ -10590,16 +10590,16 @@ Return ONLY the JSON object, no other text.`;
         WHERE user_id = ${req.session.userId}
       `);
 
-      // Create the plan
+      // Create the plan with is_active = true
       const planName = `${goal.replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())} - ${duration} Day Plan`;
       const planResult = await db!.execute(sql`
         INSERT INTO ai_diet_plans (
           user_id, name, goal, duration_days, target_calories, tdee, 
-          dietary_preference, festival_mode, macro_protein, macro_carbs, macro_fat
+          dietary_preference, festival_mode, macro_protein, macro_carbs, macro_fat, is_active
         )
         VALUES (
           ${req.session.userId}, ${planName}, ${goal}, ${duration}, ${targetCalories}, ${tdee},
-          ${dietaryPreference}, ${festivalMode || 'none'}, ${macroProtein}, ${macroCarbs}, ${macroFat}
+          ${dietaryPreference}, ${festivalMode || 'none'}, ${macroProtein}, ${macroCarbs}, ${macroFat}, true
         )
         RETURNING id
       `);
