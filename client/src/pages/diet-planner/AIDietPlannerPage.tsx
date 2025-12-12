@@ -325,55 +325,56 @@ export default function AIDietPlannerPage() {
       <div className="min-h-screen bg-gradient-to-b from-[#0f1628] via-[#141c32] to-[#1a2340]">
         {/* Premium Sticky Header */}
         <div className="sticky top-0 z-20 backdrop-blur-xl bg-[#0f1628]/80 border-b border-white/5">
-          <div className="px-4 py-4 lg:px-8">
-            <div className="flex items-center justify-between max-w-5xl mx-auto">
-              <div className="flex items-center gap-3">
+          <div className="px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
+            <div className="flex items-center justify-between max-w-5xl mx-auto gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button 
                   onClick={handleClearPlan}
-                  className="p-2 -ml-2 hover:bg-white/5 rounded-xl transition-all duration-200 active:scale-95"
+                  className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 hover:bg-white/5 rounded-lg sm:rounded-xl transition-all duration-200 active:scale-95 flex-shrink-0"
                 >
-                  <ArrowLeft className="w-5 h-5 text-white/70" />
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
                 </button>
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold text-white tracking-tight">Your Meal Plan</h1>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-orange-400" />
-                      <span className="text-orange-400 text-xs font-semibold">{activePlan.targetCalories} kcal/day</span>
+                <div className="min-w-0">
+                  <h1 className="text-sm sm:text-lg md:text-xl font-bold text-white tracking-tight truncate">Your Meal Plan</h1>
+                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                      <Flame className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-400 flex-shrink-0" />
+                      <span className="text-orange-400 text-[10px] sm:text-xs font-semibold">{activePlan.targetCalories} kcal</span>
                     </div>
-                    <span className="text-white/20">•</span>
-                    <span className="text-white/40 text-xs">{activePlan.durationDays} days</span>
+                    <span className="text-white/20 hidden xs:inline">•</span>
+                    <span className="text-white/40 text-[10px] sm:text-xs hidden xs:inline">{activePlan.durationDays} days</span>
                   </div>
                 </div>
               </div>
               <button 
                 onClick={handleClearPlan}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white text-sm font-medium transition-all duration-200 active:scale-95"
+                className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white/70 hover:text-white text-xs sm:text-sm font-medium transition-all duration-200 active:scale-95 flex-shrink-0"
               >
-                New Plan
+                <span className="hidden sm:inline">New Plan</span>
+                <span className="sm:hidden">New</span>
               </button>
             </div>
           </div>
           
           {/* Day Navigation Carousel */}
-          <div className="px-4 pb-4 lg:px-8">
+          <div className="px-3 sm:px-4 pb-3 sm:pb-4 lg:px-8">
             <div className="max-w-5xl mx-auto">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button 
                   onClick={() => navigateDay('prev')}
                   disabled={activeDay === 1}
-                  className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center active:scale-95"
+                  className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center active:scale-95"
                 >
-                  <ChevronLeft className="w-5 h-5 text-white/70" />
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
                 </button>
                 
                 <div className="flex-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  <div className="flex gap-2 py-1" style={{ minWidth: 'max-content' }}>
+                  <div className="flex gap-1.5 sm:gap-2 py-1" style={{ minWidth: 'max-content' }}>
                     {Array.from({ length: activePlan.durationDays }, (_, i) => i + 1).map(day => (
                       <button
                         key={day}
                         onClick={() => setActiveDay(day)}
-                        className={`flex-shrink-0 w-11 h-11 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95 ${
+                        className={`flex-shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 active:scale-95 ${
                           activeDay === day 
                             ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30 ring-2 ring-orange-400/30' 
                             : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80'
@@ -388,9 +389,9 @@ export default function AIDietPlannerPage() {
                 <button 
                   onClick={() => navigateDay('next')}
                   disabled={activeDay === activePlan.durationDays}
-                  className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center active:scale-95"
+                  className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center active:scale-95"
                 >
-                  <ChevronRight className="w-5 h-5 text-white/70" />
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
                 </button>
               </div>
             </div>
@@ -398,30 +399,30 @@ export default function AIDietPlannerPage() {
         </div>
 
         {/* Content */}
-        <div className="px-4 py-6 lg:px-8 pb-24 max-w-5xl mx-auto">
+        <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6 pb-20 sm:pb-24 max-w-5xl mx-auto">
           {/* Daily Summary Card - Premium Glass Effect */}
-          <div className="relative mb-6 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent rounded-3xl" />
-            <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-3xl p-5 md:p-6 border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-orange-400" />
+          <div className="relative mb-4 sm:mb-6 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent rounded-2xl sm:rounded-3xl" />
+            <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 border border-white/10">
+              <div className="flex items-center justify-between mb-3 sm:mb-4 gap-3">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-lg">Day {activeDay}</h3>
-                    <p className="text-white/40 text-sm">of {activePlan.durationDays} days</p>
+                    <h3 className="text-white font-bold text-base sm:text-lg">Day {activeDay}</h3>
+                    <p className="text-white/40 text-xs sm:text-sm">of {activePlan.durationDays} days</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl md:text-3xl font-bold text-white">{Math.round(dailyTotals.calories)}</div>
-                  <div className="text-white/40 text-xs">of {activePlan.targetCalories} kcal</div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">{Math.round(dailyTotals.calories)}</div>
+                  <div className="text-white/40 text-[10px] sm:text-xs">of {activePlan.targetCalories} kcal</div>
                 </div>
               </div>
 
               {/* Progress Bar */}
-              <div className="mb-5">
-                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <div className="mb-4 sm:mb-5">
+                <div className="h-1.5 sm:h-2 bg-white/5 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-500"
                     style={{ width: `${calorieProgress}%` }}
@@ -430,25 +431,25 @@ export default function AIDietPlannerPage() {
               </div>
               
               {/* Macro Grid */}
-              <div className="grid grid-cols-3 gap-3 md:gap-4">
-                <div className="bg-blue-500/10 rounded-2xl p-3 md:p-4 text-center border border-blue-500/10">
-                  <div className="text-xl md:text-2xl font-bold text-blue-400">{Math.round(dailyTotals.protein)}g</div>
-                  <div className="text-white/40 text-xs mt-1">Protein</div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                <div className="bg-blue-500/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-4 text-center border border-blue-500/10">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-blue-400">{Math.round(dailyTotals.protein)}g</div>
+                  <div className="text-white/40 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Protein</div>
                 </div>
-                <div className="bg-emerald-500/10 rounded-2xl p-3 md:p-4 text-center border border-emerald-500/10">
-                  <div className="text-xl md:text-2xl font-bold text-emerald-400">{Math.round(dailyTotals.carbs)}g</div>
-                  <div className="text-white/40 text-xs mt-1">Carbs</div>
+                <div className="bg-emerald-500/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-4 text-center border border-emerald-500/10">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-emerald-400">{Math.round(dailyTotals.carbs)}g</div>
+                  <div className="text-white/40 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Carbs</div>
                 </div>
-                <div className="bg-amber-500/10 rounded-2xl p-3 md:p-4 text-center border border-amber-500/10">
-                  <div className="text-xl md:text-2xl font-bold text-amber-400">{Math.round(dailyTotals.fat)}g</div>
-                  <div className="text-white/40 text-xs mt-1">Fat</div>
+                <div className="bg-amber-500/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-4 text-center border border-amber-500/10">
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-amber-400">{Math.round(dailyTotals.fat)}g</div>
+                  <div className="text-white/40 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Fat</div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Meals Grid */}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-2">
             {['breakfast', 'lunch', 'snack', 'dinner'].map(mealType => {
               const meal = getDayMeals(activeDay).find(m => m.mealType === mealType);
               if (!meal) return null;
@@ -459,91 +460,91 @@ export default function AIDietPlannerPage() {
               return (
                 <div 
                   key={mealType}
-                  className={`group relative overflow-hidden rounded-2xl transition-all duration-300 ${
+                  className={`group relative overflow-hidden rounded-xl sm:rounded-2xl transition-all duration-300 ${
                     meal.isExcluded 
                       ? 'opacity-60' 
-                      : 'hover:scale-[1.02]'
+                      : 'hover:scale-[1.01] sm:hover:scale-[1.02]'
                   }`}
                 >
-                  <div className={`relative p-5 backdrop-blur-sm ${
+                  <div className={`relative p-3.5 sm:p-5 backdrop-blur-sm ${
                     meal.isExcluded 
                       ? 'bg-rose-500/5 border border-rose-500/20' 
                       : 'bg-white/[0.03] border border-white/10 hover:border-white/20'
-                  }`} style={{ borderRadius: '1rem' }}>
+                  }`} style={{ borderRadius: 'inherit' }}>
                     {/* Meal Type Header */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl ${mealConfig.bg} flex items-center justify-center`}>
-                          <MealIcon className={`w-6 h-6 ${mealConfig.color}`} />
+                    <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl ${mealConfig.bg} flex items-center justify-center flex-shrink-0`}>
+                          <MealIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${mealConfig.color}`} />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-xs font-semibold uppercase tracking-wider ${mealConfig.color}`}>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                            <span className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wider ${mealConfig.color}`}>
                               {mealConfig.label}
                             </span>
-                            <span className={`w-2 h-2 rounded-full ${getCategoryColor(meal.category)}`} />
+                            <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${getCategoryColor(meal.category)} flex-shrink-0`} />
                           </div>
-                          <h4 className={`text-white font-semibold text-base leading-snug ${meal.isExcluded ? 'line-through opacity-60' : ''}`}>
+                          <h4 className={`text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2 ${meal.isExcluded ? 'line-through opacity-60' : ''}`}>
                             {meal.mealName}
                           </h4>
                         </div>
                       </div>
                       
                       {meal.isFavorite && (
-                        <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center">
-                          <Heart className="w-4 h-4 fill-rose-400 text-rose-400" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-rose-500/20 flex items-center justify-center flex-shrink-0">
+                          <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-rose-400 text-rose-400" />
                         </div>
                       )}
                     </div>
                     
                     {/* Nutrition Chips */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 text-xs font-semibold">
-                        <Flame className="w-3 h-3" />
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                      <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg bg-orange-500/10 text-orange-400 text-[10px] sm:text-xs font-semibold">
+                        <Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         {Math.round(meal.calories)} kcal
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 text-white/60 text-xs">
+                      <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-md sm:rounded-lg bg-white/5 text-white/60 text-[10px] sm:text-xs">
                         P: {Math.round(meal.protein)}g
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 text-white/60 text-xs">
+                      <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-md sm:rounded-lg bg-white/5 text-white/60 text-[10px] sm:text-xs">
                         C: {Math.round(meal.carbs)}g
                       </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 text-white/60 text-xs">
+                      <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-md sm:rounded-lg bg-white/5 text-white/60 text-[10px] sm:text-xs">
                         F: {Math.round(meal.fat)}g
                       </span>
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 sm:gap-2">
                       <button 
                         onClick={() => meal.id && toggleFavoriteMutation.mutate({ planId: activePlan.id, itemId: meal.id })}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 ${
+                        className={`flex-1 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 active:scale-95 ${
                           meal.isFavorite 
                             ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
                             : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10'
                         }`}
                       >
-                        <Heart className={`w-4 h-4 ${meal.isFavorite ? 'fill-current' : ''}`} />
-                        {meal.isFavorite ? 'Saved' : 'Save'}
+                        <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${meal.isFavorite ? 'fill-current' : ''}`} />
+                        <span className="hidden xs:inline">{meal.isFavorite ? 'Saved' : 'Save'}</span>
                       </button>
                       <button 
                         onClick={() => meal.id && swapMealMutation.mutate({ planId: activePlan.id, itemId: meal.id })}
                         disabled={swapMealMutation.isPending}
-                        className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-white/5 text-white/60 hover:bg-orange-500/10 hover:text-orange-400 border border-white/10 hover:border-orange-500/30 transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                        className="flex-1 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold bg-white/5 text-white/60 hover:bg-orange-500/10 hover:text-orange-400 border border-white/10 hover:border-orange-500/30 transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 active:scale-95 disabled:opacity-50"
                       >
-                        <Repeat className="w-4 h-4" />
-                        Swap
+                        <Repeat className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Swap</span>
                       </button>
                       <button 
                         onClick={() => meal.id && toggleExcludeMutation.mutate({ planId: activePlan.id, itemId: meal.id })}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 ${
+                        className={`flex-1 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-1 sm:gap-2 active:scale-95 ${
                           meal.isExcluded 
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                             : 'bg-white/5 text-white/60 hover:bg-rose-500/10 hover:text-rose-400 border border-white/10 hover:border-rose-500/30'
                         }`}
                       >
-                        <Ban className="w-4 h-4" />
-                        {meal.isExcluded ? 'Restore' : 'Skip'}
+                        <Ban className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">{meal.isExcluded ? 'Restore' : 'Skip'}</span>
                       </button>
                     </div>
                   </div>
@@ -577,20 +578,20 @@ export default function AIDietPlannerPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#0f1628] via-[#141c32] to-[#1a2340]">
       {/* Premium Header */}
       <div className="sticky top-0 z-20 backdrop-blur-xl bg-[#0f1628]/80 border-b border-white/5">
-        <div className="px-4 py-4 lg:px-8">
-          <div className="flex items-center gap-3 max-w-3xl mx-auto">
+        <div className="px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center gap-2.5 sm:gap-3 max-w-4xl mx-auto">
             <Link href="/member/diet-planner">
-              <button className="p-2 -ml-2 hover:bg-white/5 rounded-xl transition-all duration-200 active:scale-95">
-                <ArrowLeft className="w-5 h-5 text-white/70" />
+              <button className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 hover:bg-white/5 rounded-lg sm:rounded-xl transition-all duration-200 active:scale-95">
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/70" />
               </button>
             </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                <Sparkles className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white tracking-tight">AI Diet Planner</h1>
-                <p className="text-white/40 text-xs">Personalised meal plans</p>
+                <h1 className="text-sm sm:text-lg font-bold text-white tracking-tight">AI Diet Planner</h1>
+                <p className="text-white/40 text-[10px] sm:text-xs">Personalised meal plans</p>
               </div>
             </div>
           </div>
@@ -598,42 +599,42 @@ export default function AIDietPlannerPage() {
       </div>
 
       {/* Content */}
-      <div className="px-4 py-6 lg:px-8 pb-32 max-w-3xl mx-auto space-y-6">
+      <div className="px-3 sm:px-4 lg:px-8 py-4 sm:py-6 pb-28 sm:pb-32 max-w-4xl mx-auto space-y-4 sm:space-y-6">
         
         {/* TDEE Card - Premium Glass */}
         <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-transparent rounded-3xl" />
-          <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
-          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-3xl p-6 border border-white/10">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-cyan-400" />
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-transparent rounded-2xl sm:rounded-3xl" />
+          <div className="absolute top-0 right-0 w-32 sm:w-48 h-32 sm:h-48 bg-cyan-500/10 rounded-full blur-3xl -mr-12 sm:-mr-16 -mt-12 sm:-mt-16" />
+          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-white/10">
+            <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-cyan-400 text-xs font-semibold uppercase tracking-wider">Your TDEE</p>
-                  <p className="text-white/40 text-xs mt-0.5">Total Daily Energy Expenditure</p>
+                  <p className="text-cyan-400 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Your TDEE</p>
+                  <p className="text-white/40 text-[10px] sm:text-xs mt-0.5 hidden xs:block">Total Daily Energy Expenditure</p>
                 </div>
               </div>
               <button
                 onClick={handleRefreshBodyComposition}
                 disabled={isRefreshing}
-                className="p-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all duration-200 disabled:opacity-50 active:scale-95"
+                className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all duration-200 disabled:opacity-50 active:scale-95 flex-shrink-0"
               >
-                <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
             </div>
-            <div className="flex items-baseline gap-2 mb-3">
-              <p className="text-5xl font-bold text-white tracking-tight">
+            <div className="flex items-baseline gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+              <p className="text-4xl sm:text-5xl font-bold text-white tracking-tight">
                 {tdee.toLocaleString()}
               </p>
-              <span className="text-xl font-medium text-white/40">kcal</span>
+              <span className="text-lg sm:text-xl font-medium text-white/40">kcal</span>
             </div>
-            <div className="flex items-center gap-2 text-white/50 text-sm">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-white/50 text-xs sm:text-sm">
               <span>BMR {bodyComposition?.bmr ? Math.round(Number(bodyComposition.bmr)).toLocaleString() : '—'}</span>
               <span className="text-white/20">×</span>
               <span className="text-cyan-400">{activityMultiplier}</span>
-              <span className="px-2 py-0.5 rounded-md bg-white/5 text-xs">
+              <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-white/5 text-[10px] sm:text-xs">
                 {getLifestyleLabel(bodyComposition?.lifestyle || 'moderately_active')}
               </span>
             </div>
@@ -642,11 +643,11 @@ export default function AIDietPlannerPage() {
 
         {/* Goal Selection - Premium Cards */}
         <div>
-          <h3 className="text-white font-semibold mb-4 text-sm flex items-center gap-2">
-            <Target className="w-4 h-4 text-white/40" />
+          <h3 className="text-white font-semibold mb-3 sm:mb-4 text-xs sm:text-sm flex items-center gap-2">
+            <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
             Select Your Goal
           </h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
               { id: 'fat_loss' as DietGoal, icon: Flame, label: 'Fat Loss', sub: '-200 kcal', color: 'rose', gradient: 'from-rose-500 to-red-500' },
               { id: 'muscle_gain' as DietGoal, icon: Dumbbell, label: 'Build', sub: '+200 kcal', color: 'blue', gradient: 'from-blue-500 to-indigo-500' },
@@ -655,22 +656,22 @@ export default function AIDietPlannerPage() {
               <button
                 key={goal.id}
                 onClick={() => setSelectedGoal(goal.id)}
-                className={`relative p-4 md:p-5 rounded-2xl border-2 transition-all duration-300 text-center overflow-hidden group ${
+                className={`relative p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 text-center overflow-hidden group ${
                   selectedGoal === goal.id
                     ? `border-${goal.color}-500 bg-${goal.color}-500/10`
                     : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]'
                 }`}
               >
                 {selectedGoal === goal.id && (
-                  <div className={`absolute top-2 right-2 w-5 h-5 rounded-full bg-gradient-to-br ${goal.gradient} flex items-center justify-center`}>
-                    <Check className="w-3 h-3 text-white" />
+                  <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-gradient-to-br ${goal.gradient} flex items-center justify-center`}>
+                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                   </div>
                 )}
-                <goal.icon className={`w-7 h-7 md:w-8 md:h-8 mx-auto mb-2 transition-colors duration-200 ${
+                <goal.icon className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 mx-auto mb-1.5 sm:mb-2 transition-colors duration-200 ${
                   selectedGoal === goal.id ? `text-${goal.color}-400` : 'text-white/40 group-hover:text-white/60'
                 }`} />
-                <p className="text-white text-sm font-semibold mb-0.5">{goal.label}</p>
-                <p className="text-white/40 text-xs">{goal.sub}</p>
+                <p className="text-white text-xs sm:text-sm font-semibold mb-0.5">{goal.label}</p>
+                <p className="text-white/40 text-[10px] sm:text-xs">{goal.sub}</p>
               </button>
             ))}
           </div>
@@ -678,26 +679,26 @@ export default function AIDietPlannerPage() {
 
         {/* Duration - Premium Pills */}
         <div>
-          <h3 className="text-white font-semibold mb-4 text-sm flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-white/40" />
+          <h3 className="text-white font-semibold mb-3 sm:mb-4 text-xs sm:text-sm flex items-center gap-2">
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
             Plan Duration
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {[7, 30].map(dur => (
               <button
                 key={dur}
                 onClick={() => setSelectedDuration(dur as Duration)}
-                className={`relative py-5 rounded-2xl font-medium transition-all duration-300 overflow-hidden ${
+                className={`relative py-4 sm:py-5 rounded-xl sm:rounded-2xl font-medium transition-all duration-300 overflow-hidden ${
                   selectedDuration === dur
                     ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30'
                     : 'bg-white/[0.03] text-white/60 hover:bg-white/[0.06] border border-white/10 hover:border-white/20'
                 }`}
               >
-                <span className="text-3xl font-bold">{dur}</span>
-                <span className="text-sm ml-1 font-medium">days</span>
+                <span className="text-2xl sm:text-3xl font-bold">{dur}</span>
+                <span className="text-xs sm:text-sm ml-1 font-medium">days</span>
                 {selectedDuration === dur && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
+                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                   </div>
                 )}
               </button>
@@ -707,12 +708,12 @@ export default function AIDietPlannerPage() {
 
         {/* Dietary Preference - Premium Toggle Group */}
         <div>
-          <h3 className="text-white font-semibold mb-4 text-sm flex items-center gap-2">
-            <UtensilsCrossed className="w-4 h-4 text-white/40" />
+          <h3 className="text-white font-semibold mb-3 sm:mb-4 text-xs sm:text-sm flex items-center gap-2">
+            <UtensilsCrossed className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/40" />
             Dietary Preference
           </h3>
-          <div className="bg-white/[0.02] rounded-2xl p-1.5 border border-white/10">
-            <div className="grid grid-cols-3 gap-1.5">
+          <div className="bg-white/[0.02] rounded-xl sm:rounded-2xl p-1 sm:p-1.5 border border-white/10">
+            <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
               {[
                 { id: 'veg' as DietaryPreference, icon: Salad, label: 'Veg', color: 'emerald' },
                 { id: 'eggetarian' as DietaryPreference, icon: Egg, label: 'Egg', color: 'amber' },
@@ -721,14 +722,14 @@ export default function AIDietPlannerPage() {
                 <button
                   key={diet.id}
                   onClick={() => setSelectedDietary(diet.id)}
-                  className={`py-4 rounded-xl font-medium transition-all duration-300 flex flex-col items-center gap-2 ${
+                  className={`py-3 sm:py-4 rounded-lg sm:rounded-xl font-medium transition-all duration-300 flex flex-col items-center gap-1.5 sm:gap-2 ${
                     selectedDietary === diet.id
                       ? `bg-${diet.color}-500 text-white shadow-lg shadow-${diet.color}-500/30`
                       : 'bg-transparent text-white/50 hover:bg-white/5 hover:text-white/70'
                   }`}
                 >
-                  <diet.icon className="w-5 h-5" />
-                  <span className="text-xs font-semibold">{diet.label}</span>
+                  <diet.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-[10px] sm:text-xs font-semibold">{diet.label}</span>
                 </button>
               ))}
             </div>
@@ -737,38 +738,38 @@ export default function AIDietPlannerPage() {
 
         {/* Summary Card - Premium Glass */}
         <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent rounded-2xl" />
-          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-2xl p-5 border border-white/10">
-            <h3 className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-4">Plan Summary</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent rounded-xl sm:rounded-2xl" />
+          <div className="relative backdrop-blur-sm bg-white/[0.02] rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10">
+            <h3 className="text-white/60 text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-3 sm:mb-4">Plan Summary</h3>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
               <div>
-                <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                  <Flame className="w-6 h-6 text-orange-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl bg-orange-500/10 flex items-center justify-center">
+                  <Flame className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
                 </div>
-                <p className="text-2xl font-bold text-orange-400">{targetCalories.toLocaleString()}</p>
-                <p className="text-white/40 text-xs mt-0.5">kcal/day</p>
+                <p className="text-xl sm:text-2xl font-bold text-orange-400">{targetCalories.toLocaleString()}</p>
+                <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">kcal/day</p>
               </div>
               <div>
-                <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-blue-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                 </div>
-                <p className="text-2xl font-bold text-white">{selectedDuration}</p>
-                <p className="text-white/40 text-xs mt-0.5">days</p>
+                <p className="text-xl sm:text-2xl font-bold text-white">{selectedDuration}</p>
+                <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">days</p>
               </div>
               <div>
-                <div className={`w-12 h-12 mx-auto mb-2 rounded-xl flex items-center justify-center ${
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl flex items-center justify-center ${
                   selectedDietary === 'veg' ? 'bg-emerald-500/10' :
                   selectedDietary === 'eggetarian' ? 'bg-amber-500/10' : 'bg-rose-500/10'
                 }`}>
-                  {selectedDietary === 'veg' ? <Salad className="w-6 h-6 text-emerald-400" /> :
-                   selectedDietary === 'eggetarian' ? <Egg className="w-6 h-6 text-amber-400" /> :
-                   <Beef className="w-6 h-6 text-rose-400" />}
+                  {selectedDietary === 'veg' ? <Salad className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" /> :
+                   selectedDietary === 'eggetarian' ? <Egg className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" /> :
+                   <Beef className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400" />}
                 </div>
-                <p className={`text-2xl font-bold ${
+                <p className={`text-xl sm:text-2xl font-bold ${
                   selectedDietary === 'veg' ? 'text-emerald-400' :
                   selectedDietary === 'eggetarian' ? 'text-amber-400' : 'text-rose-400'
                 }`}>{getDietaryLabel(selectedDietary)}</p>
-                <p className="text-white/40 text-xs mt-0.5">diet</p>
+                <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">diet</p>
               </div>
             </div>
           </div>
@@ -776,21 +777,22 @@ export default function AIDietPlannerPage() {
       </div>
 
       {/* Fixed Bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 p-4 bg-gradient-to-t from-[#0f1628] via-[#0f1628]/95 to-transparent">
-        <div className="max-w-3xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-30 p-3 sm:p-4 bg-gradient-to-t from-[#0f1628] via-[#0f1628]/95 to-transparent">
+        <div className="max-w-4xl mx-auto">
           <Button
             onClick={handleGenerate}
             disabled={generatePlanMutation.isPending}
-            className="w-full py-6 text-base font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 hover:from-orange-600 hover:via-amber-600 hover:to-orange-500 rounded-2xl shadow-2xl shadow-orange-500/30 border-0 transition-all duration-300 active:scale-[0.98]"
+            className="w-full py-5 sm:py-6 text-sm sm:text-base font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 hover:from-orange-600 hover:via-amber-600 hover:to-orange-500 rounded-xl sm:rounded-2xl shadow-2xl shadow-orange-500/30 border-0 transition-all duration-300 active:scale-[0.98]"
           >
             {generatePlanMutation.isPending ? (
               <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Generating your plan...
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                <span className="hidden sm:inline">Generating your plan...</span>
+                <span className="sm:hidden">Generating...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-5 h-5 mr-2" />
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Generate My Plan
               </>
             )}
