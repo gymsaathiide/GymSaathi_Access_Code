@@ -402,13 +402,13 @@ export default function MemberDashboard() {
             )}
           </div>
           {activeDietPlan && (
-            <CardDescription className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
               <Badge variant="outline" className="text-xs">
                 {activeDietPlan.goal.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </Badge>
               <span>{activeDietPlan.durationDays} days</span>
               <span className="text-orange-500 font-medium">{activeDietPlan.targetCalories} kcal/day</span>
-            </CardDescription>
+            </div>
           )}
         </CardHeader>
         <CardContent>
