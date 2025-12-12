@@ -1,10 +1,51 @@
-import { ArrowLeft, Sparkles, ChevronRight, Brain, Utensils, Target, Zap, Calendar, TrendingUp } from "lucide-react";
-import { Link } from "wouter";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Sparkles, ChevronRight, Brain, Utensils, Target, TrendingUp, Loader2 } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 export default function DietPlannerPage() {
+  const [, setLocation] = useLocation();
+
+  const { data: activePlan, isLoading } = useQuery({
+    queryKey: ['active-diet-plan'],
+    queryFn: async () => {
+      const res = await fetch('/api/diet-planner/active-plan', { credentials: 'include' });
+      const data = await res.json();
+      return data.plan;
+    },
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (!isLoading && activePlan) {
+      setLocation('/member/diet-planner/ai-planner');
+    }
+  }, [activePlan, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0f1628] via-[#141c32] to-[#1a2340] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+          <p className="text-white/50 text-sm">Loading your plan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (activePlan) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0f1628] via-[#141c32] to-[#1a2340] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+          <p className="text-white/50 text-sm">Redirecting to your plan...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f1628] via-[#141c32] to-[#1a2340]">
-      {/* Header */}
       <div className="sticky top-0 z-10 backdrop-blur-xl bg-[#0f1628]/80 border-b border-white/5 px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
         <div className="flex items-center gap-3 max-w-4xl mx-auto">
           <Link href="/member">
@@ -19,9 +60,7 @@ export default function DietPlannerPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 sm:space-y-6 max-w-4xl mx-auto">
-        {/* Hero Section - Premium Glass Card */}
         <div className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/5 rounded-2xl sm:rounded-3xl" />
           <div className="absolute top-0 right-0 w-32 sm:w-48 h-32 sm:h-48 bg-orange-500/20 rounded-full blur-3xl -mr-12 sm:-mr-16 -mt-12 sm:-mt-16" />
@@ -54,12 +93,10 @@ export default function DietPlannerPage() {
           </div>
         </div>
 
-        {/* Features Grid */}
         <div className="space-y-3 sm:space-y-4">
           <h3 className="text-white/50 text-xs font-semibold uppercase tracking-wider px-1">What you get</h3>
           
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-            {/* Feature 1 */}
             <div className="group bg-white/[0.02] hover:bg-white/[0.04] rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10 hover:border-white/20 transition-all duration-300 flex items-start gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
                 <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
@@ -70,7 +107,6 @@ export default function DietPlannerPage() {
               </div>
             </div>
             
-            {/* Feature 2 */}
             <div className="group bg-white/[0.02] hover:bg-white/[0.04] rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10 hover:border-white/20 transition-all duration-300 flex items-start gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
                 <Utensils className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
@@ -81,7 +117,6 @@ export default function DietPlannerPage() {
               </div>
             </div>
             
-            {/* Feature 3 */}
             <div className="group bg-white/[0.02] hover:bg-white/[0.04] rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10 hover:border-white/20 transition-all duration-300 flex items-start gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
                 <Target className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
@@ -92,7 +127,6 @@ export default function DietPlannerPage() {
               </div>
             </div>
 
-            {/* Feature 4 */}
             <div className="group bg-white/[0.02] hover:bg-white/[0.04] rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10 hover:border-white/20 transition-all duration-300 flex items-start gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
                 <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
@@ -105,7 +139,6 @@ export default function DietPlannerPage() {
           </div>
         </div>
 
-        {/* Diet Options */}
         <div className="space-y-3 sm:space-y-4">
           <h3 className="text-white/50 text-xs font-semibold uppercase tracking-wider px-1">Available for</h3>
           
@@ -131,32 +164,7 @@ export default function DietPlannerPage() {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="bg-white/[0.02] rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-white/10">
-          <div className="grid grid-cols-3 gap-3 sm:gap-4 text-center">
-            <div>
-              <div className="w-9 h-9 sm:w-10 sm:h-10 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl bg-orange-500/10 flex items-center justify-center">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-white">7-30</p>
-              <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">Day plans</p>
-            </div>
-            <div>
-              <div className="w-9 h-9 sm:w-10 sm:h-10 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-white">4</p>
-              <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">Meals/day</p>
-            </div>
-            <div>
-              <div className="w-9 h-9 sm:w-10 sm:h-10 mx-auto mb-1.5 sm:mb-2 rounded-lg sm:rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-white">3</p>
-              <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">Goal types</p>
-            </div>
-          </div>
-        </div>
+        <div className="pb-20 md:pb-4" />
       </div>
     </div>
   );

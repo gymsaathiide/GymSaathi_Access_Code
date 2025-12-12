@@ -1,0 +1,93 @@
+We have a bug in the Diet Planner flow where the generated diet plan is getting lost when the user navigates to another tab (Dashboard, Workout Planner, etc.) and then comes back to the Diet Planner.
+
+Fix this permanently by persisting the diet plan correctly.
+
+REQUIRED BEHAVIOR (NO EXCEPTIONS)
+
+Persist Diet Plan
+
+When a user clicks Generate and a diet plan is created, save the complete generated plan in the database.
+
+The plan must be saved against the logged-in user ID.
+
+Store:
+
+goal (fat loss / muscle gain / trim & tone)
+
+duration (7 or 30 days)
+
+target calories
+
+daily meals (breakfast, lunch, snacks, dinner)
+
+calories + macros per meal
+
+created_at and updated_at
+
+Load Existing Plan Automatically
+
+Whenever the user visits /member/diet-planner:
+
+First check if an active diet plan already exists for that user.
+
+If it exists → directly show the saved generated plan.
+
+Do NOT reset the UI.
+
+Do NOT show the “Start Planning” banner again.
+
+Banner Visibility Rules
+
+Show the AI Diet Planner / Start Planning banner ONLY IF:
+
+The user has no diet plan saved in the database.
+
+If a plan exists, the banner must never appear again unless the user explicitly creates a new plan.
+
+Tab Switching / Refresh / Reload
+
+The diet plan must persist across:
+
+Page refresh
+
+Tab switching
+
+Route changes
+
+Logout → login again
+
+The UI must always rehydrate from the database.
+
+New Plan Button
+
+When the user clicks “New Plan”:
+
+Delete OR overwrite the existing diet plan in the database.
+
+Redirect the user back to the initial “Start Planning” banner page.
+
+Generate a completely fresh plan and save it again.
+
+Frontend Rules
+
+Frontend should never assume state.
+
+On page load, always fetch the diet plan from backend.
+
+State should be derived only from API response.
+
+Backend Rules
+
+Create or update the required database table(s) if missing.
+
+Ensure only one active plan exists per user.
+
+FINAL RESULT EXPECTATION
+
+Generated diet plan must NEVER disappear.
+
+Navigation should feel seamless.
+
+Diet Planner should behave like a real production app, not a demo.
+
+Implement, test all scenarios, and fix the issue end-to-end.
