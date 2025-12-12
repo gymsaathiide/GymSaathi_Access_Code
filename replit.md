@@ -1,6 +1,6 @@
 # Overview
 
-This project is a multi-tenant gym management superadmin dashboard platform offering billing, white-label branding, analytics, security auditing, and third-party integrations. Built with a modern full-stack TypeScript architecture, it aims to efficiently manage multiple gym facilities, providing a robust solution with significant market potential.
+This project is a multi-tenant gym management superadmin dashboard platform designed to efficiently manage multiple gym facilities. It offers features such as billing, white-label branding, analytics, security auditing, and third-party integrations, providing a robust solution with significant market potential.
 
 # User Preferences
 
@@ -9,156 +9,39 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend
-
-The frontend uses **React 18**, **TypeScript**, and **Vite**. UI components are built with **Radix UI primitives** and **shadcn/ui** (new-york style), optimized for enterprise data density. Styling is managed by **TailwindCSS** with CSS variables (dark mode only) and custom typography. **TanStack Query** handles server state, **Wouter** for client-side routing, and **Recharts** for data visualization. The layout features a fixed sidebar and flexible main content area.
+The frontend uses React 18, TypeScript, and Vite. UI components are built with Radix UI primitives and shadcn/ui (new-york style), optimized for enterprise data density. Styling is managed by TailwindCSS (dark mode only) with custom typography. TanStack Query handles server state, Wouter for client-side routing, and Recharts for data visualization.
 
 ## Backend
-
-The backend is built with **Express.js**, **Node.js**, and **TypeScript**, exposing a **RESTful API** at `/api`. It includes request logging middleware and uses **PostgreSQL** as the primary database. **Drizzle ORM** provides type-safe database operations and integrates with **Zod** for schema validation. **connect-pg-simple** manages PostgreSQL-backed session storage for authentication.
+The backend is built with Express.js, Node.js, and TypeScript, exposing a RESTful API at `/api`. It uses PostgreSQL as the primary database, with Drizzle ORM for type-safe operations and Zod for schema validation. Session-based authentication is managed via Express sessions with a PostgreSQL store.
 
 ## Data Storage
-
-The primary database is **Supabase PostgreSQL**, accessed via the `pg` driver and **Drizzle ORM**. The schema includes tables for gyms, subscriptions, transactions, branding, audit logs, and integrations, using UUID primary keys.
+The primary database is Supabase PostgreSQL, accessed via the `pg` driver and Drizzle ORM. The schema includes tables for gyms, subscriptions, transactions, branding, audit logs, integrations, and extensive diet planner data.
 
 ## Authentication & Authorization
-
-**Session-based authentication** uses Express sessions with a PostgreSQL store. Security features include CORS, raw body capture for webhook verification, and an audit logging system. A "Forgot Password" flow with secure, time-limited tokens and bcrypt hashing is implemented.
-
-**Trainer RBAC (Role-Based Access Control)**: Trainers have strict isolation from order management while retaining purchase capability:
--   CAN browse products in the shop and place orders for themselves
--   CAN checkout using the standard cart flow (backend auto-creates linked member record if needed)
--   CANNOT view, update, or manage any orders (theirs or others)
--   CANNOT access order analytics, shop revenue dashboards, or order history
--   Backend enforces 403 Forbidden on all order viewing/management API endpoints for trainers
--   Frontend hides Orders tab, Shop Revenue link, and all order management UI components
-
-**Note**: OTP verification for first-time login has been disabled. Users can now log in directly without email verification.
+The system uses session-based authentication with a PostgreSQL store. Security features include CORS and an audit logging system. A "Forgot Password" flow is implemented. Trainer RBAC (Role-Based Access Control) strictly isolates trainers from order management while allowing personal purchases.
 
 ## UI/UX Decisions
-
-The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26%,10%)), white/5% opacity cards, and orange accents. No light theme or theme toggle is available. Consistent layout components like `ModernLayout`, `ModernSidebar`, and `ModernHeader` are used. Dashboard visualizations include `MemberActivityChart`, `MembershipPieChart`, and `TargetGauge`. The system includes comprehensive mobile responsiveness across various dashboards and transactional flows, utilizing Tailwind's responsive utilities and touch-friendly designs.
+The platform features a dark theme only design with navy backgrounds and orange accents. Consistent layout components are used throughout. Comprehensive mobile responsiveness is implemented with defined breakpoints, a mobile bottom navigation, and typography scaling. The Diet Planner system features a redesigned premium UI with a two-zone layout, glass-effect cards, and sticky navigation.
 
 ## Key Features
-
--   **QR Attendance System**: Member check-in/check-out via QR codes with admin controls.
--   **Public Enquiry Form System**: Gym-branded forms for lead generation with email/WhatsApp notifications and anti-spam.
--   **Trainer Management System**: CRUD operations for trainers, role management, and a dedicated dashboard.
--   **Quick Action Dropdown**: Provides quick access for admins to manage payment details (UPI QR, bank details) and access a 24/7 helpdesk.
--   **Cart Persistence System**: Cart state persists across page refreshes using local storage, user-specific, and clears on logout.
--   **Order Notification System**: Comprehensive notifications for members (WhatsApp, Email, In-App) and admins (In-App) upon order creation.
--   **Enhanced Toast Notification System**: Improved toast notifications with auto-dismissal, duration control, multiple simultaneous toasts, and enhanced UI with smart icons and variants.
--   **Revenue Graph Real-time Updates**: Admin dashboard revenue graph updates automatically after orders and refreshes periodically.
--   **Shop Orders Revenue Dashboard**: Comprehensive dashboard for shop sales analytics with:
-    -   Responsive stats cards (Today's Revenue, Monthly Revenue, Total Orders, Avg Order Value)
-    -   Date filter tabs (Today, 7 Days, 30 Days, This Month, This Year)
-    -   Interactive revenue trend graph with tooltips (Recharts)
-    -   Recent orders table with status badges
-    -   60-second auto-refresh for real-time updates
-    -   Full mobile responsiveness with touch-friendly design
-    -   Route: `/admin/shop-revenue` (Admin only - trainers do not have access)
--   **Security Audit System**: Super Admin functional error tracking with:
-    -   Tracks only user-facing errors (orders, payments, notifications)
-    -   Converts technical errors to human-readable messages
-    -   3-day auto-expiry for all logged errors
-    -   Dashboard with stats cards (Total Issues, Member/Admin/Trainer breakdown)
-    -   Role filtering and search functionality
-    -   Mobile-responsive table UI
-    -   Route: `/audit` (Super Admin only)
--   **Superadmin Profile & User Management**: Comprehensive account management with:
-    -   Profile settings to update name, email, and phone
-    -   Password change with current password verification
-    -   User management dashboard to view all superadmins
-    -   Add new superadmin accounts with email and temporary password
-    -   Delete superadmin accounts (with self-deletion and last-admin protections)
-    -   Mobile-responsive card view for small screens, table view for desktop
-    -   Routes: `/settings` and `/users` (Super Admin only)
--   **Diet Planner System** (Member Dashboard): Comprehensive nutrition and fitness planning with:
-    -   **Dashboard Diet Plan Preview**: Member dashboard shows latest active diet plan with:
-        -   Day 1 meal preview (Breakfast, Lunch, Snack, Dinner)
-        -   Calorie summary per meal with category indicators (veg/egg/non-veg)
-        -   Favorite and excluded meal states displayed
-        -   Quick "View Full Plan" link to AI Diet Planner page
-        -   Empty state with "Create My Plan" button when no plan exists
-        -   Auto-updates when new plan is generated (cache invalidation)
-    -   **Plan Replacement Behavior**: When regenerating a diet plan:
-        -   New plan automatically deactivates all previous plans for the user
-        -   Only the latest active plan is shown across all views
-        -   UI refreshes immediately after generation (React Query cache invalidation)
-        -   No historical plans visible (single active plan per member)
-    -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals (uses OpenAI Vision for image parsing)
-    -   **Meal Database System**: Card-based navigation to Breakfast, Lunch, and Dinner meal databases
-    -   **AI Diet Planner**: Full-day personalized meal plan generator with premium UI:
-        -   **Redesigned Premium UI** (Dec 2025): Complete visual overhaul with:
-            -   Two-zone layout: configuration panel + meal plan view
-            -   Pill-based goal selectors with gradient icons (Fat Loss, Muscle Gain, Trim & Tone)
-            -   Glass-effect cards with frosted backdrop and subtle borders
-            -   Sticky day navigation carousel with horizontal scroll
-            -   Floating plan summary header showing total calories/macros
-            -   Premium meal cards with gradient headers and macro chips
-            -   Hover micro-animations and scale transitions
-            -   Mobile-responsive with bottom action tray
-            -   Navy gradient backgrounds (#0f1628 → #1a2340) with orange accents
-        -   Goal selection cards (Fat Loss -200kcal, Muscle Gain +200kcal, Trim & Tone maintenance)
-        -   TDEE calculation from body composition BMR with lifestyle multipliers
-        -   Duration selector (7 or 30 days)
-        -   Cumulative dietary preference toggles (Veg, Egg, Non-Veg)
-        -   Festival mode chips (None, Navratri, Ekadashi, Fasting)
-        -   Full day meal breakdown (Breakfast, Lunch, Snack, Dinner)
-        -   Day-by-day navigation with calorie/macro summaries
-        -   Swap meal functionality to replace individual meals
-        -   Favorite toggle to mark preferred meals
-        -   Exclude toggle to skip unwanted meals
-        -   Visual exclusion state (dimmed cards with red border)
-        -   **Plan Persistence**: Generated plans persist across page reloads and logout/login sessions
-            -   Plans saved to `ai_diet_plans` and `ai_diet_plan_items` tables
-            -   Active plan loaded automatically on page mount via `/api/diet-planner/active-plan`
-            -   Mutations (swap/favorite/exclude) sync with server and invalidate cache
-            -   Clear plan deactivates on server before clearing locally
-        -   Database tables: ai_diet_plans, ai_diet_plan_items, member_diet_preferences, meal_favorites, meal_exclusions
-        -   Route: `/member/diet-planner/ai-planner`
-    -   **Breakfast Meal Plan Generator**: Simplified meal planning interface with:
-        -   Empty state on page load (no meals shown initially)
-        -   **Cumulative category toggle filters** (radio button behavior - only one active):
-            -   **Veg toggle**: Shows only vegetarian meals
-            -   **Egg toggle**: Shows vegetarian + egg-based meals (cumulative)
-            -   **Non-Veg toggle**: Shows all meals - veg + egg + non-veg (default, all-inclusive)
-        -   Generate 7-day or 30-day meal plan buttons
-        -   Meal cards display ONLY when plan is generated (no browse/search mode)
-        -   Visual category indicators (green=veg, yellow=eggetarian, red=non-veg)
-        -   Day badges (D1, D2, etc) on each meal card
-        -   Nutritional info display (calories, protein, carbs, fats)
-        -   Regenerate button maintains category and duration for consistency
-        -   Clear Plan button returns to empty state
-        -   State management: activePlan stores {duration, category, meals}
-        -   Database tables: 
-            -   `meals_breakfast` (300 meals)
-            -   `meals_lunch` (150 meals - rice, roti, curries, dal)
-            -   `meals_dinner` (150 meals - lighter meals, soups, khichdi)
-            -   `meals_snacks` (100 meals - protein shakes, fruits, nuts)
-        -   API endpoint: `POST /api/meals/breakfast/generate-plan` (uses SQL IN clause for cumulative filtering)
-        -   AI Diet Planner fetches from dedicated tables based on meal type (breakfast → meals_breakfast, lunch → meals_lunch, etc.)
-    -   **Daily Nutrition Tracking**: Log meals with food search, manual entry, and macro tracking (calories, protein, carbs, fats)
-    -   **Workout Planner**: Exercise library with warm-up, strength, cardio, and stretching exercises
-    -   **Progress Tracking**: Daily tracking with water intake, weight, and meal completion
-    -   Database tables: body_composition_reports, meals_breakfast, diet_plans, meals, meal_logs, user_foods, daily_tracking, workout_plans, workout_exercises
-    -   Routes: `/member/diet-planner/*` (Diet Planner with meal cards, Breakfast, Lunch, Dinner, Daily Nutrition, Workout Plan)
--   **Manage Meals** (Superadmin): Comprehensive meal database management with:
-    -   4 clickable cards for Breakfast, Lunch, Snacks, and Dinner
-    -   View all meals from each database table with search functionality
-    -   Edit meal details (name, category, calories, protein, carbs, fats)
-    -   Delete meals with confirmation dialog
-    -   Category badges (green=veg, yellow=eggetarian, red=non-veg)
-    -   Nutritional info display for each meal
-    -   Backend validation with safe numeric parsing (supports decimals)
-    -   Route: `/manage-meals` (Superadmin only)
--   **Permanent Member Deletion** (Admin): Complete member data removal with:
-    -   Delete button with confirmation dialog in Members page
-    -   Permanent deletion of member record and linked user account
-    -   Cascading deletion of all related data (memberships, orders, payments, attendance, invoices)
-    -   Diet planner data cleanup (body composition reports, diet plans, meals, meal logs, tracking data)
-    -   Supabase storage file cleanup (member photos, body composition images)
-    -   Lead conversion reference cleanup (clears convertedToMemberId before deletion)
-    -   API endpoint: `DELETE /api/members/:id/permanent` (Admin only)
+-   **QR Attendance System**: Member check-in/check-out via QR codes.
+-   **Public Enquiry Form System**: Gym-branded lead generation forms.
+-   **Trainer Management System**: CRUD operations and dedicated dashboard.
+-   **Quick Action Dropdown**: Admin access to payment details and helpdesk.
+-   **Cart Persistence System**: User-specific cart state persistence.
+-   **Order Notification System**: Notifications for members and admins.
+-   **Enhanced Toast Notification System**: Improved, customizable toast notifications.
+-   **Revenue Graph Real-time Updates**: Automatic updates for the admin dashboard revenue graph.
+-   **Shop Orders Revenue Dashboard**: Comprehensive sales analytics for shop orders (Admin only).
+-   **Security Audit System**: Super Admin functional error tracking and dashboard.
+-   **Superadmin Profile & User Management**: Account and user management for Superadmins.
+-   **Diet Planner System**: Comprehensive nutrition and fitness planning for members including:
+    -   Dashboard Diet Plan Preview
+    -   AI Diet Planner with personalized meal plan generation, body composition analysis, meal database, and plan persistence.
+    -   Simplified Meal Plan Generators (Breakfast, Lunch, Dinner, Snacks).
+    -   Daily Nutrition Tracking, Workout Planner, and Progress Tracking.
+-   **Manage Meals**: Superadmin interface for managing meal database tables.
+-   **Permanent Member Deletion**: Admin functionality for complete member data removal with cascading deletions.
 
 # External Dependencies
 
