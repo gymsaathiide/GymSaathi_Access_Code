@@ -134,7 +134,7 @@ function ProtectedApp() {
         <Route path="/member/diet-planner/breakfast" component={() => <ProtectedRoute allowedRoles={['member']}><BreakfastPage /></ProtectedRoute>} />
         <Route path="/member/diet-planner/lunch" component={() => <ProtectedRoute allowedRoles={['member']}><LunchPage /></ProtectedRoute>} />
         <Route path="/member/diet-planner/dinner" component={() => <ProtectedRoute allowedRoles={['member']}><DinnerPage /></ProtectedRoute>} />
-        <Route path="/member/diet-planner" component={() => <ProtectedRoute allowedRoles={['member']}><DietPlannerPage /></ProtectedRoute>} />
+        <Route path="/member/diet-planner" component={() => <ProtectedRoute allowedRoles={['member']}><MemberDietDashboard /></ProtectedRoute>} />
         <Route path="/member/classes" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Classes /></ProtectedRoute>} />
         <Route path="/member/attendance" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Attendance /></ProtectedRoute>} />
         <Route path="/member/shop" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Shop /></ProtectedRoute>} />
