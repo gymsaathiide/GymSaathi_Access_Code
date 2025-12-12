@@ -73,7 +73,7 @@ export default function AIDietPlannerPage() {
   // Set active plan when saved plan is loaded - normalize nutritional data
   // Also handles when plan is cleared (savedPlanData becomes null)
   useEffect(() => {
-    if (savedPlanData) {
+    if (savedPlanData && savedPlanData.items && Array.isArray(savedPlanData.items)) {
       const normalizedPlan = {
         ...savedPlanData,
         items: savedPlanData.items.map((item: any) => ({
@@ -85,7 +85,7 @@ export default function AIDietPlannerPage() {
         }))
       };
       setActivePlan(normalizedPlan);
-    } else if (savedPlanData === null) {
+    } else if (savedPlanData === null || (savedPlanData && !savedPlanData.items)) {
       setActivePlan(null);
     }
   }, [savedPlanData]);
