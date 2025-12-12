@@ -87,7 +87,17 @@ The platform uses a **dark theme only** design with navy backgrounds (hsl(220,26
         -   No historical plans visible (single active plan per member)
     -   **Body Composition Analysis**: Track weight, BMI, BMR, body fat %, and fitness goals (uses OpenAI Vision for image parsing)
     -   **Meal Database System**: Card-based navigation to Breakfast, Lunch, and Dinner meal databases
-    -   **AI Diet Planner**: Full-day personalized meal plan generator with:
+    -   **AI Diet Planner**: Full-day personalized meal plan generator with premium UI:
+        -   **Redesigned Premium UI** (Dec 2025): Complete visual overhaul with:
+            -   Two-zone layout: configuration panel + meal plan view
+            -   Pill-based goal selectors with gradient icons (Fat Loss, Muscle Gain, Trim & Tone)
+            -   Glass-effect cards with frosted backdrop and subtle borders
+            -   Sticky day navigation carousel with horizontal scroll
+            -   Floating plan summary header showing total calories/macros
+            -   Premium meal cards with gradient headers and macro chips
+            -   Hover micro-animations and scale transitions
+            -   Mobile-responsive with bottom action tray
+            -   Navy gradient backgrounds (#0f1628 → #1a2340) with orange accents
         -   Goal selection cards (Fat Loss -200kcal, Muscle Gain +200kcal, Trim & Tone maintenance)
         -   TDEE calculation from body composition BMR with lifestyle multipliers
         -   Duration selector (7 or 30 days)
