@@ -34,12 +34,12 @@ export function MemberLayout({
 
   return (
     <div className="member-container min-h-screen">
-      <header className="member-header">
+      <header className="member-header sticky top-0 z-40 backdrop-blur-sm bg-orange-500/80">
         <div className="flex items-center gap-3">
           {showBackButton && (
             <button 
               onClick={handleBack}
-              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm"
+              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm hover:bg-white/30 transition-colors"
             >
               <ChevronLeft className="w-5 h-5 text-white" />
             </button>
@@ -61,11 +61,15 @@ export function MemberLayout({
         
         <div className="flex items-center gap-2">
           {rightAction}
-          <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm" />
+          <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm hidden sm:flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">
+              {userName?.[0]?.toUpperCase() || 'U'}
+            </span>
+          </div>
         </div>
       </header>
 
-      <main className="pb-24 md:pb-6">
+      <main className="pb-24 lg:pb-8 lg:pl-48">
         {children}
       </main>
 
