@@ -1,24 +1,19 @@
-/*  
-===========================================================
-FINAL F3 THEME + FB2 FILTER BAR IMPLEMENTATION
-Neon Dark + Orange Gradient Headers + White Inputs
-===========================================================
-*/
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
 import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
 import {
   Dialog,
   DialogContent,
@@ -26,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
 import {
   Select,
   SelectContent,
@@ -33,7 +29,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { Skeleton } from "@/components/ui/skeleton";
+
 import { ClassForm } from "@/components/ClassForm";
 import { ClassTypeForm } from "@/components/ClassTypeForm";
 import { BookingDialog } from "@/components/BookingDialog";
@@ -65,12 +63,11 @@ export default function Classes() {
 
   const isAdmin = user?.role === "admin";
   const isMember = user?.role === "member";
-  const canFetchTrainers = user?.role === "admin" || user?.role === "trainer";
+  const canFetchTrainers = isAdmin || user?.role === "trainer";
 
   const { data: classes = [], isLoading: classesLoading } = useQuery<any[]>({
     queryKey: ["/api/classes"],
     refetchInterval: 5000,
-    refetchOnWindowFocus: true,
   });
 
   const { data: classTypes = [] } = useQuery({
@@ -81,7 +78,6 @@ export default function Classes() {
   const { data: trainers = [] } = useQuery({
     queryKey: ["/api/trainers"],
     enabled: canFetchTrainers,
-    refetchInterval: 10000,
   });
 
   const { data: myBookings = [] } = useQuery<any[]>({
@@ -90,24 +86,14 @@ export default function Classes() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (classId: string) => {
-      await apiRequest("DELETE", `/api/classes/${classId}`, {});
-    },
-
+    mutationFn: async (classId: string) =>
+      await apiRequest("DELETE", `/api/classes/${classId}`, {}),
     onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Class deleted successfully",
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["/api/classes"],
-        exact: false,
-      });
+      toast({ title: "Success", description: "Class deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
     },
   });
 
-  // FILTERING
   const filteredClasses = classes.filter((cls: any) => {
     if (filterClassType !== "all" && cls.classTypeId !== filterClassType)
       return false;
@@ -145,7 +131,6 @@ export default function Classes() {
 
   const availableSpots = totalSpots - bookedSpots;
 
-  // STATUS COLORS (Neon Theme)
   const getStatusBadge = (cls: any) => {
     const start = new Date(cls.startTime);
     const end = new Date(cls.endTime);
@@ -162,25 +147,11 @@ export default function Classes() {
     return <Badge className="bg-blue-600 text-white">Scheduled</Badge>;
   };
 
-  const handleBookClass = (cls: any) => {
-    setSelectedClass(cls);
-    setBookingDialogOpen(true);
-  };
-
-  const handleEditClass = (cls: any) => {
-    setSelectedClass(cls);
-    setClassFormDialogOpen(true);
-  };
-
-  const handleDeleteClass = (id: string) => {
-    if (confirm("Are you sure?")) deleteMutation.mutate(id);
-  };
-
   return (
-    <div className="space-y-6 p-4 pb-24 bg-[#05070a] min-h-screen text-white">
-      {/* PAGE HEADER */}
+    <div className="space-y-6 p-5 pb-20 bg-[#0b0f14] min-h-screen text-white">
+      {/* PAGE TITLE */}
       <div>
-        <h1 className="text-3xl font-extrabold text-[#ffff]">Classes</h1>
+        <h1 className="text-3xl font-bold">Classes</h1>
         <p className="text-gray-400">Manage class schedules and bookings</p>
       </div>
 
@@ -192,8 +163,16 @@ export default function Classes() {
             onOpenChange={setClassTypeDialogOpen}
           >
             <DialogTrigger asChild>
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-md">
-                <Plus className="mr-2 h-4 w-4" />
+              <Button
+                className="
+                  bg-transparent 
+                  border border-white/20 
+                  text-white 
+                  hover:bg-white/10 
+                  backdrop-blur-md
+                "
+              >
+                <Plus color="#eb5a0d" className="mr-2 h-4 w-4" />
                 Add Class Type
               </Button>
             </DialogTrigger>
@@ -202,11 +181,10 @@ export default function Classes() {
               <DialogHeader>
                 <DialogTitle>Create Class Type</DialogTitle>
               </DialogHeader>
-
               <ClassTypeForm
                 onSuccess={() => {
                   setClassTypeDialogOpen(false);
-                  queryClient.invalidateQueries(["/api/class-types"]);
+                  queryClient.invalidateQueries({ queryKey: ["/api/class-types"] });
                 }}
                 onCancel={() => setClassTypeDialogOpen(false)}
               />
@@ -218,8 +196,16 @@ export default function Classes() {
             onOpenChange={setClassFormDialogOpen}
           >
             <DialogTrigger asChild>
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-md">
-                <Plus className="mr-2 h-4 w-4" />
+              <Button
+                className="
+                  bg-transparent 
+                  border border-white/20 
+                  text-white 
+                  hover:bg-white/10 
+                  backdrop-blur-md
+                "
+              >
+                <Plus color="#eb5a0d" className="mr-2 h-4 w-4" />
                 Schedule Class
               </Button>
             </DialogTrigger>
@@ -228,11 +214,10 @@ export default function Classes() {
               <DialogHeader>
                 <DialogTitle>Schedule Class</DialogTitle>
               </DialogHeader>
-
               <ClassForm
                 onSuccess={() => {
                   setClassFormDialogOpen(false);
-                  queryClient.invalidateQueries(["/api/classes"]);
+                  queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
                 }}
                 onCancel={() => setClassFormDialogOpen(false)}
               />
@@ -243,141 +228,117 @@ export default function Classes() {
 
       {/* DASHBOARD CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* DASHBOARD CARD TEMPLATE */}
-        <div className="rounded-xl overflow-hidden border border-orange-500/40 shadow-xl">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3">
-            <h3 className="text-sm font-semibold text-white">
-              Classes This Month
-            </h3>
-          </div>
-
-          <CardContent className="bg-[#0b0f14] p-4">
-            <div className="text-3xl font-bold">{classesThisMonth.length}</div>
+        {/* Card Template */}
+        <Card className="rounded-xl border border-white/15 bg-white/5 backdrop-blur-md shadow-xl">
+          <CardContent className="p-4">
+            <CardTitle className="text-gray-200">Classes This Month</CardTitle>
+            <div className="text-3xl font-bold mt-2">
+              {classesThisMonth.length}
+            </div>
             <p className="text-xs text-gray-400">
               {format(monthStart, "MMM d")} - {format(monthEnd, "MMM d")}
             </p>
           </CardContent>
-        </div>
+        </Card>
 
         {isMember && (
-          <div className="rounded-xl overflow-hidden border border-orange-500/40 shadow-xl">
-            <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3">
-              <h3 className="text-sm font-semibold text-white">My Bookings</h3>
-            </div>
-
-            <CardContent className="bg-[#0b0f14] p-4">
-              <div className="text-3xl font-bold">
+          <Card className="rounded-xl border border-white/15 bg-white/5 backdrop-blur-md shadow-xl">
+            <CardContent className="p-4">
+              <CardTitle className="text-gray-200">My Bookings</CardTitle>
+              <div className="text-3xl font-bold mt-2">
                 {myBookedClassesThisMonth.length}
               </div>
-              <p className="text-xs text-gray-400">Classes booked this month</p>
             </CardContent>
-          </div>
+          </Card>
         )}
 
-        <div className="rounded-xl overflow-hidden border border-orange-500/40 shadow-xl">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3">
-            <h3 className="text-sm font-semibold text-white">
-              Available Spots
-            </h3>
-          </div>
-
-          <CardContent className="bg-[#0b0f14] p-4">
-            <div className="text-3xl font-bold">{availableSpots}</div>
+        <Card className="rounded-xl border border-white/15 bg-white/5 backdrop-blur-md shadow-xl">
+          <CardContent className="p-4">
+            <CardTitle className="text-gray-200">Available Spots</CardTitle>
+            <div className="text-3xl font-bold mt-2">{availableSpots}</div>
             <p className="text-xs text-gray-400">
               {bookedSpots} / {totalSpots} booked
             </p>
           </CardContent>
-        </div>
+        </Card>
       </div>
 
-      {/* CLASS SCHEDULE SECTION */}
-      <Card className="border border-orange-500/40 shadow-2xl rounded-2xl bg-[#0b0f14]">
-        {/* ORANGE HEADER */}
-        <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-t-2xl">
-          <div className="flex flex-col sm:flex-row justify-between gap-4">
-            <div>
-              <CardTitle>Class Schedule</CardTitle>
-              <CardDescription className="text-white/80">
-                Browse and manage upcoming classes
-              </CardDescription>
-            </div>
-
-            {/* FILTERS (FB2) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {/* WHITE INPUTS */}
-              <Select
-                value={filterClassType}
-                onValueChange={setFilterClassType}
-              >
-                <SelectTrigger className="bg-white text-black font-semibold rounded-md">
-                  <SelectValue placeholder="All Types" />
+      {/* CLASS SCHEDULE */}
+      <Card className="rounded-xl border border-white/15 bg-white/5 backdrop-blur-md shadow-xl">
+        <CardContent className="p-6 space-y-6">
+          {/* FILTERS */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              {
+                value: filterClassType,
+                set: setFilterClassType,
+                label: "All Types",
+                items: classTypes,
+              },
+              {
+                value: filterTrainer,
+                set: setFilterTrainer,
+                label: "All Trainers",
+                items: trainers,
+              },
+              {
+                value: filterStatus,
+                set: setFilterStatus,
+                label: "All Statuses",
+                items: [
+                  { id: "scheduled", name: "Scheduled" },
+                  { id: "ongoing", name: "Ongoing" },
+                  { id: "completed", name: "Completed" },
+                  { id: "cancelled", name: "Cancelled" },
+                ],
+              },
+            ].map((filter, i) => (
+              <Select key={i} value={filter.value} onValueChange={filter.set}>
+                <SelectTrigger
+                  className="
+                  bg-white/10 
+                  backdrop-blur-md 
+                  border border-white/20 
+                  text-white 
+                  rounded-md
+                "
+                >
+                  <SelectValue placeholder={filter.label} />
                 </SelectTrigger>
-
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {classTypes.map((t: any) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
+                  <SelectItem value="all">{filter.label}</SelectItem>
+                  {filter.items.map((item: any) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-
-              <Select value={filterTrainer} onValueChange={setFilterTrainer}>
-                <SelectTrigger className="bg-white text-black font-semibold rounded-md">
-                  <SelectValue placeholder="All Trainers" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  <SelectItem value="all">All Trainers</SelectItem>
-                  {trainers.map((tr: any) => (
-                    <SelectItem key={tr.id} value={tr.id}>
-                      {tr.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="bg-white text-black font-semibold rounded-md">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="ongoing">Ongoing</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            ))}
           </div>
-        </CardHeader>
 
-        <CardContent className="p-6">
-          {/* LOADING */}
+          {/* CLASS CARDS */}
           {classesLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
                 <Card
                   key={i}
-                  className="bg-[#0b0f14] p-4 border border-[#eb5a0d]/20"
+                  className="bg-white/5 backdrop-blur-md border border-white/10 p-4"
                 >
                   <Skeleton className="h-20 w-full" />
                 </Card>
               ))}
             </div>
           ) : filteredClasses.length === 0 ? (
-            <div className="text-center py-12">
-              <CalendarIcon className="mx-auto h-12 w-12 text-gray-500" />
-              <h3 className="mt-4 text-lg font-semibold">
-                No classes scheduled
-              </h3>
+            <div className="text-center py-10 text-gray-400">
+              <CalendarIcon
+                color="#eb5a0d"
+                className="mx-auto h-12 w-12 opacity-60"
+              />
+              <p className="mt-4 text-lg">No classes scheduled</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* CLASS CARDS */}
               {filteredClasses.map((cls: any) => {
                 const isBooked = bookedClassIds.has(cls.id);
                 const isFull = cls.bookedCount >= cls.capacity;
@@ -386,79 +347,98 @@ export default function Classes() {
                 return (
                   <Card
                     key={cls.id}
-                    className="rounded-xl border border-orange-500/30 bg-[#0b0f14] shadow-lg hover:shadow-orange-500/30 hover:translate-y-[-2px] transition-all"
+                    className="
+                      rounded-xl 
+                      border border-white/15 
+                      bg-white/5 
+                      backdrop-blur-md 
+                      shadow-xl 
+                      hover:border-white/30 
+                      transition
+                    "
                   >
-                    {/* ORANGE HEADER BAR */}
-                    <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3 flex justify-between">
-                      <h3 className="text-white font-semibold">
-                        {cls.classTypeName}
-                      </h3>
-                      {getStatusBadge(cls)}
-                    </div>
+                    <CardContent className="p-5 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">
+                          {cls.classTypeName}
+                        </h3>
+                        {getStatusBadge(cls)}
+                      </div>
 
-                    <CardContent className="p-4 space-y-3">
                       {cls.trainerName && (
                         <p className="text-gray-400 text-sm">
                           with {cls.trainerName}
                         </p>
                       )}
 
-                      <div className="flex items-center gap-2 text-sm text-gray-300">
-                        <CalendarIcon className="h-4 w-4" />
+                      <div className="flex items-center gap-2 text-gray-300 text-sm">
+                        <CalendarIcon color="#eb5a0d" className="h-4 w-4" />
                         {format(new Date(cls.startTime), "EEE, MMM d, yyyy")}
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm text-gray-300">
-                        <Clock className="h-4 w-4" />
+                      <div className="flex items-center gap-2 text-gray-300 text-sm">
+                        <Clock color="#eb5a0d" className="h-4 w-4" />
                         {format(new Date(cls.startTime), "h:mm a")} -{" "}
                         {format(new Date(cls.endTime), "h:mm a")}
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm text-gray-300">
-                        <Users className="h-4 w-4" />
+                      <div className="flex items-center gap-2 text-gray-300 text-sm">
+                        <Users color="#eb5a0d" className="h-4 w-4" />
                         {cls.bookedCount} / {cls.capacity} booked
                         {!isFull && spotsLeft <= 5 && (
-                          <Badge className="bg-white text-black">
+                          <Badge className="bg-white/20 text-white">
                             {spotsLeft} left
                           </Badge>
                         )}
                       </div>
 
-                      <div className="flex gap-2 pt-2">
-                        {/* ADMIN BUTTONS */}
-                        {isAdmin && (
+                      <div className="flex gap-2 pt-1">
+                        {isAdmin ? (
                           <>
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="border-orange-500 text-orange-500 hover:bg-orange-500/20"
-                              onClick={() => handleEditClass(cls)}
+                              className="
+                                bg-transparent 
+                                border border-white/20 
+                                text-white 
+                                hover:bg-white/10 
+                                flex items-center gap-1
+                              "
+                              onClick={() => {
+                                setSelectedClass(cls);
+                                setClassFormDialogOpen(true);
+                              }}
                             >
-                              <Edit className="h-4 w-4" />
+                              <Edit color="#eb5a0d" className="h-4 w-4" />
                             </Button>
 
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="border-red-600 text-red-600 hover:bg-red-600/20"
-                              onClick={() => handleDeleteClass(cls.id)}
-                              disabled={deleteMutation.isPending}
+                              className="
+                                bg-transparent 
+                                border border-red-500/30 
+                                text-red-400 
+                                hover:bg-red-600/20 
+                                flex items-center gap-1
+                              "
+                              onClick={() => deleteMutation.mutate(cls.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </>
-                        )}
-
-                        {/* MEMBER BOOK BUTTON */}
-                        {!isAdmin && (
+                        ) : (
                           <Button
                             size="sm"
-                            className={`flex-1 ${
-                              isBooked
-                                ? "bg-white text-orange-500 border border-orange-500"
-                                : "bg-orange-500 text-white hover:bg-orange-600"
-                            }`}
-                            onClick={() => handleBookClass(cls)}
+                            className="
+                              flex-1 bg-transparent 
+                              border border-white/25 
+                              text-white 
+                              hover:bg-white/10 
+                            "
+                            onClick={() => {
+                              setSelectedClass(cls);
+                              setBookingDialogOpen(true);
+                            }}
                           >
                             {isBooked ? "Manage Booking" : "Book Class"}
                           </Button>
@@ -483,13 +463,12 @@ export default function Classes() {
             <DialogHeader>
               <DialogTitle>Edit Class</DialogTitle>
             </DialogHeader>
-
             <ClassForm
               classData={selectedClass}
               onSuccess={() => {
                 setClassFormDialogOpen(false);
-                queryClient.invalidateQueries(["/api/classes"]);
                 setSelectedClass(null);
+                queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
               }}
               onCancel={() => {
                 setClassFormDialogOpen(false);
