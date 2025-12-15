@@ -192,7 +192,7 @@ export default function Classes() {
             onOpenChange={setClassTypeDialogOpen}
           >
             <DialogTrigger asChild>
-              <Button className="bg-[#eb5a0d] hover:bg-[#c3490b] text-white shadow-md">
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-md">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Class Type
               </Button>
@@ -218,7 +218,7 @@ export default function Classes() {
             onOpenChange={setClassFormDialogOpen}
           >
             <DialogTrigger asChild>
-              <Button className="bg-[#eb5a0d] hover:bg-[#c3490b] text-white shadow-md">
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-md">
                 <Plus className="mr-2 h-4 w-4" />
                 Schedule Class
               </Button>
@@ -244,8 +244,8 @@ export default function Classes() {
       {/* DASHBOARD CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* DASHBOARD CARD TEMPLATE */}
-        <div className="rounded-xl overflow-hidden border border-[#eb5a0d]/40 shadow-xl">
-          <div className="bg-gradient-to-r from-[#eb5a0d] to-[#ff7b42] p-3">
+        <div className="rounded-xl overflow-hidden border border-orange-500/40 shadow-xl">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3">
             <h3 className="text-sm font-semibold text-white">
               Classes This Month
             </h3>
@@ -260,8 +260,8 @@ export default function Classes() {
         </div>
 
         {isMember && (
-          <div className="rounded-xl overflow-hidden border border-[#eb5a0d]/40 shadow-xl">
-            <div className="bg-gradient-to-r from-[#eb5a0d] to-[#ff7b42] p-3">
+          <div className="rounded-xl overflow-hidden border border-orange-500/40 shadow-xl">
+            <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3">
               <h3 className="text-sm font-semibold text-white">My Bookings</h3>
             </div>
 
@@ -274,8 +274,8 @@ export default function Classes() {
           </div>
         )}
 
-        <div className="rounded-xl overflow-hidden border border-[#eb5a0d]/40 shadow-xl">
-          <div className="bg-gradient-to-r from-[#eb5a0d] to-[#ff7b42] p-3">
+        <div className="rounded-xl overflow-hidden border border-orange-500/40 shadow-xl">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3">
             <h3 className="text-sm font-semibold text-white">
               Available Spots
             </h3>
@@ -291,9 +291,9 @@ export default function Classes() {
       </div>
 
       {/* CLASS SCHEDULE SECTION */}
-      <Card className="border border-[#eb5a0d]/40 shadow-2xl rounded-2xl bg-[#0b0f14]">
+      <Card className="border border-orange-500/40 shadow-2xl rounded-2xl bg-[#0b0f14]">
         {/* ORANGE HEADER */}
-        <CardHeader className="bg-gradient-to-r from-[#eb5a0d] to-[#ff7b42] text-white rounded-t-2xl">
+        <CardHeader className="bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-t-2xl">
           <div className="flex flex-col sm:flex-row justify-between gap-4">
             <div>
               <CardTitle>Class Schedule</CardTitle>
@@ -386,10 +386,10 @@ export default function Classes() {
                 return (
                   <Card
                     key={cls.id}
-                    className="rounded-xl border border-[#eb5a0d]/30 bg-[#0b0f14] shadow-lg hover:shadow-orange-500/30 hover:translate-y-[-2px] transition-all"
+                    className="rounded-xl border border-orange-500/30 bg-[#0b0f14] shadow-lg hover:shadow-orange-500/30 hover:translate-y-[-2px] transition-all"
                   >
                     {/* ORANGE HEADER BAR */}
-                    <div className="bg-gradient-to-r from-[#eb5a0d] to-[#ff7b42] p-3 flex justify-between">
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-400 p-3 flex justify-between">
                       <h3 className="text-white font-semibold">
                         {cls.classTypeName}
                       </h3>
@@ -431,7 +431,7 @@ export default function Classes() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-[#eb5a0d] text-[#eb5a0d] hover:bg-[#eb5a0d]/20"
+                              className="border-orange-500 text-orange-500 hover:bg-orange-500/20"
                               onClick={() => handleEditClass(cls)}
                             >
                               <Edit className="h-4 w-4" />
@@ -455,8 +455,8 @@ export default function Classes() {
                             size="sm"
                             className={`flex-1 ${
                               isBooked
-                                ? "bg-white text-[#eb5a0d] border border-[#eb5a0d]"
-                                : "bg-[#eb5a0d] text-white hover:bg-[#c3490b]"
+                                ? "bg-white text-orange-500 border border-orange-500"
+                                : "bg-orange-500 text-white hover:bg-orange-600"
                             }`}
                             onClick={() => handleBookClass(cls)}
                           >
