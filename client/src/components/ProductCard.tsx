@@ -1,6 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Plus, Minus, Eye, Edit, Trash2, ShoppingBag } from "lucide-react";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  Eye,
+  Edit,
+  Trash2,
+  ShoppingBag,
+} from "lucide-react";
 
 interface ProductCardProps {
   product: {
@@ -40,22 +48,29 @@ export function ProductCard({
   showAdminActions = false,
 }: ProductCardProps) {
   const displayPrice = product.discountPrice || product.price;
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  const hasDiscount =
+    product.discountPrice && product.discountPrice < product.price;
   const discountPercent = hasDiscount
     ? Math.round((1 - product.discountPrice! / product.price) * 100)
     : 0;
   const isOutOfStock = product.stock === 0;
-  const isLowStock = product.stock <= (product.lowStockAlert || 5) && product.stock > 0;
+  const isLowStock =
+    product.stock <= (product.lowStockAlert || 5) && product.stock > 0;
 
   return (
-    <div className={`relative w-[190px] h-[320px] cursor-pointer overflow-visible group mx-auto ${!product.isActive ? "opacity-60" : ""}`}>
+    <div
+      className={`relative w-[190px] h-[320px] cursor-pointer overflow-visible group mx-auto ${!product.isActive ? "opacity-60" : ""}`}
+    >
       {/* Orange rotated background */}
       <div className="absolute inset-0 bg-[#ee9933] rounded-[5px] shadow-[0_0_5px_1px_#00000022] rotate-[5deg] transition-transform duration-300 group-hover:rotate-0 group-active:shadow-none"></div>
 
       {/* White content card */}
       <div className="content absolute inset-0 bg-white rounded-[5px] shadow-[0_0_5px_1px_#00000022] p-4 flex flex-col items-center -rotate-[5deg] transition-transform duration-300 group-hover:rotate-0 group-active:shadow-none">
         {/* Image */}
-        <div className="relative w-[120px] h-[100px] flex items-center justify-center" onClick={onView}>
+        <div
+          className="relative w-[120px] h-[100px] flex items-center justify-center"
+          onClick={onView}
+        >
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -95,7 +110,9 @@ export function ProductCard({
         <div className="w-full mt-4 text-center flex-1 flex flex-col justify-between">
           <div>
             <p className="mb-1">
-              <strong className="font-bold text-slate-900 text-sm line-clamp-2">{product.name}</strong>
+              <strong className="font-bold text-slate-900 text-sm line-clamp-2">
+                {product.name}
+              </strong>
             </p>
             {product.description && (
               <p className="mb-1 text-xs text-[#00000066] line-clamp-2">
@@ -103,14 +120,10 @@ export function ProductCard({
               </p>
             )}
             {product.sku && (
-              <p className="text-[10px] text-[#00000044]">
-                SKU: {product.sku}
-              </p>
+              <p className="text-[10px] text-[#00000044]">SKU: {product.sku}</p>
             )}
             {showAdminActions && (
-              <p className="text-xs text-[#00000066]">
-                Stock: {product.stock}
-              </p>
+              <p className="text-xs text-[#00000066]">Stock: {product.stock}</p>
             )}
           </div>
 
@@ -191,7 +204,10 @@ export function ProductCard({
         </div>
 
         {!product.isActive && showAdminActions && (
-          <Badge variant="secondary" className="absolute top-2 right-2 text-[8px]">
+          <Badge
+            variant="secondary"
+            className="absolute top-2 right-2 text-[8px]"
+          >
             Inactive
           </Badge>
         )}

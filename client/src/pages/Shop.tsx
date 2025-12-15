@@ -35,9 +35,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { ProductForm } from "@/components/ProductForm";
 import { OrderForm } from "@/components/OrderForm";
 import { ProductCard } from "@/components/ProductCard";
@@ -77,7 +88,15 @@ export default function Shop() {
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { cart, addToCart: contextAddToCart, updateQuantity: contextUpdateQuantity, removeFromCart: contextRemoveFromCart, clearCart, cartTotal, cartItemCount } = useCart();
+  const {
+    cart,
+    addToCart: contextAddToCart,
+    updateQuantity: contextUpdateQuantity,
+    removeFromCart: contextRemoveFromCart,
+    clearCart,
+    cartTotal,
+    cartItemCount,
+  } = useCart();
   const canManageProducts = user?.role === "admin";
   const [activeTab, setActiveTab] = useState("products");
   const [productFormOpen, setProductFormOpen] = useState(false);
@@ -87,11 +106,14 @@ export default function Shop() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [productStatusFilter, setProductStatusFilter] = useState<string>("all");
-  
+
   // Mobile Store State
-  const [mobileViewMode, setMobileViewMode] = useState<"store" | "admin">("store");
+  const [mobileViewMode, setMobileViewMode] = useState<"store" | "admin">(
+    "store",
+  );
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("cash");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<string>("cash");
   const [mobileProductDetail, setMobileProductDetail] = useState<any>(null);
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -134,10 +156,10 @@ export default function Shop() {
     const rawPrice = product.discountPrice || product.price;
     const price = parseFloat(rawPrice);
     if (isNaN(price) || price < 0) {
-      toast({ 
-        title: "Error", 
-        description: "Invalid product price. Please try again.", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "Invalid product price. Please try again.",
+        variant: "destructive",
       });
       return;
     }
@@ -166,12 +188,14 @@ export default function Shop() {
     mutationFn: (data: any) => apiRequest("POST", "/api/orders", data),
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/billing/revenue-trend"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/billing/revenue-trend"],
+      });
       clearCart();
       setIsCartOpen(false);
       toast({
         title: "Order Placed Successfully!",
-        description: `Order #${response.orderNumber || 'NEW'} confirmed! Processing your order now.`,
+        description: `Order #${response.orderNumber || "NEW"} confirmed! Processing your order now.`,
         variant: "success",
         duration: 5000,
       });
@@ -179,7 +203,8 @@ export default function Shop() {
     onError: (error: any) => {
       toast({
         title: "Order Failed",
-        description: error.message || "We couldn't place your order. Please try again.",
+        description:
+          error.message || "We couldn't place your order. Please try again.",
         variant: "destructive",
         duration: 4000,
       });
@@ -199,7 +224,7 @@ export default function Shop() {
     // Get member ID from member data or user context
     // For trainers, memberId may be null - backend will auto-create a member record
     const memberId = memberData?.member?.id;
-    
+
     // Members need a memberId, trainers can proceed without (backend handles it)
     if (!memberId && user?.role !== "trainer") {
       toast({
@@ -212,7 +237,9 @@ export default function Shop() {
 
     // Calculate totals
     const subtotal = cartTotal;
-    const taxRate = storeSettings?.defaultTaxPercent ? parseFloat(storeSettings.defaultTaxPercent) : 0;
+    const taxRate = storeSettings?.defaultTaxPercent
+      ? parseFloat(storeSettings.defaultTaxPercent)
+      : 0;
     const taxAmount = (subtotal * taxRate) / 100;
     const total = subtotal + taxAmount;
 
@@ -255,13 +282,17 @@ export default function Shop() {
   });
 
   // Mobile store filtered products (active only, with search and category)
-  const mobileStoreProducts = products
-    .filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(mobileSearchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "all" || product.categoryId === selectedCategory;
-      const isAvailable = storeSettings?.showOutOfStock ? true : product.stock > 0;
-      return matchesSearch && matchesCategory && isAvailable && product.isActive;
-    });
+  const mobileStoreProducts = products.filter((product) => {
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(mobileSearchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "all" || product.categoryId === selectedCategory;
+    const isAvailable = storeSettings?.showOutOfStock
+      ? true
+      : product.stock > 0;
+    return matchesSearch && matchesCategory && isAvailable && product.isActive;
+  });
 
   const updateSettingsMutation = useMutation({
     mutationFn: (data: any) => apiRequest("PATCH", "/api/store-settings", data),
@@ -578,7 +609,7 @@ export default function Shop() {
   // Mobile Store View
   if (isMobile && mobileViewMode === "store") {
     return (
-      <div className="space-y-4 pb-20">
+      <div className="space-y-4 pb-20 p-5">
         {/* Mobile Store Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Store</h1>
@@ -628,7 +659,9 @@ export default function Shop() {
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               {categories.map((cat: any) => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -636,20 +669,31 @@ export default function Shop() {
 
         {/* Mobile Product Grid */}
         {productsLoading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading products...</div>
+          <div className="text-center py-8 text-muted-foreground">
+            Loading products...
+          </div>
         ) : mobileStoreProducts.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No products available</div>
+          <div className="text-center py-8 text-muted-foreground">
+            No products available
+          </div>
         ) : (
           <div className="flex flex-wrap justify-center gap-6 py-4">
             {mobileStoreProducts.map((product) => {
-              const cartItem = cart.find(item => item.productId === product.id);
+              const cartItem = cart.find(
+                (item) => item.productId === product.id,
+              );
               return (
                 <ProductCard
                   key={product.id}
                   product={product}
                   cartItem={cartItem}
                   onAddToCart={() => addToCart(product)}
-                  onUpdateQuantity={(delta) => updateCartQuantity(product.id, cartItem ? cartItem.quantity + delta : 1)}
+                  onUpdateQuantity={(delta) =>
+                    updateCartQuantity(
+                      product.id,
+                      cartItem ? cartItem.quantity + delta : 1,
+                    )
+                  }
                   onView={() => setMobileProductDetail(product)}
                 />
               );
@@ -666,7 +710,7 @@ export default function Shop() {
                 Cart ({cartItemCount} items)
               </SheetTitle>
             </SheetHeader>
-            
+
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
                 <ShoppingBag className="h-12 w-12 mb-2" />
@@ -677,10 +721,17 @@ export default function Shop() {
                 <ScrollArea className="flex-1 -mx-6 px-6">
                   <div className="space-y-3 pb-4">
                     {cart.map((item) => (
-                      <div key={item.productId} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <div
+                        key={item.productId}
+                        className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
+                      >
                         <div className="h-16 w-16 bg-muted rounded-md overflow-hidden flex-shrink-0">
                           {item.image ? (
-                            <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                            <img
+                              src={item.image}
+                              alt={item.productName}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <Package className="h-6 w-6 text-muted-foreground/30" />
@@ -688,32 +739,67 @@ export default function Shop() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{item.productName}</p>
-                          <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
+                          <p className="font-medium text-sm truncate">
+                            {item.productName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            ₹{item.price.toFixed(2)}
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.productId,
+                                item.quantity - 1,
+                              )
+                            }
+                          >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="w-6 text-center text-sm">{item.quantity}</span>
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock}>
+                          <span className="w-6 text-center text-sm">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.productId,
+                                item.quantity + 1,
+                              )
+                            }
+                            disabled={item.quantity >= item.stock}
+                          >
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeFromCart(item.productId)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => removeFromCart(item.productId)}
+                        >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     ))}
                   </div>
                 </ScrollArea>
-                
+
                 <div className="border-t pt-4 space-y-4 -mx-6 px-6 pb-4">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
                     <span>₹{cartTotal.toFixed(2)}</span>
                   </div>
-                  <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                  <Select
+                    value={selectedPaymentMethod}
+                    onValueChange={setSelectedPaymentMethod}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Payment Method" />
                     </SelectTrigger>
@@ -723,13 +809,15 @@ export default function Shop() {
                       <SelectItem value="card">Card</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button 
-                    className="w-full" 
-                    size="lg" 
-                    onClick={handleCheckout} 
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={handleCheckout}
                     disabled={createOrderFromCartMutation.isPending}
                   >
-                    {createOrderFromCartMutation.isPending ? "Placing Order..." : "Place Order"}
+                    {createOrderFromCartMutation.isPending
+                      ? "Placing Order..."
+                      : "Place Order"}
                   </Button>
                 </div>
               </div>
@@ -738,13 +826,20 @@ export default function Shop() {
         </Sheet>
 
         {/* Mobile Product Detail Dialog */}
-        <Dialog open={!!mobileProductDetail} onOpenChange={(open) => !open && setMobileProductDetail(null)}>
+        <Dialog
+          open={!!mobileProductDetail}
+          onOpenChange={(open) => !open && setMobileProductDetail(null)}
+        >
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             {mobileProductDetail && (
               <>
                 <div className="aspect-square bg-muted rounded-lg overflow-hidden -mx-6 -mt-6">
                   {mobileProductDetail.imageUrl ? (
-                    <img src={mobileProductDetail.imageUrl} alt={mobileProductDetail.name} className="w-full h-full object-cover" />
+                    <img
+                      src={mobileProductDetail.imageUrl}
+                      alt={mobileProductDetail.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="h-16 w-16 text-muted-foreground/30" />
@@ -754,20 +849,44 @@ export default function Shop() {
                 <DialogHeader className="pt-4">
                   <DialogTitle>{mobileProductDetail.name}</DialogTitle>
                   {mobileProductDetail.description && (
-                    <DialogDescription>{mobileProductDetail.description}</DialogDescription>
+                    <DialogDescription>
+                      {mobileProductDetail.description}
+                    </DialogDescription>
                   )}
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="flex items-baseline gap-3">
-                    <span className="text-2xl font-bold">₹{parseFloat(mobileProductDetail.discountPrice || mobileProductDetail.price).toFixed(2)}</span>
+                    <span className="text-2xl font-bold">
+                      ₹
+                      {parseFloat(
+                        mobileProductDetail.discountPrice ||
+                          mobileProductDetail.price,
+                      ).toFixed(2)}
+                    </span>
                     {mobileProductDetail.discountPrice && (
-                      <span className="text-muted-foreground line-through">₹{parseFloat(mobileProductDetail.price).toFixed(2)}</span>
+                      <span className="text-muted-foreground line-through">
+                        ₹{parseFloat(mobileProductDetail.price).toFixed(2)}
+                      </span>
                     )}
                   </div>
-                  <Badge variant={mobileProductDetail.stock > 0 ? "default" : "destructive"}>
-                    {mobileProductDetail.stock > 0 ? `${mobileProductDetail.stock} in stock` : "Out of Stock"}
+                  <Badge
+                    variant={
+                      mobileProductDetail.stock > 0 ? "default" : "destructive"
+                    }
+                  >
+                    {mobileProductDetail.stock > 0
+                      ? `${mobileProductDetail.stock} in stock`
+                      : "Out of Stock"}
                   </Badge>
-                  <Button className="w-full" size="lg" disabled={mobileProductDetail.stock === 0} onClick={() => { addToCart(mobileProductDetail); setMobileProductDetail(null); }}>
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    disabled={mobileProductDetail.stock === 0}
+                    onClick={() => {
+                      addToCart(mobileProductDetail);
+                      setMobileProductDetail(null);
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add to Cart
                   </Button>
@@ -785,7 +904,10 @@ export default function Shop() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl font-semibold" data-testid="text-page-title">
+          <h1
+            className="text-2xl sm:text-3xl font-semibold"
+            data-testid="text-page-title"
+          >
             Shop Management
           </h1>
           {isMobile && (
@@ -802,7 +924,11 @@ export default function Shop() {
         </div>
         <div className="flex gap-2">
           {canManageProducts && activeTab === "products" && (
-            <Button onClick={handleAddProduct} data-testid="button-add-product" className="flex-1 sm:flex-none">
+            <Button
+              onClick={handleAddProduct}
+              data-testid="button-add-product"
+              className="flex-1 sm:flex-none"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Product
             </Button>
@@ -979,22 +1105,41 @@ export default function Shop() {
         data-testid="tabs-shop"
         className="w-full"
       >
-        <TabsList data-testid="tabs-list" className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex h-auto">
-          <TabsTrigger value="products" data-testid="tab-products" className="text-xs sm:text-sm py-2">
+        <TabsList
+          data-testid="tabs-list"
+          className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex h-auto"
+        >
+          <TabsTrigger
+            value="products"
+            data-testid="tab-products"
+            className="text-xs sm:text-sm py-2"
+          >
             Products
           </TabsTrigger>
           {canManageProducts && (
-            <TabsTrigger value="categories" data-testid="tab-categories" className="text-xs sm:text-sm py-2">
+            <TabsTrigger
+              value="categories"
+              data-testid="tab-categories"
+              className="text-xs sm:text-sm py-2"
+            >
               Categories
             </TabsTrigger>
           )}
           {user?.role === "admin" && (
-            <TabsTrigger value="orders" data-testid="tab-orders" className="text-xs sm:text-sm py-2">
+            <TabsTrigger
+              value="orders"
+              data-testid="tab-orders"
+              className="text-xs sm:text-sm py-2"
+            >
               Orders
             </TabsTrigger>
           )}
           {canManageProducts && (
-            <TabsTrigger value="settings" data-testid="tab-settings" className="text-xs sm:text-sm py-2">
+            <TabsTrigger
+              value="settings"
+              data-testid="tab-settings"
+              className="text-xs sm:text-sm py-2"
+            >
               Settings
             </TabsTrigger>
           )}
@@ -1022,7 +1167,9 @@ export default function Shop() {
 
             <Card data-testid="card-low-stock">
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-6 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Low Stock</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-medium">
+                  Low Stock
+                </CardTitle>
                 <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600 hidden sm:block" />
               </CardHeader>
               <CardContent className="p-3 sm:p-6 pt-0">
@@ -1255,23 +1402,35 @@ export default function Shop() {
                       {/* Header */}
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-semibold text-sm" data-testid={`text-order-number-${order.id}`}>
+                          <p
+                            className="font-semibold text-sm"
+                            data-testid={`text-order-number-${order.id}`}
+                          >
                             {order.orderNumber}
                           </p>
-                          <p className="text-xs text-muted-foreground" data-testid={`text-member-${order.id}`}>
+                          <p
+                            className="text-xs text-muted-foreground"
+                            data-testid={`text-member-${order.id}`}
+                          >
                             {order.memberName}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold" data-testid={`text-amount-${order.id}`}>
+                          <p
+                            className="font-bold"
+                            data-testid={`text-amount-${order.id}`}
+                          >
                             ₹{parseFloat(order.totalAmount).toFixed(2)}
                           </p>
-                          <p className="text-xs text-muted-foreground" data-testid={`text-date-${order.id}`}>
+                          <p
+                            className="text-xs text-muted-foreground"
+                            data-testid={`text-date-${order.id}`}
+                          >
                             {format(new Date(order.orderDate), "MMM d, yyyy")}
                           </p>
                         </div>
                       </div>
-                      
+
                       {/* Status Badges */}
                       <div className="flex gap-2">
                         <Badge
@@ -1282,34 +1441,48 @@ export default function Shop() {
                           {order.status}
                         </Badge>
                         <Badge
-                          variant={getPaymentBadgeVariant(order.paymentStatus || "unpaid")}
+                          variant={getPaymentBadgeVariant(
+                            order.paymentStatus || "unpaid",
+                          )}
                           className="text-xs"
                           data-testid={`badge-payment-${order.id}`}
                         >
                           {order.paymentStatus || "unpaid"}
                         </Badge>
                       </div>
-                      
+
                       {/* Actions */}
                       {(user?.role === "admin" || user?.role === "trainer") && (
                         <div className="flex flex-col gap-2 pt-2 border-t">
                           <Select
                             value={order.status}
                             onValueChange={(status) =>
-                              updateOrderStatusMutation.mutate({ id: order.id, status })
+                              updateOrderStatusMutation.mutate({
+                                id: order.id,
+                                status,
+                              })
                             }
                             disabled={updateOrderStatusMutation.isPending}
                           >
-                            <SelectTrigger className="w-full text-xs" data-testid={`select-status-${order.id}`}>
+                            <SelectTrigger
+                              className="w-full text-xs"
+                              data-testid={`select-status-${order.id}`}
+                            >
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="confirmed">Confirmed</SelectItem>
+                              <SelectItem value="confirmed">
+                                Confirmed
+                              </SelectItem>
                               <SelectItem value="packed">Packed</SelectItem>
                               <SelectItem value="shipped">Shipped</SelectItem>
-                              <SelectItem value="delivered">Delivered</SelectItem>
-                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                              <SelectItem value="delivered">
+                                Delivered
+                              </SelectItem>
+                              <SelectItem value="cancelled">
+                                Cancelled
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           {order.paymentStatus !== "paid" && (
@@ -1348,7 +1521,8 @@ export default function Shop() {
                         <TableHead>Status</TableHead>
                         <TableHead>Payment</TableHead>
                         <TableHead>Order Date</TableHead>
-                        {(user?.role === "admin" || user?.role === "trainer") && (
+                        {(user?.role === "admin" ||
+                          user?.role === "trainer") && (
                           <TableHead>Actions</TableHead>
                         )}
                       </TableRow>
@@ -1360,25 +1534,39 @@ export default function Shop() {
                             {order.orderNumber}
                           </TableCell>
                           <TableCell>{order.memberName}</TableCell>
-                          <TableCell>₹{parseFloat(order.totalAmount).toFixed(2)}</TableCell>
                           <TableCell>
-                            <Badge variant={getStatusBadgeVariant(order.status)}>
+                            ₹{parseFloat(order.totalAmount).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={getStatusBadgeVariant(order.status)}
+                            >
                               {order.status}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getPaymentBadgeVariant(order.paymentStatus || "unpaid")}>
+                            <Badge
+                              variant={getPaymentBadgeVariant(
+                                order.paymentStatus || "unpaid",
+                              )}
+                            >
                               {order.paymentStatus || "unpaid"}
                             </Badge>
                           </TableCell>
-                          <TableCell>{format(new Date(order.orderDate), "MMM d, yyyy")}</TableCell>
-                          {(user?.role === "admin" || user?.role === "trainer") && (
+                          <TableCell>
+                            {format(new Date(order.orderDate), "MMM d, yyyy")}
+                          </TableCell>
+                          {(user?.role === "admin" ||
+                            user?.role === "trainer") && (
                             <TableCell>
                               <div className="flex gap-2">
                                 <Select
                                   value={order.status}
                                   onValueChange={(status) =>
-                                    updateOrderStatusMutation.mutate({ id: order.id, status })
+                                    updateOrderStatusMutation.mutate({
+                                      id: order.id,
+                                      status,
+                                    })
                                   }
                                   disabled={updateOrderStatusMutation.isPending}
                                 >
@@ -1386,12 +1574,24 @@ export default function Shop() {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="pending">Pending</SelectItem>
-                                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                                    <SelectItem value="packed">Packed</SelectItem>
-                                    <SelectItem value="shipped">Shipped</SelectItem>
-                                    <SelectItem value="delivered">Delivered</SelectItem>
-                                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    <SelectItem value="pending">
+                                      Pending
+                                    </SelectItem>
+                                    <SelectItem value="confirmed">
+                                      Confirmed
+                                    </SelectItem>
+                                    <SelectItem value="packed">
+                                      Packed
+                                    </SelectItem>
+                                    <SelectItem value="shipped">
+                                      Shipped
+                                    </SelectItem>
+                                    <SelectItem value="delivered">
+                                      Delivered
+                                    </SelectItem>
+                                    <SelectItem value="cancelled">
+                                      Cancelled
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                                 {order.paymentStatus !== "paid" && (
@@ -1404,7 +1604,9 @@ export default function Shop() {
                                         paymentStatus: "paid",
                                       })
                                     }
-                                    disabled={updateOrderPaymentMutation.isPending}
+                                    disabled={
+                                      updateOrderPaymentMutation.isPending
+                                    }
                                   >
                                     <Check className="h-3 w-3 mr-1" />
                                     Mark Paid

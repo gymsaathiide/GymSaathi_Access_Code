@@ -118,8 +118,8 @@ export function ModernLayout({ children }: ModernLayoutProps) {
         {/* Main content column */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header — compact and consistent */}
-          <header className="sticky top-0 z-30 backdrop-blur-sm bg-[rgba(10,14,23,0.85)] border-b border-slate-800/60 shadow-sm">
-            <div className="max-w-[1400px] mx-auto px-3 md:px-4 lg:px-6">
+          <header className="sticky top-0 z-30 backdrop-blur-sm bg-[rgba(10,14,23,0.85)] border-b border-slate-800/60 shadow-sm p-5">
+            <div className="max-w-[1400px] mx-auto px-3  lg:px-6">
               <ModernHeader
                 onMenuClick={() => {
                   // On small screens open mobile overlay, on large screens toggle collapse
@@ -156,9 +156,7 @@ export function ModernLayout({ children }: ModernLayoutProps) {
                 `}
               >
                 {/* Add a small inner padding wrapper so children don't touch edges on phones */}
-                <div className="w-full px-3 py-3 sm:px-4 sm:py-4">
-                  {children}
-                </div>
+                <div className="w-full sm:px-4 sm:py-4">{children}</div>
               </div>
             </div>
           </main>

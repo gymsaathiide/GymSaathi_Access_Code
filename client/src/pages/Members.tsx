@@ -40,7 +40,16 @@ import { useToast } from "@/hooks/use-toast";
 import { MemberForm } from "@/components/MemberForm";
 import { MemberProfileDialog } from "@/components/MemberProfileDialog";
 import { PageHeader, PageCard } from "@/components/layout";
-import { Search, Plus, Eye, Edit, UserX, Calendar, User, Trash2 } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Eye,
+  Edit,
+  UserX,
+  Calendar,
+  User,
+  Trash2,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,7 +112,10 @@ export default function Members() {
 
   const permanentDeleteMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      const response = await apiRequest("DELETE", `/api/members/${memberId}/permanent`);
+      const response = await apiRequest(
+        "DELETE",
+        `/api/members/${memberId}/permanent`,
+      );
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to delete member");
@@ -115,14 +127,16 @@ export default function Members() {
       setDeletingMember(null);
       toast({
         title: "Member Deleted",
-        description: "Member and all associated data have been permanently deleted.",
+        description:
+          "Member and all associated data have been permanently deleted.",
       });
       console.log("Deletion results:", data?.deletionResults);
     },
     onError: (error: Error) => {
       toast({
         title: "Deletion Failed",
-        description: error.message || "An error occurred while deleting the member.",
+        description:
+          error.message || "An error occurred while deleting the member.",
         variant: "destructive",
       });
     },
@@ -161,7 +175,7 @@ export default function Members() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-5 pb-20">
       <PageHeader
         title="Members"
         description="Manage gym members and their memberships"
@@ -266,7 +280,11 @@ export default function Members() {
                     <div className="flex items-start gap-3">
                       <Avatar className="h-12 w-12 flex-shrink-0">
                         {member.photoUrl ? (
-                          <AvatarImage src={member.photoUrl} alt={member.name} className="object-cover" />
+                          <AvatarImage
+                            src={member.photoUrl}
+                            alt={member.name}
+                            className="object-cover"
+                          />
                         ) : null}
                         <AvatarFallback className="text-sm bg-orange-500/20 text-orange-500 dark:text-orange-400">
                           {getInitials(member.name)}
@@ -296,7 +314,12 @@ export default function Members() {
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
                           <p className="text-xs text-gray-500 dark:text-white/50">
                             <Calendar className="h-3 w-3 inline mr-1" />
-                            {member.joinDate ? format(new Date(member.joinDate), "MMM dd, yyyy") : "N/A"}
+                            {member.joinDate
+                              ? format(
+                                  new Date(member.joinDate),
+                                  "MMM dd, yyyy",
+                                )
+                              : "N/A"}
                           </p>
                           <div className="flex gap-1">
                             <Button
@@ -341,13 +364,27 @@ export default function Members() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/5 hover:bg-white/5">
-                      <TableHead className="text-gray-600 dark:text-white/60">Avatar</TableHead>
-                      <TableHead className="text-gray-600 dark:text-white/60">Name</TableHead>
-                      <TableHead className="text-gray-600 dark:text-white/60">Email</TableHead>
-                      <TableHead className="text-gray-600 dark:text-white/60">Phone</TableHead>
-                      <TableHead className="text-gray-600 dark:text-white/60">Status</TableHead>
-                      <TableHead className="text-gray-600 dark:text-white/60">Join Date</TableHead>
-                      <TableHead className="text-right text-gray-600 dark:text-white/60">Actions</TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">
+                        Avatar
+                      </TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">
+                        Name
+                      </TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">
+                        Email
+                      </TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">
+                        Phone
+                      </TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-gray-600 dark:text-white/60">
+                        Join Date
+                      </TableHead>
+                      <TableHead className="text-right text-gray-600 dark:text-white/60">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -360,23 +397,39 @@ export default function Members() {
                         <TableCell>
                           <Avatar className="h-10 w-10">
                             {member.photoUrl ? (
-                              <AvatarImage src={member.photoUrl} alt={member.name} className="object-cover" />
+                              <AvatarImage
+                                src={member.photoUrl}
+                                alt={member.name}
+                                className="object-cover"
+                              />
                             ) : null}
                             <AvatarFallback className="text-sm bg-orange-500/20 text-orange-500 dark:text-orange-400">
                               {getInitials(member.name)}
                             </AvatarFallback>
                           </Avatar>
                         </TableCell>
-                        <TableCell className="font-medium text-gray-900 dark:text-white">{member.name}</TableCell>
-                        <TableCell className="text-gray-700 dark:text-white/70">{member.email}</TableCell>
-                        <TableCell className="text-gray-700 dark:text-white/70">{member.phone}</TableCell>
+                        <TableCell className="font-medium text-gray-900 dark:text-white">
+                          {member.name}
+                        </TableCell>
+                        <TableCell className="text-gray-700 dark:text-white/70">
+                          {member.email}
+                        </TableCell>
+                        <TableCell className="text-gray-700 dark:text-white/70">
+                          {member.phone}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={getStatusBadgeClass(member.status)} data-testid={`badge-status-${member.id}`}>
+                          <Badge
+                            variant="outline"
+                            className={getStatusBadgeClass(member.status)}
+                            data-testid={`badge-status-${member.id}`}
+                          >
                             {member.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-gray-700 dark:text-white/70">
-                          {member.joinDate ? format(new Date(member.joinDate), "MMM dd, yyyy") : "N/A"}
+                          {member.joinDate
+                            ? format(new Date(member.joinDate), "MMM dd, yyyy")
+                            : "N/A"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
@@ -486,17 +539,26 @@ export default function Members() {
         onOpenChange={(open) => !open && setViewingMember(null)}
       />
 
-      <AlertDialog open={!!deletingMember} onOpenChange={(open) => !open && setDeletingMember(null)}>
+      <AlertDialog
+        open={!!deletingMember}
+        onOpenChange={(open) => !open && setDeletingMember(null)}
+      >
         <AlertDialogContent className="bg-white dark:bg-[hsl(220,26%,14%)] border-white/10">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-gray-900 dark:text-white">
               Permanently Delete Member
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600 dark:text-white/70">
-              Are you sure you want to permanently delete <span className="font-semibold text-gray-900 dark:text-white">{deletingMember?.name}</span>?
-              <br /><br />
+              Are you sure you want to permanently delete{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {deletingMember?.name}
+              </span>
+              ?
+              <br />
+              <br />
               <span className="text-red-600 dark:text-red-400 font-medium">
-                This action cannot be undone. All data will be permanently removed:
+                This action cannot be undone. All data will be permanently
+                removed:
               </span>
               <ul className="list-disc list-inside mt-2 text-sm space-y-1">
                 <li>Member profile and membership history</li>
@@ -510,7 +572,7 @@ export default function Members() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
+            <AlertDialogCancel
               className="bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border-0"
               disabled={permanentDeleteMutation.isPending}
             >
@@ -521,7 +583,9 @@ export default function Members() {
               disabled={permanentDeleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {permanentDeleteMutation.isPending ? "Deleting..." : "Delete Permanently"}
+              {permanentDeleteMutation.isPending
+                ? "Deleting..."
+                : "Delete Permanently"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

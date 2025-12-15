@@ -39,7 +39,7 @@ interface SearchResult {
   name: string;
   email: string;
   phone: string;
-  type: 'member' | 'lead';
+  type: "member" | "lead";
   status?: string;
 }
 
@@ -48,13 +48,19 @@ interface ModernHeaderProps {
   showMenuButton?: boolean;
 }
 
-export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeaderProps) {
+export function ModernHeader({
+  onMenuClick,
+  showMenuButton = true,
+}: ModernHeaderProps) {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<{ members: SearchResult[]; leads: SearchResult[] } | null>(null);
+  const [searchResults, setSearchResults] = useState<{
+    members: SearchResult[];
+    leads: SearchResult[];
+  } | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   const { data: gymData } = useQuery({
@@ -74,16 +80,18 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/notifications/mark-all-read', {
-        method: 'PATCH',
-        credentials: 'include',
+      const res = await fetch("/api/notifications/mark-all-read", {
+        method: "PATCH",
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to mark all as read');
+      if (!res.ok) throw new Error("Failed to mark all as read");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/notifications/unread-count"],
+      });
     },
   });
 
@@ -97,11 +105,11 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
   };
 
   const today = new Date();
-  const formattedDate = today.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  const formattedDate = today.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   const getGreeting = () => {
@@ -118,43 +126,50 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
       return;
     }
     try {
-      const response = await fetch(`/api/admin/search?q=${encodeURIComponent(searchQuery)}`, {
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `/api/admin/search?q=${encodeURIComponent(searchQuery)}`,
+        {
+          credentials: "include",
+        },
+      );
       if (response.ok) {
         const data = await response.json();
         setSearchResults(data);
         setShowSearchResults(true);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error("Search error:", error);
     }
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
-    if (e.key === 'Escape') {
+    if (e.key === "Enter") handleSearch();
+    if (e.key === "Escape") {
       setShowSearchResults(false);
-      setSearchQuery('');
+      setSearchQuery("");
     }
   };
 
   const navigateToResult = (result: SearchResult) => {
-    if (result.type === 'member') {
-      navigate('/admin/members');
+    if (result.type === "member") {
+      navigate("/admin/members");
     } else {
-      navigate('/admin/leads');
+      navigate("/admin/leads");
     }
     setShowSearchResults(false);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'success': return <CheckCircle className="h-4 w-4 text-green-400" />;
-      case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
-      case 'error': return <XCircle className="h-4 w-4 text-red-400" />;
-      default: return <Info className="h-4 w-4 text-blue-400" />;
+      case "success":
+        return <CheckCircle className="h-4 w-4 text-green-400" />;
+      case "warning":
+        return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
+      case "error":
+        return <XCircle className="h-4 w-4 text-red-400" />;
+      default:
+        return <Info className="h-4 w-4 text-blue-400" />;
     }
   };
 
@@ -165,8 +180,8 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Just now';
+
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
@@ -187,7 +202,8 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
         <div className="hidden md:block">
           <p className="text-xs text-white/40">{formattedDate}</p>
           <h1 className="font-semibold text-white">
-            {getGreeting()}, <span className="text-orange-500">{user?.name?.split(' ')[0]}</span>
+            {getGreeting()},{" "}
+            <span className="text-orange-500">{user?.name?.split(" ")[0]}</span>
           </h1>
         </div>
       </div>
@@ -205,13 +221,18 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
           />
           {showSearchResults && searchResults && (
             <div className="absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto bg-[hsl(220,26%,16%)] border-white/10">
-              {searchResults.members.length === 0 && searchResults.leads.length === 0 ? (
-                <div className="p-4 text-center text-white/50">No results found</div>
+              {searchResults.members.length === 0 &&
+              searchResults.leads.length === 0 ? (
+                <div className="p-4 text-center text-white/50">
+                  No results found
+                </div>
               ) : (
                 <>
                   {searchResults.members.length > 0 && (
                     <div className="p-2">
-                      <div className="text-xs font-semibold px-2 py-1 text-white/50">Members</div>
+                      <div className="text-xs font-semibold px-2 py-1 text-white/50">
+                        Members
+                      </div>
                       {searchResults.members.map((m) => (
                         <button
                           key={m.id}
@@ -219,11 +240,20 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
                           className="w-full px-2 py-2 rounded flex items-center gap-3 text-left hover:bg-white/10"
                         >
                           <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 text-xs font-medium">
-                            {m.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            {m.name
+                              ?.split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-medium text-white">{m.name}</div>
-                            <div className="text-xs text-white/50">{m.email}</div>
+                            <div className="font-medium text-white">
+                              {m.name}
+                            </div>
+                            <div className="text-xs text-white/50">
+                              {m.email}
+                            </div>
                           </div>
                         </button>
                       ))}
@@ -231,19 +261,30 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
                   )}
                   {searchResults.leads.length > 0 && (
                     <div className="p-2 border-t border-white/10">
-                      <div className="text-xs font-semibold px-2 py-1 text-white/50">Leads</div>
+                      <div className="text-xs font-semibold px-2 py-1 text-white/50">
+                        Leads
+                      </div>
                       {searchResults.leads.map((l) => (
                         <button
                           key={l.id}
                           onClick={() => navigateToResult(l)}
                           className="w-full px-2 py-2 rounded flex items-center gap-3 text-left hover:bg-white/10"
                         >
-                          <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 text-xs font-medium">
-                            {l.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          <div className="rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 text-xs font-medium ">
+                            {l.name
+                              ?.split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-medium text-white">{l.name}</div>
-                            <div className="text-xs text-white/50">{l.status}</div>
+                            <div className="font-medium text-white">
+                              {l.name}
+                            </div>
+                            <div className="text-xs text-white/50">
+                              {l.status}
+                            </div>
                           </div>
                         </button>
                       ))}
@@ -263,12 +304,15 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
               <Bell className="h-5 w-5" />
               {(unreadCount?.count ?? 0) > 0 && (
                 <span className="absolute top-1 right-1 min-w-[14px] h-[14px] flex items-center justify-center bg-orange-500 rounded-full text-[10px] text-white font-bold px-1">
-                  {unreadCount!.count > 9 ? '9+' : unreadCount!.count}
+                  {unreadCount!.count > 9 ? "9+" : unreadCount!.count}
                 </span>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 p-0 bg-[hsl(220,26%,16%)] border-white/10">
+          <DropdownMenuContent
+            align="end"
+            className="w-80 p-0 bg-[hsl(220,26%,16%)] border-white/10"
+          >
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <span className="font-semibold text-white">Notifications</span>
               {(unreadCount?.count ?? 0) > 0 && (
@@ -293,15 +337,21 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
                       key={notification.id}
                       className={cn(
                         "px-4 py-3 cursor-pointer hover:bg-white/5",
-                        notification.isRead === 0 && "bg-orange-500/5"
+                        notification.isRead === 0 && "bg-orange-500/5",
                       )}
                     >
                       <div className="flex gap-3">
                         {getNotificationIcon(notification.type)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate text-white">{notification.title}</p>
-                          <p className="text-xs line-clamp-2 text-white/60">{notification.message}</p>
-                          <p className="text-xs mt-1 text-white/40">{formatTimeAgo(notification.createdAt)}</p>
+                          <p className="text-sm font-medium truncate text-white">
+                            {notification.title}
+                          </p>
+                          <p className="text-xs line-clamp-2 text-white/60">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs mt-1 text-white/40">
+                            {formatTimeAgo(notification.createdAt)}
+                          </p>
                         </div>
                         {notification.isRead === 0 && (
                           <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1.5"></span>
@@ -319,7 +369,10 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-xl transition-colors hover:bg-white/5">
               <Avatar className="h-8 w-8 md:h-9 md:w-9 border-2 border-orange-500/30">
-                <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.name || ""} />
+                <AvatarImage
+                  src={user?.profileImageUrl || undefined}
+                  alt={user?.name || ""}
+                />
                 <AvatarFallback className="bg-gradient-to-br from-orange-500 to-orange-600 text-white text-xs md:text-sm font-semibold">
                   {getInitials(user?.name || "U")}
                 </AvatarFallback>
@@ -331,7 +384,10 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
               <ChevronDown className="hidden md:block h-4 w-4 text-white/40" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-[hsl(220,26%,16%)] border-white/10">
+          <DropdownMenuContent
+            align="end"
+            className="w-56 bg-[hsl(220,26%,16%)] border-white/10"
+          >
             <div className="px-3 py-2 md:hidden">
               <p className="font-medium text-white">{user?.name}</p>
               <p className="text-sm capitalize text-white/60">{user?.role}</p>
@@ -339,7 +395,7 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
             <DropdownMenuSeparator className="md:hidden bg-white/10" />
             {user?.role !== "superadmin" && (
               <>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => setIsProfileDialogOpen(true)}
                   className="cursor-pointer text-white/80 hover:text-white hover:bg-white/10"
                 >
@@ -348,7 +404,7 @@ export function ModernHeader({ onMenuClick, showMenuButton = true }: ModernHeade
                 <DropdownMenuSeparator className="bg-white/10" />
               </>
             )}
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={logout}
               className="text-red-500 hover:text-red-600 hover:bg-red-500/10 cursor-pointer"
             >
