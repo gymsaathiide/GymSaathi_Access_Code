@@ -102,6 +102,8 @@ export default function AIDietPlannerPage() {
       return data.plan;
     },
     staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
@@ -597,10 +599,20 @@ export default function AIDietPlannerPage() {
               </button>
               <div className="hidden sm:block">
                 <Button
-                  onClick={handleClearPlan}
+                  onClick={handleGenerate}
+                  disabled={generatePlanMutation.isPending}
                   className="py-2 px-4 bg-gradient-to-r from-amber-400 to-orange-400 text-black font-bold rounded-xl shadow-lg"
                 >
-                  <Sparkles className="w-4 h-4 mr-2" /> Generate
+                  {generatePlanMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />{" "}
+                      Generating
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" /> Generate
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -1044,10 +1056,20 @@ export default function AIDietPlannerPage() {
             {/* bottom sticky CTA for mobile */}
             <div className="lg:hidden fixed left-4 right-4 bottom-4 z-50">
               <Button
-                onClick={handleClearPlan}
+                onClick={handleGenerate}
+                disabled={generatePlanMutation.isPending}
                 className="w-full py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-black font-semibold shadow-lg"
               >
-                <Sparkles className="w-4 h-4 mr-2" /> Generate New Plan
+                {generatePlanMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />{" "}
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" /> Generate Plan
+                  </>
+                )}
               </Button>
             </div>
           </section>
