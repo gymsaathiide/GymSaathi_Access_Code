@@ -49,6 +49,7 @@ The platform features a dark theme only design with navy backgrounds and orange 
     -   Active workout tracking with timer, completion status, and session statistics
     -   Weight logging and progress tracking
     -   Admin equipment management (enable/disable equipment per gym)
+    -   Superadmin exercise library management with CRUD operations (create, read, update, delete exercises with full validation)
 -   **Manage Meals**: Superadmin interface for managing meal database tables.
 -   **Permanent Member Deletion**: Admin functionality for complete member data removal with cascading deletions.
 
