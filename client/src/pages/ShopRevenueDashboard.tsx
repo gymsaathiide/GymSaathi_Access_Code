@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { 
-  IndianRupee, 
-  ShoppingCart, 
-  TrendingUp, 
-  Package, 
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  IndianRupee,
+  ShoppingCart,
+  TrendingUp,
+  Package,
   Calendar,
   Loader2,
   RefreshCw,
@@ -12,22 +12,22 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
+  AlertCircle,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
   ResponsiveContainer,
-  CartesianGrid
-} from 'recharts';
-import { cn } from '@/lib/utils';
-import { useLocation } from 'wouter';
+  CartesianGrid,
+} from "recharts";
+import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 interface ShopRevenueData {
   totalRevenue: number;
@@ -59,9 +59,9 @@ const formatCurrency = (amount: number) => {
 };
 
 const formatFullCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -77,7 +77,15 @@ interface StatCardProps {
   trend?: number;
 }
 
-function StatCard({ title, value, subtitle, icon: Icon, iconColor = 'text-orange-500', valueColor = 'text-white', trend }: StatCardProps) {
+function StatCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  iconColor = "text-orange-500",
+  valueColor = "text-white",
+  trend,
+}: StatCardProps) {
   return (
     <Card className="bg-card-dark border-white/5 overflow-hidden relative">
       <CardHeader className="pb-2">
@@ -87,19 +95,29 @@ function StatCard({ title, value, subtitle, icon: Icon, iconColor = 'text-orange
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={cn("text-xl sm:text-2xl font-bold truncate", valueColor)}>{value}</div>
+        <div
+          className={cn("text-xl sm:text-2xl font-bold truncate", valueColor)}
+        >
+          {value}
+        </div>
         {(subtitle || trend !== undefined) && (
           <div className="flex items-center gap-2 mt-1">
             {trend !== undefined && (
-              <span className={cn(
-                "flex items-center text-xs font-medium",
-                trend >= 0 ? "text-green-400" : "text-red-400"
-              )}>
-                <TrendingUp className={cn("h-3 w-3 mr-0.5", trend < 0 && "rotate-180")} />
+              <span
+                className={cn(
+                  "flex items-center text-xs font-medium",
+                  trend >= 0 ? "text-green-400" : "text-red-400",
+                )}
+              >
+                <TrendingUp
+                  className={cn("h-3 w-3 mr-0.5", trend < 0 && "rotate-180")}
+                />
                 {Math.abs(trend).toFixed(1)}%
               </span>
             )}
-            {subtitle && <span className="text-white/50 text-xs truncate">{subtitle}</span>}
+            {subtitle && (
+              <span className="text-white/50 text-xs truncate">{subtitle}</span>
+            )}
           </div>
         )}
       </CardContent>
@@ -109,14 +127,20 @@ function StatCard({ title, value, subtitle, icon: Icon, iconColor = 'text-orange
 }
 
 const periodOptions = [
-  { value: 'today', label: 'Today' },
-  { value: '7days', label: '7 Days' },
-  { value: '30days', label: '30 Days' },
-  { value: 'month', label: 'This Month' },
-  { value: 'year', label: 'This Year' },
+  { value: "today", label: "Today" },
+  { value: "7days", label: "7 Days" },
+  { value: "30days", label: "30 Days" },
+  { value: "month", label: "This Month" },
+  { value: "year", label: "This Year" },
 ];
 
-function RevenueGraph({ data, isLoading }: { data: ShopRevenueData['graphData']; isLoading: boolean }) {
+function RevenueGraph({
+  data,
+  isLoading,
+}: {
+  data: ShopRevenueData["graphData"];
+  isLoading: boolean;
+}) {
   if (isLoading) {
     return (
       <Card className="bg-card-dark border-white/5">
@@ -145,14 +169,16 @@ function RevenueGraph({ data, isLoading }: { data: ShopRevenueData['graphData'];
         <CardContent className="flex flex-col items-center justify-center h-[260px] sm:h-[300px] text-center">
           <ShoppingCart className="h-12 w-12 text-white/20 mb-3" />
           <p className="text-white/50 text-sm">No order data available</p>
-          <p className="text-white/30 text-xs mt-1">Revenue will appear here when orders are placed</p>
+          <p className="text-white/30 text-xs mt-1">
+            Revenue will appear here when orders are placed
+          </p>
         </CardContent>
       </Card>
     );
   }
 
   const totalRevenue = data.reduce((sum, item) => sum + item.revenue, 0);
-  const maxRevenue = Math.max(...data.map(d => d.revenue));
+  const maxRevenue = Math.max(...data.map((d) => d.revenue));
 
   return (
     <Card className="bg-card-dark border-white/5">
@@ -164,62 +190,69 @@ function RevenueGraph({ data, isLoading }: { data: ShopRevenueData['graphData'];
           </CardTitle>
           <div className="text-right">
             <p className="text-xs text-white/50">Period Total</p>
-            <p className="text-lg sm:text-xl font-bold text-green-400">{formatCurrency(totalRevenue)}</p>
+            <p className="text-lg sm:text-xl font-bold text-green-400">
+              {formatCurrency(totalRevenue)}
+            </p>
           </div>
         </div>
       </CardHeader>
       <CardContent className="px-2 sm:px-6">
         <div className="w-full h-[260px] sm:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart 
-              data={data} 
+            <AreaChart
+              data={data}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="rgba(255,255,255,0.05)" 
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.05)"
                 vertical={false}
               />
-              <XAxis 
-                dataKey="displayDate" 
-                axisLine={false} 
+              <XAxis
+                dataKey="displayDate"
+                axisLine={false}
                 tickLine={false}
-                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }}
                 interval="preserveStartEnd"
                 minTickGap={30}
               />
-              <YAxis 
-                axisLine={false} 
+              <YAxis
+                axisLine={false}
                 tickLine={false}
-                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                tickFormatter={(value) => value >= 1000 ? `₹${(value/1000).toFixed(0)}k` : `₹${value}`}
+                tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }}
+                tickFormatter={(value) =>
+                  value >= 1000 ? `₹${(value / 1000).toFixed(0)}k` : `₹${value}`
+                }
                 width={50}
-                domain={[0, maxRevenue > 0 ? 'auto' : 1000]}
+                domain={[0, maxRevenue > 0 ? "auto" : 1000]}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  padding: '8px 12px',
+                  backgroundColor: "#1f2937",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  padding: "8px 12px",
                 }}
-                labelStyle={{ color: '#9ca3af', marginBottom: '4px' }}
-                formatter={(value: number) => [formatFullCurrency(value), 'Revenue']}
+                labelStyle={{ color: "#9ca3af", marginBottom: "4px" }}
+                formatter={(value: number) => [
+                  formatFullCurrency(value),
+                  "Revenue",
+                ]}
                 labelFormatter={(label) => `Date: ${label}`}
               />
-              <Area 
-                type="monotone" 
-                dataKey="revenue" 
-                stroke="#22c55e" 
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#22c55e"
                 strokeWidth={2}
-                fill="url(#colorRevenue)" 
+                fill="url(#colorRevenue)"
                 name="Revenue"
                 animationDuration={800}
                 animationEasing="ease-out"
@@ -233,15 +266,46 @@ function RevenueGraph({ data, isLoading }: { data: ShopRevenueData['graphData'];
 }
 
 function getStatusBadge(status: string) {
-  const statusConfig: Record<string, { color: string; icon: React.ElementType; label: string }> = {
-    pending: { color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: Clock, label: 'Pending' },
-    confirmed: { color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: CheckCircle2, label: 'Confirmed' },
-    packed: { color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: Package, label: 'Packed' },
-    shipped: { color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: TrendingUp, label: 'Shipped' },
-    delivered: { color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle2, label: 'Delivered' },
-    cancelled: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: XCircle, label: 'Cancelled' },
+  const statusConfig: Record<
+    string,
+    { color: string; icon: React.ElementType; label: string }
+  > = {
+    pending: {
+      color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      icon: Clock,
+      label: "Pending",
+    },
+    confirmed: {
+      color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      icon: CheckCircle2,
+      label: "Confirmed",
+    },
+    packed: {
+      color: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      icon: Package,
+      label: "Packed",
+    },
+    shipped: {
+      color: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+      icon: TrendingUp,
+      label: "Shipped",
+    },
+    delivered: {
+      color: "bg-green-500/20 text-green-400 border-green-500/30",
+      icon: CheckCircle2,
+      label: "Delivered",
+    },
+    cancelled: {
+      color: "bg-red-500/20 text-red-400 border-red-500/30",
+      icon: XCircle,
+      label: "Cancelled",
+    },
   };
-  const config = statusConfig[status] || { color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: AlertCircle, label: status };
+  const config = statusConfig[status] || {
+    color: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+    icon: AlertCircle,
+    label: status,
+  };
   const Icon = config.icon;
   return (
     <Badge variant="outline" className={cn("text-xs border", config.color)}>
@@ -253,11 +317,23 @@ function getStatusBadge(status: string) {
 
 function getPaymentBadge(status: string) {
   const statusConfig: Record<string, { color: string; label: string }> = {
-    paid: { color: 'bg-green-500/20 text-green-400 border-green-500/30', label: 'Paid' },
-    unpaid: { color: 'bg-red-500/20 text-red-400 border-red-500/30', label: 'Unpaid' },
-    refunded: { color: 'bg-orange-500/20 text-orange-400 border-orange-500/30', label: 'Refunded' },
+    paid: {
+      color: "bg-green-500/20 text-green-400 border-green-500/30",
+      label: "Paid",
+    },
+    unpaid: {
+      color: "bg-red-500/20 text-red-400 border-red-500/30",
+      label: "Unpaid",
+    },
+    refunded: {
+      color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+      label: "Refunded",
+    },
   };
-  const config = statusConfig[status] || { color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', label: status };
+  const config = statusConfig[status] || {
+    color: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+    label: status,
+  };
   return (
     <Badge variant="outline" className={cn("text-xs border", config.color)}>
       {config.label}
@@ -265,7 +341,13 @@ function getPaymentBadge(status: string) {
   );
 }
 
-function RecentOrdersTable({ orders, isLoading }: { orders: ShopRevenueData['recentOrders']; isLoading: boolean }) {
+function RecentOrdersTable({
+  orders,
+  isLoading,
+}: {
+  orders: ShopRevenueData["recentOrders"];
+  isLoading: boolean;
+}) {
   const [, navigate] = useLocation();
 
   if (isLoading) {
@@ -308,11 +390,11 @@ function RecentOrdersTable({ orders, isLoading }: { orders: ShopRevenueData['rec
           <ShoppingCart className="h-4 w-4 text-orange-500" />
           Recent Orders
         </CardTitle>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 text-xs"
-          onClick={() => navigate('/admin/shop')}
+          onClick={() => navigate("/admin/shop")}
         >
           View All
           <ChevronRight className="h-4 w-4 ml-1" />
@@ -323,42 +405,58 @@ function RecentOrdersTable({ orders, isLoading }: { orders: ShopRevenueData['rec
           <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">Order</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">Customer</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">Amount</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">Status</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">Payment</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">Date</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">
+                  Order
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">
+                  Customer
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">
+                  Amount
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">
+                  Status
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">
+                  Payment
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-white/50">
+                  Date
+                </th>
               </tr>
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr 
-                  key={order.id} 
+                <tr
+                  key={order.id}
                   className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
                   onClick={() => navigate(`/admin/shop?order=${order.id}`)}
                 >
                   <td className="py-3 px-4">
-                    <span className="text-sm font-medium text-white">{order.orderNumber}</span>
+                    <span className="text-sm font-medium text-white">
+                      {order.orderNumber}
+                    </span>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="text-sm text-white/80">{order.memberName}</span>
+                    <span className="text-sm text-white/80">
+                      {order.memberName}
+                    </span>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="text-sm font-medium text-green-400">{formatFullCurrency(order.totalAmount)}</span>
+                    <span className="text-sm font-medium text-green-400">
+                      {formatFullCurrency(order.totalAmount)}
+                    </span>
                   </td>
-                  <td className="py-3 px-4">
-                    {getStatusBadge(order.status)}
-                  </td>
+                  <td className="py-3 px-4">{getStatusBadge(order.status)}</td>
                   <td className="py-3 px-4">
                     {getPaymentBadge(order.paymentStatus)}
                   </td>
                   <td className="py-3 px-4">
                     <span className="text-sm text-white/60">
-                      {new Date(order.orderDate).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
+                      {new Date(order.orderDate).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
                       })}
                     </span>
                   </td>
@@ -373,14 +471,17 @@ function RecentOrdersTable({ orders, isLoading }: { orders: ShopRevenueData['rec
 }
 
 export default function ShopRevenueDashboard() {
-  const [selectedPeriod, setSelectedPeriod] = useState('30days');
+  const [selectedPeriod, setSelectedPeriod] = useState("30days");
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch, isFetching } = useQuery<ShopRevenueData>({
-    queryKey: ['/api/admin/shop-revenue', selectedPeriod],
+    queryKey: ["/api/admin/shop-revenue", selectedPeriod],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/shop-revenue?period=${selectedPeriod}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch shop revenue data');
+      const res = await fetch(
+        `/api/admin/shop-revenue?period=${selectedPeriod}`,
+        { credentials: "include" },
+      );
+      if (!res.ok) throw new Error("Failed to fetch shop revenue data");
       return res.json();
     },
     refetchInterval: 60000,
@@ -392,20 +493,26 @@ export default function ShopRevenueDashboard() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-5 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Shop Orders Revenue</h1>
-          <p className="text-white/60 text-sm mt-1">Track your shop sales and revenue performance</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">
+            Shop Orders Revenue
+          </h1>
+          <p className="text-white/60 text-sm mt-1">
+            Track your shop sales and revenue performance
+          </p>
         </div>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={handleRefresh}
           disabled={isFetching}
           className="border-white/10 text-white hover:bg-white/10 self-start sm:self-auto"
         >
-          <RefreshCw className={cn("h-4 w-4 mr-2", isFetching && "animate-spin")} />
+          <RefreshCw
+            className={cn("h-4 w-4 mr-2", isFetching && "animate-spin")}
+          />
           Refresh
         </Button>
       </div>
@@ -443,14 +550,14 @@ export default function ShopRevenueDashboard() {
         {periodOptions.map((option) => (
           <Button
             key={option.value}
-            variant={selectedPeriod === option.value ? 'default' : 'outline'}
+            variant={selectedPeriod === option.value ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedPeriod(option.value)}
             className={cn(
               "text-xs sm:text-sm",
-              selectedPeriod === option.value 
-                ? 'bg-orange-500 hover:bg-orange-600 text-white' 
-                : 'border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+              selectedPeriod === option.value
+                ? "bg-orange-500 hover:bg-orange-600 text-white"
+                : "border-white/10 text-white/70 hover:bg-white/10 hover:text-white",
             )}
           >
             {option.label}
@@ -460,7 +567,10 @@ export default function ShopRevenueDashboard() {
 
       <RevenueGraph data={data?.graphData || []} isLoading={isLoading} />
 
-      <RecentOrdersTable orders={data?.recentOrders || []} isLoading={isLoading} />
+      <RecentOrdersTable
+        orders={data?.recentOrders || []}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

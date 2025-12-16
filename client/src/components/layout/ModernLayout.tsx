@@ -138,7 +138,7 @@ export function ModernLayout({ children }: ModernLayoutProps) {
               - mobile-first: full width with inner safe padding
               - larger screens: content constrained and centered with subtle horizontal gap when sidebar is expanded
           */}
-          <main className={`flex-1 overflow-auto bg-transparent`}>
+          <main className={`flex-1 overflow-auto bg-transparent p-5`}>
             <div
               className={`
                 max-w-[1400px] mx-auto min-h-[60vh]
