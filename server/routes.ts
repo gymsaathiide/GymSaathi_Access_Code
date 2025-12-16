@@ -9859,9 +9859,13 @@ Return ONLY the JSON object, no other text.`;
       `);
 
       // Create new workout plan
+      // Convert equipment array to PostgreSQL array format
+      const equipmentArray = Array.isArray(equipment) ? equipment : [];
+      const pgEquipmentArray = `{${equipmentArray.map((e: string) => `"${e}"`).join(',')}}`;
+      
       const planResult = await db!.execute(sql`
         INSERT INTO workout_plans (user_id, level, equipment, duration_days, is_active)
-        VALUES (${req.session.userId}, ${level}, ${JSON.stringify(equipment)}, ${durationDays}, true)
+        VALUES (${req.session.userId}, ${level}, ${pgEquipmentArray}::text[], ${durationDays}, true)
         RETURNING *
       `);
 
@@ -9877,15 +9881,25 @@ Return ONLY the JSON object, no other text.`;
         const dayWorkouts = workoutTemplates[day % workoutTemplates.length] || workoutTemplates[0];
         
         for (const exercise of dayWorkouts) {
+          // Convert arrays to PostgreSQL array format
+          const musclesArray = Array.isArray(exercise.muscles_targeted) ? exercise.muscles_targeted : [];
+          const pgMuscles = `{${musclesArray.map((m: string) => `"${m}"`).join(',')}}`;
+          
+          const mistakesArray = Array.isArray(exercise.mistakes_to_avoid) ? exercise.mistakes_to_avoid : [];
+          const pgMistakes = `{${mistakesArray.map((m: string) => `"${m}"`).join(',')}}`;
+          
+          const tipsArray = Array.isArray(exercise.tips) ? exercise.tips : [];
+          const pgTips = `{${tipsArray.map((t: string) => `"${t}"`).join(',')}}`;
+          
           await db!.execute(sql`
             INSERT INTO workout_exercises (workout_plan_id, day_number, session_type, exercise_name,
               sets, reps, duration_minutes, rest_seconds, muscles_targeted, 
               form_instructions, mistakes_to_avoid, tips)
             VALUES (${(plan as any).id}, ${day}, ${exercise.session_type}, ${exercise.exercise_name},
               ${exercise.sets || null}, ${exercise.reps || null}, ${exercise.duration_minutes || null},
-              ${exercise.rest_seconds || null}, ${JSON.stringify(exercise.muscles_targeted || [])},
-              ${exercise.form_instructions || null}, ${JSON.stringify(exercise.mistakes_to_avoid || [])},
-              ${JSON.stringify(exercise.tips || [])})
+              ${exercise.rest_seconds || null}, ${pgMuscles}::text[],
+              ${exercise.form_instructions || null}, ${pgMistakes}::text[],
+              ${pgTips}::text[])
           `);
         }
       }
