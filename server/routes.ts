@@ -10439,6 +10439,194 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // Validation helpers for exercises
+  const validExerciseTypes = ['strength', 'mobility', 'cardio'];
+  const validDifficulties = ['beginner', 'intermediate', 'expert'];
+  const validMuscles = ['abs', 'chest', 'back', 'shoulders', 'arms', 'quads', 'hamstrings', 'glutes', 'calves', 'hip_flexor', 'neck'];
+
+  function validateExerciseData(data: any): { valid: boolean; error?: string; sanitized?: any } {
+    const { name, type, difficulty, primaryMuscle, secondaryMuscles, requiredEquipment, instructions, tips, sets, reps, durationSeconds, restSeconds, caloriesPerMinute, videoUrl } = data;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return { valid: false, error: 'Name is required' };
+    }
+    if (!type || !validExerciseTypes.includes(type)) {
+      return { valid: false, error: `Type must be one of: ${validExerciseTypes.join(', ')}` };
+    }
+    if (!primaryMuscle || !validMuscles.includes(primaryMuscle)) {
+      return { valid: false, error: `Primary muscle must be one of: ${validMuscles.join(', ')}` };
+    }
+    const safeDifficulty = difficulty && validDifficulties.includes(difficulty) ? difficulty : 'beginner';
+    const safeSecondaryMuscles = Array.isArray(secondaryMuscles) ? secondaryMuscles.filter((m: any) => typeof m === 'string' && validMuscles.includes(m)) : [];
+    const safeRequiredEquipment = Array.isArray(requiredEquipment) && requiredEquipment.length > 0 ? requiredEquipment.filter((e: any) => typeof e === 'string') : ['Bodyweight'];
+    const safeTips = Array.isArray(tips) ? tips.filter((t: any) => typeof t === 'string') : [];
+    const safeSets = typeof sets === 'number' && !isNaN(sets) && sets > 0 ? sets : null;
+    const safeReps = typeof reps === 'string' ? reps : null;
+    const safeDurationSeconds = typeof durationSeconds === 'number' && !isNaN(durationSeconds) && durationSeconds > 0 ? durationSeconds : null;
+    const safeRestSeconds = typeof restSeconds === 'number' && !isNaN(restSeconds) ? restSeconds : 60;
+    const safeCaloriesPerMinute = typeof caloriesPerMinute === 'number' && !isNaN(caloriesPerMinute) ? caloriesPerMinute : 5;
+    const safeVideoUrl = typeof videoUrl === 'string' && videoUrl.length > 0 ? videoUrl : null;
+
+    return {
+      valid: true,
+      sanitized: {
+        name: name.trim(),
+        type,
+        difficulty: safeDifficulty,
+        primaryMuscle,
+        secondaryMuscles: safeSecondaryMuscles,
+        requiredEquipment: safeRequiredEquipment,
+        instructions: typeof instructions === 'string' ? instructions : '',
+        tips: safeTips,
+        sets: safeSets,
+        reps: safeReps,
+        durationSeconds: safeDurationSeconds,
+        restSeconds: safeRestSeconds,
+        caloriesPerMinute: safeCaloriesPerMinute,
+        videoUrl: safeVideoUrl,
+      }
+    };
+  }
+
+  // Create new exercise (superadmin only)
+  app.post('/api/training/exercises', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const userResult = await pool.query(
+        'SELECT role FROM users WHERE id = $1',
+        [req.session.userId]
+      );
+      if (userResult.rows[0]?.role !== 'superadmin') {
+        return res.status(403).json({ error: 'Superadmin access required' });
+      }
+
+      const validation = validateExerciseData(req.body);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+
+      const data = validation.sanitized;
+
+      const result = await pool.query(
+        `INSERT INTO exercises (
+          name, type, difficulty, primary_muscle, secondary_muscles,
+          required_equipment, instructions, tips, sets, reps,
+          duration_seconds, rest_seconds, calories_per_minute, video_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *`,
+        [
+          data.name, data.type, data.difficulty, data.primaryMuscle,
+          data.secondaryMuscles, data.requiredEquipment,
+          data.instructions, data.tips, data.sets, data.reps,
+          data.durationSeconds, data.restSeconds, data.caloriesPerMinute, data.videoUrl
+        ]
+      );
+
+      res.json({ exercise: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error creating exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update exercise (superadmin only)
+  app.patch('/api/training/exercises/:id', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const userResult = await pool.query(
+        'SELECT role FROM users WHERE id = $1',
+        [req.session.userId]
+      );
+      if (userResult.rows[0]?.role !== 'superadmin') {
+        return res.status(403).json({ error: 'Superadmin access required' });
+      }
+
+      const { id } = req.params;
+      
+      const validation = validateExerciseData(req.body);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+
+      const data = validation.sanitized;
+
+      const result = await pool.query(
+        `UPDATE exercises SET
+          name = $1,
+          type = $2,
+          difficulty = $3,
+          primary_muscle = $4,
+          secondary_muscles = $5,
+          required_equipment = $6,
+          instructions = $7,
+          tips = $8,
+          sets = $9,
+          reps = $10,
+          duration_seconds = $11,
+          rest_seconds = $12,
+          calories_per_minute = $13,
+          video_url = $14,
+          updated_at = NOW()
+        WHERE id = $15
+        RETURNING *`,
+        [
+          data.name, data.type, data.difficulty, data.primaryMuscle,
+          data.secondaryMuscles, data.requiredEquipment,
+          data.instructions, data.tips, data.sets, data.reps,
+          data.durationSeconds, data.restSeconds, data.caloriesPerMinute, data.videoUrl, id
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Exercise not found' });
+      }
+
+      res.json({ exercise: result.rows[0] });
+    } catch (error: any) {
+      console.error('Error updating exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete exercise (superadmin only)
+  app.delete('/api/training/exercises/:id', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const userResult = await pool.query(
+        'SELECT role FROM users WHERE id = $1',
+        [req.session.userId]
+      );
+      if (userResult.rows[0]?.role !== 'superadmin') {
+        return res.status(403).json({ error: 'Superadmin access required' });
+      }
+
+      const { id } = req.params;
+
+      const result = await pool.query(
+        'DELETE FROM exercises WHERE id = $1 RETURNING id',
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Exercise not found' });
+      }
+
+      res.json({ success: true, deletedId: id });
+    } catch (error: any) {
+      console.error('Error deleting exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==========================================
   // END NEW TRAINING SYSTEM APIs
   // ==========================================

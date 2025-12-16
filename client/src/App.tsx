@@ -39,6 +39,7 @@ import ShopRevenueDashboard from './pages/ShopRevenueDashboard';
 import { BodyCompositionPage, DietPlannerPage, AIDietPlannerPage, WorkoutPlannerPage, HistoryPage, BreakfastPage, LunchPage, DinnerPage } from './pages/diet-planner';
 import MemberDietDashboard from './pages/diet-planner/MemberDietDashboard';
 import ManageMealsPage from './pages/ManageMealsPage';
+import ManageExercisesPage from './pages/ManageExercisesPage';
 import TrainingHomePage from './pages/training/TrainingHomePage';
 import TrainingOnboardingPage from './pages/training/TrainingOnboardingPage';
 import GenerateWorkoutPage from './pages/training/GenerateWorkoutPage';
@@ -107,6 +108,7 @@ function ProtectedApp() {
         <Route path="/audit" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SecurityAuditDashboard /></ProtectedRoute>} />
         <Route path="/integrations" component={() => <ProtectedRoute allowedRoles={['superadmin']}><Integrations /></ProtectedRoute>} />
         <Route path="/manage-meals" component={() => <ProtectedRoute allowedRoles={['superadmin']}><ManageMealsPage /></ProtectedRoute>} />
+        <Route path="/manage-exercises" component={() => <ProtectedRoute allowedRoles={['superadmin']}><ManageExercisesPage /></ProtectedRoute>} />
         <Route path="/users" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SuperadminUsers /></ProtectedRoute>} />
         <Route path="/settings" component={() => <ProtectedRoute allowedRoles={['superadmin']}><SuperadminSettings /></ProtectedRoute>} />
 
