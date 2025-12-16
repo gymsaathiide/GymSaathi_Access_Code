@@ -218,41 +218,44 @@ export default function TrainingHomePage() {
 
         {/* Training Session - Muscle Selection */}
         <div>
-          <h2 className="text-lg font-semibold mb-4">Training Session</h2>
+          <h2 className="text-lg font-semibold mb-4">Training session</h2>
           <div className="space-y-3">
             {isLoading ? (
               <div className="text-center py-8 text-white/50">Loading muscles...</div>
             ) : (
-              muscleGroups.map((muscle) => {
-                const Icon = muscleIcons[muscle.name] || Dumbbell;
-                const colorClass = muscleColors[muscle.name] || "from-gray-400 to-gray-500";
+              muscleGroups.map((muscle, index) => {
+                const pastelColors = [
+                  { bg: "from-amber-100 to-orange-100", text: "text-amber-900", icon: "bg-blue-200" },
+                  { bg: "from-purple-100 to-violet-100", text: "text-purple-900", icon: "bg-purple-200" },
+                  { bg: "from-rose-100 to-pink-100", text: "text-rose-900", icon: "bg-rose-200" },
+                  { bg: "from-cyan-100 to-teal-100", text: "text-cyan-900", icon: "bg-cyan-200" },
+                  { bg: "from-emerald-100 to-green-100", text: "text-emerald-900", icon: "bg-emerald-200" },
+                  { bg: "from-blue-100 to-indigo-100", text: "text-blue-900", icon: "bg-blue-200" },
+                ];
+                const colorScheme = pastelColors[index % pastelColors.length];
                 
                 return (
                   <Link key={muscle.id} href={`/member/training/generate?muscle=${muscle.name}`}>
                     <Card 
-                      className="border-0 overflow-hidden cursor-pointer hover:scale-[1.02] transition"
-                      style={{ 
-                        background: `linear-gradient(135deg, ${muscle.color}15, ${muscle.color}05)`,
-                        borderLeft: `3px solid ${muscle.color}`
-                      }}
+                      className={`border-0 overflow-hidden cursor-pointer hover:scale-[1.02] transition bg-gradient-to-r ${colorScheme.bg} relative`}
                     >
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div 
-                            className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center`}
-                          >
-                            <Icon className="w-6 h-6 text-white" />
-                          </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-8 opacity-30">
+                        <svg viewBox="0 0 400 40" className="w-full h-full" preserveAspectRatio="none">
+                          <path d="M0 40 Q100 10 200 25 T400 15 L400 40 Z" fill="currentColor" className="text-black/10" />
+                        </svg>
+                      </div>
+                      <CardContent className="p-4 relative z-10">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg ${colorScheme.icon}`} />
                           <div>
-                            <h3 className="font-semibold text-white capitalize">
+                            <h3 className={`font-bold ${colorScheme.text} capitalize`}>
                               {muscle.display_name}
                             </h3>
-                            <p className="text-sm text-white/50">
-                              {muscle.exercise_count} Exercises
+                            <p className={`text-sm ${colorScheme.text} opacity-70`}>
+                              {muscle.exercise_count} Exercise
                             </p>
                           </div>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-white/30" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -261,7 +264,38 @@ export default function TrainingHomePage() {
             )}
           </div>
         </div>
+
+        {/* Bottom Navigation Spacer */}
+        <div className="h-20" />
       </div>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-lg border-t border-white/10 z-50">
+        <div className="max-w-lg mx-auto flex items-center justify-around py-3">
+          <Link href="/member">
+            <button className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </button>
+          </Link>
+          <Link href="/member/training">
+            <button className="flex flex-col items-center gap-1 text-orange-500">
+              <Dumbbell className="w-6 h-6" />
+            </button>
+          </Link>
+          <Link href="/member/training/stats">
+            <button className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition">
+              <Activity className="w-6 h-6" />
+            </button>
+          </Link>
+          <Link href="/member">
+            <button className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition">
+              <Target className="w-6 h-6" />
+            </button>
+          </Link>
+        </div>
+      </nav>
     </div>
   );
 }
