@@ -45,6 +45,7 @@ import TrainingOnboardingPage from './pages/training/TrainingOnboardingPage';
 import GenerateWorkoutPage from './pages/training/GenerateWorkoutPage';
 import ActiveWorkoutPage from './pages/training/ActiveWorkoutPage';
 import TrainingStatsPage from './pages/training/TrainingStatsPage';
+import AdminEquipmentPage from './pages/AdminEquipmentPage';
 
 function TestDashboard() {
   const { user } = useAuth();
@@ -122,6 +123,7 @@ function ProtectedApp() {
         <Route path="/admin/billing" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer']}><Billing /></ProtectedRoute>} />
         <Route path="/admin/shop" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Shop /></ProtectedRoute>} />
         <Route path="/admin/shop-revenue" component={() => <ProtectedRoute allowedRoles={['admin']}><ShopRevenueDashboard /></ProtectedRoute>} />
+        <Route path="/admin/equipment" component={() => <ProtectedRoute allowedRoles={['admin']}><AdminEquipmentPage /></ProtectedRoute>} />
         <Route path="/admin/more" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><AdminMore /></ProtectedRoute>} />
 
         <Route path="/trainer" component={() => <ProtectedRoute allowedRoles={['trainer']}><TrainerDashboard /></ProtectedRoute>} />

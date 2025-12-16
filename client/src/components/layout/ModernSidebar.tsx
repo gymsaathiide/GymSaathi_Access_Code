@@ -57,6 +57,7 @@ const adminItems = [
   { title: "Billing", url: "/admin/billing", icon: CreditCard },
   { title: "Shop", url: "/admin/shop", icon: ShoppingBag },
   { title: "Shop Revenue", url: "/admin/shop-revenue", icon: TrendingUp },
+  { title: "Equipment", url: "/admin/equipment", icon: Settings },
 ];
 
 const trainerItems = [
@@ -70,6 +71,7 @@ const trainerItems = [
 
 const memberItems = [
   { title: "Dashboard", url: "/member", icon: LayoutDashboard },
+  { title: "Training", url: "/member/training", icon: Target },
   { title: "Body Report", url: "/member/diet-planner/body-composition", icon: Activity },
   { title: "Diet Planner", url: "/member/diet-planner", icon: Apple },
   { title: "Workout Planner", url: "/member/diet-planner/workout", icon: Dumbbell },
