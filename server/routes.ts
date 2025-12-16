@@ -7,7 +7,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { insertMemberSchema, insertPaymentSchema, insertInvoiceSchema, insertLeadSchema, insertProductSchema, insertOrderSchema, insertClassSchema, insertClassTypeSchema, insertClassBookingSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { db, supabaseAdmin } from "./db";
+import { db, supabaseAdmin, pool } from "./db";
 import { eq, and, desc, asc, sql, gte, lte, lt, or, like, isNull, inArray } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import { sendGymAdminWelcomeEmail, sendMemberWelcomeEmail, sendInvoiceEmail, sendLeadWelcomeEmail, sendNewLeadNotificationEmail, sendTrainerWelcomeEmail, sendPasswordResetEmail, sendPaymentDetailsEmail, sendPaymentReminderEmail, sendOrderConfirmationEmail } from "./services/emailService";
@@ -9802,6 +9802,9 @@ Return ONLY the JSON object, no other text.`;
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
 
     try {
       // Get user's gym to check enabled equipment
@@ -9852,6 +9855,9 @@ Return ONLY the JSON object, no other text.`;
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
 
     try {
       const profileResult = await pool.query(
@@ -9877,6 +9883,9 @@ Return ONLY the JSON object, no other text.`;
   app.post('/api/training/profile', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
     }
 
     try {
@@ -9917,6 +9926,9 @@ Return ONLY the JSON object, no other text.`;
   app.post('/api/training/generate-session', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
     }
 
     try {
@@ -10105,6 +10117,9 @@ Return ONLY the JSON object, no other text.`;
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
 
     try {
       const sessionResult = await pool.query(
@@ -10143,6 +10158,9 @@ Return ONLY the JSON object, no other text.`;
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
 
     try {
       const { exerciseId } = req.params;
@@ -10170,6 +10188,9 @@ Return ONLY the JSON object, no other text.`;
   app.post('/api/training/complete-session/:sessionId', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
     }
 
     try {
@@ -10214,6 +10235,9 @@ Return ONLY the JSON object, no other text.`;
   app.get('/api/training/stats', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
     }
 
     try {
@@ -10311,6 +10335,9 @@ Return ONLY the JSON object, no other text.`;
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
 
     try {
       const { weightKg } = req.body;
@@ -10331,6 +10358,9 @@ Return ONLY the JSON object, no other text.`;
 
   // Get master equipment list (for admin)
   app.get('/api/training/master-equipment', async (req, res) => {
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
     try {
       const result = await pool.query('SELECT * FROM master_equipment ORDER BY category, name');
       res.json({ equipment: result.rows });
@@ -10344,6 +10374,9 @@ Return ONLY the JSON object, no other text.`;
   app.get('/api/training/gym-equipment', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
     }
 
     try {
@@ -10379,6 +10412,9 @@ Return ONLY the JSON object, no other text.`;
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
 
     try {
       const { equipmentId } = req.params;
@@ -10410,6 +10446,9 @@ Return ONLY the JSON object, no other text.`;
 
   // Get all exercises (for superadmin management)
   app.get('/api/training/exercises', async (req, res) => {
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
     try {
       const { type, muscle, difficulty } = req.query;
       
@@ -10493,6 +10532,9 @@ Return ONLY the JSON object, no other text.`;
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
+    }
 
     try {
       const userResult = await pool.query(
@@ -10536,6 +10578,9 @@ Return ONLY the JSON object, no other text.`;
   app.patch('/api/training/exercises/:id', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
     }
 
     try {
@@ -10598,6 +10643,9 @@ Return ONLY the JSON object, no other text.`;
   app.delete('/api/training/exercises/:id', async (req, res) => {
     if (!req.session?.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!pool) {
+      return res.status(500).json({ error: 'Database not available' });
     }
 
     try {
