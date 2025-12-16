@@ -25,6 +25,7 @@ import {
   ChevronRight,
   Flame,
   Sparkles,
+  Dumbbell,
 } from "lucide-react";
 import QrScanner from "@/components/QrScanner";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -619,6 +620,50 @@ export default function MemberDashboard() {
               </Link>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Training Section */}
+      <Card className="overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-orange-500/20">
+        <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Dumbbell className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0" />
+              <CardTitle className="text-sm sm:text-base truncate">
+                Training Sessions
+              </CardTitle>
+            </div>
+            <Link href="/member/training">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-orange-500 hover:text-orange-600 text-xs sm:text-sm px-2 sm:px-3 h-8"
+              >
+                <span className="hidden xs:inline">Start Training</span>
+                <span className="xs:hidden">Start</span>
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+          <div className="text-center py-4 sm:py-6">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <Dumbbell className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500" />
+            </div>
+            <h3 className="font-semibold mb-1.5 sm:mb-2 text-sm sm:text-base">
+              Muscle-Based Training
+            </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 px-2">
+              Get personalized workout sessions targeting specific muscle groups
+            </p>
+            <Link href="/member/training">
+              <Button className="gap-2 bg-orange-500 hover:bg-orange-600 text-sm sm:text-base h-9 sm:h-10 px-4 sm:px-6">
+                <Dumbbell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Start Workout
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 

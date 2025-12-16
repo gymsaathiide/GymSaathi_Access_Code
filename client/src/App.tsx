@@ -39,6 +39,11 @@ import ShopRevenueDashboard from './pages/ShopRevenueDashboard';
 import { BodyCompositionPage, DietPlannerPage, AIDietPlannerPage, WorkoutPlannerPage, HistoryPage, BreakfastPage, LunchPage, DinnerPage } from './pages/diet-planner';
 import MemberDietDashboard from './pages/diet-planner/MemberDietDashboard';
 import ManageMealsPage from './pages/ManageMealsPage';
+import TrainingHomePage from './pages/training/TrainingHomePage';
+import TrainingOnboardingPage from './pages/training/TrainingOnboardingPage';
+import GenerateWorkoutPage from './pages/training/GenerateWorkoutPage';
+import ActiveWorkoutPage from './pages/training/ActiveWorkoutPage';
+import TrainingStatsPage from './pages/training/TrainingStatsPage';
 
 function TestDashboard() {
   const { user } = useAuth();
@@ -139,6 +144,11 @@ function ProtectedApp() {
         <Route path="/member/attendance" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Attendance /></ProtectedRoute>} />
         <Route path="/member/shop" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><Shop /></ProtectedRoute>} />
         <Route path="/member/more" component={() => <ProtectedRoute allowedRoles={['admin', 'trainer', 'member']}><AdminMore /></ProtectedRoute>} />
+        <Route path="/member/training" component={() => <ProtectedRoute allowedRoles={['member']}><TrainingHomePage /></ProtectedRoute>} />
+        <Route path="/member/training/onboarding" component={() => <ProtectedRoute allowedRoles={['member']}><TrainingOnboardingPage /></ProtectedRoute>} />
+        <Route path="/member/training/generate" component={() => <ProtectedRoute allowedRoles={['member']}><GenerateWorkoutPage /></ProtectedRoute>} />
+        <Route path="/member/training/workout/:sessionId" component={() => <ProtectedRoute allowedRoles={['member']}><ActiveWorkoutPage /></ProtectedRoute>} />
+        <Route path="/member/training/stats" component={() => <ProtectedRoute allowedRoles={['member']}><TrainingStatsPage /></ProtectedRoute>} />
         <Route path="/member-store" component={() => <ProtectedRoute allowedRoles={['member']}><MemberStore /></ProtectedRoute>} />
       </Switch>
     </ModernLayout>

@@ -9793,7 +9793,657 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
-  // Workout Plan APIs
+  // ==========================================
+  // NEW TRAINING SYSTEM APIs (Muscle-based workouts)
+  // ==========================================
+
+  // Get muscle groups with exercise counts
+  app.get('/api/training/muscle-groups', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Get user's gym to check enabled equipment
+      const userResult = await pool.query(
+        'SELECT gym_id FROM users WHERE id = $1',
+        [req.session.userId]
+      );
+      const gymId = userResult.rows[0]?.gym_id;
+
+      // Get enabled equipment for this gym (always include Bodyweight)
+      let enabledEquipment = ['Bodyweight'];
+      if (gymId) {
+        const equipResult = await pool.query(
+          `SELECT me.name FROM master_equipment me
+           LEFT JOIN gym_enabled_equipment gee ON me.id = gee.equipment_id AND gee.gym_id = $1
+           WHERE me.is_default = true OR (gee.enabled = true)`,
+          [gymId]
+        );
+        enabledEquipment = equipResult.rows.map((r: any) => r.name);
+        if (!enabledEquipment.includes('Bodyweight')) enabledEquipment.push('Bodyweight');
+      } else {
+        // No gym - show all equipment
+        const equipResult = await pool.query('SELECT name FROM master_equipment');
+        enabledEquipment = equipResult.rows.map((r: any) => r.name);
+      }
+
+      // Get muscle groups with exercise counts (filtered by available equipment)
+      const muscleGroups = await pool.query(
+        `SELECT mg.*, 
+          (SELECT COUNT(*) FROM exercises e 
+           WHERE e.primary_muscle = mg.name 
+           AND e.type = 'strength'
+           AND e.required_equipment && $1::text[]) as exercise_count
+         FROM muscle_groups mg
+         ORDER BY mg.sort_order`,
+        [enabledEquipment]
+      );
+
+      res.json({ muscleGroups: muscleGroups.rows, enabledEquipment });
+    } catch (error: any) {
+      console.error('Error fetching muscle groups:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get/save member workout profile (onboarding data)
+  app.get('/api/training/profile', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const profileResult = await pool.query(
+        'SELECT * FROM member_workout_profile WHERE user_id = $1',
+        [req.session.userId]
+      );
+      
+      const focusMusclesResult = await pool.query(
+        'SELECT muscle_group FROM member_focus_muscles WHERE user_id = $1',
+        [req.session.userId]
+      );
+
+      res.json({
+        profile: profileResult.rows[0] || null,
+        focusMuscles: focusMusclesResult.rows.map((r: any) => r.muscle_group)
+      });
+    } catch (error: any) {
+      console.error('Error fetching workout profile:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/training/profile', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { gender, goal, fitnessLevel, focusMuscles } = req.body;
+
+      // Upsert profile
+      await pool.query(
+        `INSERT INTO member_workout_profile (user_id, gender, goal, fitness_level)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id) DO UPDATE SET 
+           gender = EXCLUDED.gender,
+           goal = EXCLUDED.goal,
+           fitness_level = EXCLUDED.fitness_level,
+           updated_at = NOW()`,
+        [req.session.userId, gender, goal, fitnessLevel]
+      );
+
+      // Replace focus muscles
+      await pool.query('DELETE FROM member_focus_muscles WHERE user_id = $1', [req.session.userId]);
+      
+      if (focusMuscles && Array.isArray(focusMuscles)) {
+        for (const muscle of focusMuscles) {
+          await pool.query(
+            'INSERT INTO member_focus_muscles (user_id, muscle_group) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [req.session.userId, muscle]
+          );
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error saving workout profile:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate training session for a target muscle
+  app.post('/api/training/generate-session', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { targetMuscle, includeCardio = false } = req.body;
+
+      if (!targetMuscle) {
+        return res.status(400).json({ error: 'Target muscle is required' });
+      }
+
+      // Get user profile for fitness level
+      const profileResult = await pool.query(
+        'SELECT fitness_level FROM member_workout_profile WHERE user_id = $1',
+        [req.session.userId]
+      );
+      const fitnessLevel = profileResult.rows[0]?.fitness_level || 'beginner';
+
+      // Get user's gym equipment
+      const userResult = await pool.query(
+        'SELECT gym_id FROM users WHERE id = $1',
+        [req.session.userId]
+      );
+      const gymId = userResult.rows[0]?.gym_id;
+
+      let enabledEquipment = ['Bodyweight'];
+      if (gymId) {
+        const equipResult = await pool.query(
+          `SELECT me.name FROM master_equipment me
+           LEFT JOIN gym_enabled_equipment gee ON me.id = gee.equipment_id AND gee.gym_id = $1
+           WHERE me.is_default = true OR (gee.enabled = true)`,
+          [gymId]
+        );
+        enabledEquipment = equipResult.rows.map((r: any) => r.name);
+        if (!enabledEquipment.includes('Bodyweight')) enabledEquipment.push('Bodyweight');
+      } else {
+        const equipResult = await pool.query('SELECT name FROM master_equipment');
+        enabledEquipment = equipResult.rows.map((r: any) => r.name);
+      }
+
+      // Get exercises used in last 2 sessions to avoid repetition
+      const recentExercisesResult = await pool.query(
+        `SELECT DISTINCT se.exercise_id 
+         FROM session_exercises se
+         JOIN training_sessions ts ON se.session_id = ts.id
+         WHERE ts.user_id = $1
+         ORDER BY ts.created_at DESC
+         LIMIT 20`,
+        [req.session.userId]
+      );
+      const recentExerciseIds = recentExercisesResult.rows.map((r: any) => r.exercise_id);
+
+      // Determine exercise counts by level
+      let strengthCount: number;
+      switch (fitnessLevel) {
+        case 'beginner': strengthCount = 4; break;
+        case 'intermediate': strengthCount = 5; break;
+        case 'expert': strengthCount = 6; break;
+        default: strengthCount = 4;
+      }
+
+      // Get MOBILITY exercises (2-3 exercises)
+      const mobilityResult = await pool.query(
+        `SELECT * FROM exercises 
+         WHERE type = 'mobility' 
+         AND (primary_muscle = $1 OR $1 = ANY(secondary_muscles))
+         AND required_equipment && $2::text[]
+         ${recentExerciseIds.length > 0 ? 'AND id NOT IN (' + recentExerciseIds.map((_, i) => '$' + (i + 3)).join(',') + ')' : ''}
+         ORDER BY RANDOM()
+         LIMIT 3`,
+        [targetMuscle, enabledEquipment, ...recentExerciseIds]
+      );
+
+      // Get STRENGTH exercises (4-7 based on level)
+      // First get primary muscle exercises
+      const strengthPrimaryResult = await pool.query(
+        `SELECT * FROM exercises 
+         WHERE type = 'strength' 
+         AND primary_muscle = $1
+         AND (difficulty = $2 OR difficulty = 'beginner')
+         AND required_equipment && $3::text[]
+         ${recentExerciseIds.length > 0 ? 'AND id NOT IN (' + recentExerciseIds.map((_, i) => '$' + (i + 4)).join(',') + ')' : ''}
+         ORDER BY RANDOM()
+         LIMIT $${recentExerciseIds.length + 4}`,
+        [targetMuscle, fitnessLevel, enabledEquipment, ...recentExerciseIds, strengthCount]
+      );
+
+      // If not enough primary, get secondary muscle exercises
+      let strengthExercises = strengthPrimaryResult.rows;
+      if (strengthExercises.length < strengthCount) {
+        const remaining = strengthCount - strengthExercises.length;
+        const existingIds = strengthExercises.map((e: any) => e.id);
+        
+        const strengthSecondaryResult = await pool.query(
+          `SELECT * FROM exercises 
+           WHERE type = 'strength' 
+           AND $1 = ANY(secondary_muscles)
+           AND (difficulty = $2 OR difficulty = 'beginner')
+           AND required_equipment && $3::text[]
+           ${existingIds.length > 0 ? 'AND id NOT IN (' + existingIds.map((_, i) => '$' + (i + 4)).join(',') + ')' : ''}
+           ORDER BY RANDOM()
+           LIMIT $${existingIds.length + 4}`,
+          [targetMuscle, fitnessLevel, enabledEquipment, ...existingIds, remaining]
+        );
+        strengthExercises = [...strengthExercises, ...strengthSecondaryResult.rows];
+      }
+
+      // Get CARDIO exercise if requested (1 exercise)
+      let cardioExercises: any[] = [];
+      if (includeCardio) {
+        const cardioResult = await pool.query(
+          `SELECT * FROM exercises 
+           WHERE type = 'cardio'
+           AND required_equipment && $1::text[]
+           ORDER BY RANDOM()
+           LIMIT 1`,
+          [enabledEquipment]
+        );
+        cardioExercises = cardioResult.rows;
+      }
+
+      // Create training session
+      const sessionResult = await pool.query(
+        `INSERT INTO training_sessions (user_id, target_muscle, include_cardio)
+         VALUES ($1, $2, $3)
+         RETURNING *`,
+        [req.session.userId, targetMuscle, includeCardio]
+      );
+      const session = sessionResult.rows[0];
+
+      // Add exercises to session
+      const allExercises: any[] = [];
+      let sortOrder = 1;
+
+      // Add mobility exercises
+      for (const exercise of mobilityResult.rows) {
+        await pool.query(
+          `INSERT INTO session_exercises (session_id, exercise_id, exercise_type, sort_order)
+           VALUES ($1, $2, 'mobility', $3)`,
+          [session.id, exercise.id, sortOrder++]
+        );
+        allExercises.push({ ...exercise, exercise_type: 'mobility', sort_order: sortOrder - 1 });
+      }
+
+      // Add strength exercises
+      for (const exercise of strengthExercises) {
+        await pool.query(
+          `INSERT INTO session_exercises (session_id, exercise_id, exercise_type, sort_order)
+           VALUES ($1, $2, 'strength', $3)`,
+          [session.id, exercise.id, sortOrder++]
+        );
+        allExercises.push({ ...exercise, exercise_type: 'strength', sort_order: sortOrder - 1 });
+      }
+
+      // Add cardio exercises
+      for (const exercise of cardioExercises) {
+        await pool.query(
+          `INSERT INTO session_exercises (session_id, exercise_id, exercise_type, sort_order)
+           VALUES ($1, $2, 'cardio', $3)`,
+          [session.id, exercise.id, sortOrder++]
+        );
+        allExercises.push({ ...exercise, exercise_type: 'cardio', sort_order: sortOrder - 1 });
+      }
+
+      // Calculate estimated duration
+      const estimatedMinutes = allExercises.reduce((sum, ex) => {
+        if (ex.duration_seconds) return sum + Math.ceil(ex.duration_seconds / 60);
+        if (ex.sets && ex.reps) return sum + ex.sets * 2; // ~2 min per set
+        return sum + 3;
+      }, 0);
+
+      res.json({
+        session,
+        exercises: allExercises,
+        estimatedMinutes,
+        mobilityCount: mobilityResult.rows.length,
+        strengthCount: strengthExercises.length,
+        cardioCount: cardioExercises.length
+      });
+    } catch (error: any) {
+      console.error('Error generating training session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get current/active training session
+  app.get('/api/training/current-session', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const sessionResult = await pool.query(
+        `SELECT * FROM training_sessions 
+         WHERE user_id = $1 AND status = 'in_progress'
+         ORDER BY created_at DESC LIMIT 1`,
+        [req.session.userId]
+      );
+
+      if (!sessionResult.rows[0]) {
+        return res.json({ session: null, exercises: [] });
+      }
+
+      const session = sessionResult.rows[0];
+
+      const exercisesResult = await pool.query(
+        `SELECT se.*, e.name, e.type, e.primary_muscle, e.secondary_muscles,
+                e.instructions, e.tips, e.sets, e.reps, e.duration_seconds, 
+                e.rest_seconds, e.video_url, e.calories_per_minute
+         FROM session_exercises se
+         JOIN exercises e ON se.exercise_id = e.id
+         WHERE se.session_id = $1
+         ORDER BY se.sort_order`,
+        [session.id]
+      );
+
+      res.json({ session, exercises: exercisesResult.rows });
+    } catch (error: any) {
+      console.error('Error fetching current session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update exercise in session (log sets, reps, weight)
+  app.patch('/api/training/session-exercise/:exerciseId', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { exerciseId } = req.params;
+      const { setsCompleted, repsCompleted, weightUsed, durationSeconds, isCompleted } = req.body;
+
+      await pool.query(
+        `UPDATE session_exercises 
+         SET sets_completed = COALESCE($1, sets_completed),
+             reps_completed = COALESCE($2, reps_completed),
+             weight_used = COALESCE($3, weight_used),
+             duration_seconds = COALESCE($4, duration_seconds),
+             is_completed = COALESCE($5, is_completed)
+         WHERE id = $6`,
+        [setsCompleted, repsCompleted, weightUsed, durationSeconds, isCompleted, exerciseId]
+      );
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error updating exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete training session
+  app.post('/api/training/complete-session/:sessionId', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { sessionId } = req.params;
+
+      // Calculate total duration and calories
+      const exercisesResult = await pool.query(
+        `SELECT se.duration_seconds, e.calories_per_minute
+         FROM session_exercises se
+         JOIN exercises e ON se.exercise_id = e.id
+         WHERE se.session_id = $1 AND se.is_completed = true`,
+        [sessionId]
+      );
+
+      let totalDuration = 0;
+      let caloriesBurned = 0;
+
+      for (const ex of exercisesResult.rows) {
+        const duration = ex.duration_seconds || 180; // default 3 min
+        totalDuration += duration;
+        caloriesBurned += Math.round((duration / 60) * (ex.calories_per_minute || 5));
+      }
+
+      await pool.query(
+        `UPDATE training_sessions 
+         SET status = 'completed',
+             completed_at = NOW(),
+             total_duration_seconds = $1,
+             calories_burned = $2
+         WHERE id = $3 AND user_id = $4`,
+        [totalDuration, caloriesBurned, sessionId, req.session.userId]
+      );
+
+      res.json({ success: true, totalDuration, caloriesBurned });
+    } catch (error: any) {
+      console.error('Error completing session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get training statistics
+  app.get('/api/training/stats', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Get weekly workout count
+      const weeklyResult = await pool.query(
+        `SELECT COUNT(*) as count FROM training_sessions 
+         WHERE user_id = $1 AND status = 'completed'
+         AND created_at >= NOW() - INTERVAL '7 days'`,
+        [req.session.userId]
+      );
+
+      // Get total workout time this week
+      const timeResult = await pool.query(
+        `SELECT COALESCE(SUM(total_duration_seconds), 0) as total_seconds 
+         FROM training_sessions 
+         WHERE user_id = $1 AND status = 'completed'
+         AND created_at >= NOW() - INTERVAL '7 days'`,
+        [req.session.userId]
+      );
+
+      // Get total calories burned this week
+      const caloriesResult = await pool.query(
+        `SELECT COALESCE(SUM(calories_burned), 0) as total_calories 
+         FROM training_sessions 
+         WHERE user_id = $1 AND status = 'completed'
+         AND created_at >= NOW() - INTERVAL '7 days'`,
+        [req.session.userId]
+      );
+
+      // Get muscle group progress (workouts per muscle)
+      const muscleProgressResult = await pool.query(
+        `SELECT target_muscle, COUNT(*) as workout_count 
+         FROM training_sessions 
+         WHERE user_id = $1 AND status = 'completed'
+         GROUP BY target_muscle`,
+        [req.session.userId]
+      );
+
+      // Get latest weight
+      const weightResult = await pool.query(
+        `SELECT weight_kg, recorded_at FROM weight_tracking 
+         WHERE user_id = $1 
+         ORDER BY recorded_at DESC LIMIT 1`,
+        [req.session.userId]
+      );
+
+      // Get weight history (last 7 days)
+      const weightHistoryResult = await pool.query(
+        `SELECT weight_kg, recorded_at FROM weight_tracking 
+         WHERE user_id = $1 AND recorded_at >= NOW() - INTERVAL '7 days'
+         ORDER BY recorded_at`,
+        [req.session.userId]
+      );
+
+      // Calculate streak
+      const streakResult = await pool.query(
+        `SELECT DISTINCT DATE(created_at) as workout_date 
+         FROM training_sessions 
+         WHERE user_id = $1 AND status = 'completed'
+         ORDER BY workout_date DESC`,
+        [req.session.userId]
+      );
+
+      let streak = 0;
+      const dates = streakResult.rows.map((r: any) => new Date(r.workout_date).toDateString());
+      const today = new Date();
+      
+      for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - i);
+        if (dates.includes(checkDate.toDateString())) {
+          streak++;
+        } else if (i > 0) {
+          break; // streak broken
+        }
+      }
+
+      res.json({
+        weeklyWorkouts: parseInt(weeklyResult.rows[0].count),
+        weeklyDurationMinutes: Math.round(parseInt(timeResult.rows[0].total_seconds) / 60),
+        weeklyCalories: parseInt(caloriesResult.rows[0].total_calories),
+        muscleProgress: muscleProgressResult.rows,
+        currentWeight: weightResult.rows[0]?.weight_kg || null,
+        weightHistory: weightHistoryResult.rows,
+        currentStreak: streak
+      });
+    } catch (error: any) {
+      console.error('Error fetching stats:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Log weight
+  app.post('/api/training/log-weight', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { weightKg } = req.body;
+
+      await pool.query(
+        `INSERT INTO weight_tracking (user_id, weight_kg)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id, recorded_at) DO UPDATE SET weight_kg = EXCLUDED.weight_kg`,
+        [req.session.userId, weightKg]
+      );
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error logging weight:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get master equipment list (for admin)
+  app.get('/api/training/master-equipment', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM master_equipment ORDER BY category, name');
+      res.json({ equipment: result.rows });
+    } catch (error: any) {
+      console.error('Error fetching master equipment:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get gym enabled equipment (admin view)
+  app.get('/api/training/gym-equipment', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const userResult = await pool.query(
+        'SELECT gym_id, role FROM users WHERE id = $1',
+        [req.session.userId]
+      );
+      const { gym_id: gymId, role } = userResult.rows[0] || {};
+
+      if (!gymId || !['admin', 'superadmin'].includes(role)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const result = await pool.query(
+        `SELECT me.*, 
+          COALESCE(gee.enabled, me.is_default) as enabled,
+          gee.id as gym_equipment_id
+         FROM master_equipment me
+         LEFT JOIN gym_enabled_equipment gee ON me.id = gee.equipment_id AND gee.gym_id = $1
+         ORDER BY me.category, me.name`,
+        [gymId]
+      );
+
+      res.json({ equipment: result.rows, gymId });
+    } catch (error: any) {
+      console.error('Error fetching gym equipment:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Toggle gym equipment enabled/disabled (admin only)
+  app.post('/api/training/gym-equipment/:equipmentId/toggle', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { equipmentId } = req.params;
+      const { enabled } = req.body;
+
+      const userResult = await pool.query(
+        'SELECT gym_id, role FROM users WHERE id = $1',
+        [req.session.userId]
+      );
+      const { gym_id: gymId, role } = userResult.rows[0] || {};
+
+      if (!gymId || !['admin', 'superadmin'].includes(role)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      await pool.query(
+        `INSERT INTO gym_enabled_equipment (gym_id, equipment_id, enabled)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (gym_id, equipment_id) DO UPDATE SET enabled = EXCLUDED.enabled`,
+        [gymId, equipmentId, enabled]
+      );
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error toggling equipment:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all exercises (for superadmin management)
+  app.get('/api/training/exercises', async (req, res) => {
+    try {
+      const { type, muscle, difficulty } = req.query;
+      
+      let query = 'SELECT * FROM exercises WHERE 1=1';
+      const params: any[] = [];
+
+      if (type) {
+        params.push(type);
+        query += ` AND type = $${params.length}`;
+      }
+      if (muscle) {
+        params.push(muscle);
+        query += ` AND (primary_muscle = $${params.length} OR $${params.length} = ANY(secondary_muscles))`;
+      }
+      if (difficulty) {
+        params.push(difficulty);
+        query += ` AND difficulty = $${params.length}`;
+      }
+
+      query += ' ORDER BY type, primary_muscle, name';
+
+      const result = await pool.query(query, params);
+      res.json({ exercises: result.rows });
+    } catch (error: any) {
+      console.error('Error fetching exercises:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==========================================
+  // END NEW TRAINING SYSTEM APIs
+  // ==========================================
+
+  // Workout Plan APIs (OLD - for backwards compatibility)
   
   // Get existing workout plan
   app.get('/api/diet-planner/workout-plan', async (req, res) => {
