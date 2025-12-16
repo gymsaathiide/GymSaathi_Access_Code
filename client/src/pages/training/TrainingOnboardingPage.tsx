@@ -116,22 +116,22 @@ export default function TrainingOnboardingPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#0f1419] text-white">
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-black/50 border-b border-white/5">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <button onClick={handleBack} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-semibold">Set your goal</h1>
+          <h1 className="text-base sm:text-lg font-semibold">Set your goal</h1>
           <div className="w-9" />
         </div>
       </header>
 
       {/* Progress Bar */}
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex gap-2">
           {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
-              className={`flex-1 h-1.5 rounded-full transition-all ${
+              className={`flex-1 h-1 sm:h-1.5 rounded-full transition-all ${
                 s <= step ? "bg-white" : "bg-white/20"
               }`}
             />
@@ -139,7 +139,7 @@ export default function TrainingOnboardingPage() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-28">
         {/* Step 1: Gender */}
         {step === 1 && (
           <div className="space-y-6">
@@ -231,7 +231,7 @@ export default function TrainingOnboardingPage() {
               <p className="text-white/60">Select the muscles you want to focus on</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mt-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 mt-6 sm:mt-8">
               {muscleGroups.map((muscle) => {
                 const isSelected = focusMuscles.includes(muscle.id);
                 return (
@@ -314,13 +314,13 @@ export default function TrainingOnboardingPage() {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f] to-transparent">
-        <div className="max-w-lg mx-auto flex gap-3">
+      <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f] to-transparent">
+        <div className="max-w-2xl mx-auto flex gap-2 sm:gap-3">
           {step > 1 && (
             <Button
               onClick={handleBack}
               variant="outline"
-              className="flex-1 py-6 border-white/20 bg-white/5 hover:bg-white/10"
+              className="flex-1 py-4 sm:py-6 border-white/20 bg-white/5 hover:bg-white/10 text-sm sm:text-base"
             >
               Previous
             </Button>
@@ -328,7 +328,7 @@ export default function TrainingOnboardingPage() {
           <Button
             onClick={handleNext}
             disabled={!canProceed() || saveProfileMutation.isPending}
-            className="flex-1 py-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50"
+            className="flex-1 py-4 sm:py-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 text-sm sm:text-base"
           >
             {saveProfileMutation.isPending
               ? "Saving..."

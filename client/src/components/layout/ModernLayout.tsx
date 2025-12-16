@@ -138,25 +138,24 @@ export function ModernLayout({ children }: ModernLayoutProps) {
               - mobile-first: full width with inner safe padding
               - larger screens: content constrained and centered with subtle horizontal gap when sidebar is expanded
           */}
-          <main className={`flex-1 overflow-auto bg-transparent p-5`}>
+          <main className={`flex-1 overflow-auto bg-transparent px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 pb-20 md:pb-6`}>
             <div
               className={`
                 max-w-[1400px] mx-auto min-h-[60vh]
                 transition-all duration-300 ease-in-out
-                ${sidebarOpen ? "lg:pl-6 lg:pr-6" : "lg:pl-4 lg:pr-4"}
               `}
             >
               {/* Content panel: edge-to-edge on mobile, centered and padded on larger screens */}
               <div
                 className={`
                   bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))]
-                  border border-slate-800/50 rounded-none sm:rounded-md
+                  border border-slate-800/50 rounded-lg sm:rounded-xl
                   shadow-[0_4px_20px_rgba(2,6,23,0.45)]
                   overflow-hidden
                 `}
               >
                 {/* Add a small inner padding wrapper so children don't touch edges on phones */}
-                <div className="w-full sm:px-4 sm:py-4">{children}</div>
+                <div className="w-full px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5">{children}</div>
               </div>
             </div>
           </main>

@@ -69,23 +69,23 @@ export default function TrainingStatsPage() {
   const totalMuscleWorkouts = muscleProgress.reduce((sum, m) => sum + parseInt(m.workout_count), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#0f1419] text-white pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#0f1419] text-white pb-24 md:pb-8">
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-black/50 border-b border-white/5">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/member/training">
               <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition">
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>
-            <h1 className="text-xl font-bold">Statistics</h1>
+            <h1 className="text-lg sm:text-xl font-bold">Statistics</h1>
           </div>
           <div className="w-9" />
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Weight Card */}
         <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-white/10 overflow-hidden">
           <CardContent className="p-6">
@@ -149,14 +149,14 @@ export default function TrainingStatsPage() {
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
           <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-cyan-400 mb-2">
-                <Clock className="w-5 h-5" />
-                <span className="text-sm">Time Spending</span>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 text-cyan-400 mb-1 sm:mb-2">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-xs sm:text-sm">Time Spending</span>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-lg sm:text-2xl font-bold">
                 {stats?.weeklyDurationMinutes
                   ? `${Math.floor(stats.weeklyDurationMinutes / 60)}h ${stats.weeklyDurationMinutes % 60}m`
                   : "0h 0m"}
@@ -164,15 +164,37 @@ export default function TrainingStatsPage() {
             </CardContent>
           </Card>
           <Card className="bg-white/5 border-white/10">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-orange-400 mb-2">
-                <TrendingUp className="w-5 h-5" />
-                <span className="text-sm">Wellness</span>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 text-orange-400 mb-1 sm:mb-2">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-xs sm:text-sm">Wellness</span>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-lg sm:text-2xl font-bold">
                 {stats?.weeklyWorkouts
                   ? `${Math.round((stats.weeklyWorkouts / 7) * 100)}%`
                   : "0%"}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10 hidden md:block">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 text-green-400 mb-1 sm:mb-2">
+                <Flame className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-xs sm:text-sm">Calories</span>
+              </div>
+              <div className="text-lg sm:text-2xl font-bold">
+                {stats?.weeklyCalories || 0}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10 hidden md:block">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 text-purple-400 mb-1 sm:mb-2">
+                <Target className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-xs sm:text-sm">Workouts</span>
+              </div>
+              <div className="text-lg sm:text-2xl font-bold">
+                {stats?.weeklyWorkouts || 0}
               </div>
             </CardContent>
           </Card>

@@ -183,14 +183,14 @@ export default function ActiveWorkoutPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
       {/* Header */}
-      <header className="px-4 py-4 flex items-center justify-between border-b border-white/5">
+      <header className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b border-white/5">
         <button
           onClick={() => setLocation("/member/training")}
           className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-semibold">{currentExercise.name}</h1>
+        <h1 className="text-base sm:text-lg font-semibold truncate max-w-[60%] text-center">{currentExercise.name}</h1>
         <button
           onClick={handleSkipExercise}
           className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"
@@ -200,29 +200,29 @@ export default function ActiveWorkoutPage() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-4 sm:py-8 max-w-2xl mx-auto w-full">
         {/* Video/Image Placeholder */}
-        <div className="w-full max-w-md aspect-video bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl mb-8 flex items-center justify-center">
-          <Dumbbell className="w-20 h-20 text-white/20" />
+        <div className="w-full max-w-md aspect-video bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl mb-4 sm:mb-8 flex items-center justify-center">
+          <Dumbbell className="w-14 h-14 sm:w-20 sm:h-20 text-white/20" />
         </div>
 
         {/* Timer Display */}
-        <div className="text-center mb-8">
-          <div className="text-6xl font-bold font-mono mb-4">
+        <div className="text-center mb-4 sm:mb-8">
+          <div className="text-4xl sm:text-6xl font-bold font-mono mb-3 sm:mb-4">
             {formatTime(elapsedSeconds)}
           </div>
-          <div className="flex items-center justify-center gap-8">
+          <div className="flex items-center justify-center gap-6 sm:gap-8">
             <div className="text-center">
-              <div className="text-sm text-white/50">Time Workout</div>
-              <div className="text-xl font-semibold">
+              <div className="text-xs sm:text-sm text-white/50">Time Workout</div>
+              <div className="text-base sm:text-xl font-semibold">
                 {currentExercise.duration_seconds
                   ? `${Math.ceil(currentExercise.duration_seconds / 60)}m`
                   : "N/A"}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-white/50">Exercise</div>
-              <div className="text-xl font-semibold">
+              <div className="text-xs sm:text-sm text-white/50">Exercise</div>
+              <div className="text-base sm:text-xl font-semibold">
                 {currentExercise.sets && currentExercise.reps
                   ? `${currentExercise.sets}x${currentExercise.reps}`
                   : "Timed"}
@@ -234,12 +234,12 @@ export default function ActiveWorkoutPage() {
         {/* Play/Pause Button */}
         <button
           onClick={() => setIsTimerRunning(!isTimerRunning)}
-          className="w-20 h-20 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center transition mb-8"
+          className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center transition mb-4 sm:mb-8"
         >
           {isTimerRunning ? (
-            <Pause className="w-8 h-8 text-white" />
+            <Pause className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           ) : (
-            <Play className="w-8 h-8 text-white ml-1" />
+            <Play className="w-6 h-6 sm:w-8 sm:h-8 text-white ml-1" />
           )}
         </button>
 
@@ -256,18 +256,18 @@ export default function ActiveWorkoutPage() {
       </div>
 
       {/* Bottom Section */}
-      <div className="px-4 pb-8 space-y-4">
+      <div className="px-4 sm:px-6 pb-6 sm:pb-8 space-y-3 sm:space-y-4 max-w-2xl mx-auto w-full">
         {/* Swipe for more exercises */}
         <button
           onClick={() => setShowExerciseList(!showExerciseList)}
-          className="w-full flex items-center justify-center gap-2 py-3 text-white/50"
+          className="w-full flex items-center justify-center gap-2 py-2 sm:py-3 text-white/50 text-sm sm:text-base"
         >
-          <ChevronUp className={`w-5 h-5 transition ${showExerciseList ? "rotate-180" : ""}`} />
-          <span>Swipe for more episodes</span>
+          <ChevronUp className={`w-4 h-4 sm:w-5 sm:h-5 transition ${showExerciseList ? "rotate-180" : ""}`} />
+          <span>View all exercises</span>
         </button>
 
         {showExerciseList && (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="space-y-2 max-h-40 sm:max-h-48 overflow-y-auto">
             {exercises.map((exercise, index) => (
               <button
                 key={exercise.id}
@@ -276,7 +276,7 @@ export default function ActiveWorkoutPage() {
                   setElapsedSeconds(0);
                   setIsTimerRunning(false);
                 }}
-                className={`w-full p-3 rounded-xl flex items-center justify-between transition ${
+                className={`w-full p-2.5 sm:p-3 rounded-lg sm:rounded-xl flex items-center justify-between transition ${
                   index === currentExerciseIndex
                     ? "bg-orange-500/20 border border-orange-500/50"
                     : exercise.is_completed
@@ -284,9 +284,9 @@ export default function ActiveWorkoutPage() {
                     : "bg-white/5 border border-white/10"
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold ${
                       exercise.is_completed
                         ? "bg-green-500 text-white"
                         : index === currentExerciseIndex
@@ -296,11 +296,11 @@ export default function ActiveWorkoutPage() {
                   >
                     {exercise.is_completed ? <Check className="w-3 h-3" /> : index + 1}
                   </div>
-                  <span className={exercise.is_completed ? "text-green-400" : "text-white"}>
+                  <span className={`text-sm sm:text-base truncate ${exercise.is_completed ? "text-green-400" : "text-white"}`}>
                     {exercise.name}
                   </span>
                 </div>
-                <span className="text-sm text-white/50">
+                <span className="text-xs sm:text-sm text-white/50 flex-shrink-0">
                   {exercise.sets && exercise.reps
                     ? `${exercise.sets}x${exercise.reps}`
                     : exercise.duration_seconds
@@ -316,16 +316,16 @@ export default function ActiveWorkoutPage() {
         <Button
           onClick={handleCompleteExercise}
           disabled={updateExerciseMutation.isPending}
-          className="w-full py-6 text-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-2xl"
+          className="w-full py-4 sm:py-6 text-sm sm:text-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl sm:rounded-2xl"
         >
-          <Check className="w-5 h-5 mr-2" />
+          <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           {currentExerciseIndex === exercises.length - 1
             ? "Complete Workout"
             : "Complete & Next"}
         </Button>
 
         {/* Progress indicator */}
-        <div className="flex items-center justify-center gap-2 text-sm text-white/50">
+        <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-white/50">
           <span>
             Exercise {currentExerciseIndex + 1} of {exercises.length}
           </span>
