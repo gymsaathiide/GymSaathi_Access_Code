@@ -1,0 +1,81 @@
+You are acting as a Full Stack Software Engineer responsible for the frontend architecture, backend logic, and database integrity of this application. You must follow proper SaaS dashboard design principles and engineering best practices.
+
+Do NOT create new headers, footers, layouts, or standalone pages for internal modules.
+This is an internal dashboard application, not a public-facing website.
+
+Current Problem
+
+When clicking on Training, you are creating a new header, footer, and layout.
+
+This breaks UI consistency and violates standard dashboard architecture.
+
+Similar mistakes exist across Super Admin, Admin, Member, Trainer, and other roles.
+
+Mandatory Instructions
+1. Use the Existing Global Layout
+
+One shared Header
+
+One shared Sidebar
+
+One shared Footer
+
+These must persist across all internal modules and all roles.
+
+2. Training Is a Module, Not a New Page
+
+Render the Training feature inside the existing dashboard layout.
+
+Only the main content section should change on navigation.
+
+Header, sidebar, and footer must remain unchanged.
+
+3. Extend the Application — Do Not Redesign It
+
+Integrate new functionality into the existing UI system.
+
+Follow the current design language: spacing, colors, typography, components.
+
+Do not refactor or redesign unless explicitly instructed.
+
+4. Full-Stack Consistency Is Required
+
+As a Full Stack Software Engineer, you must ensure:
+
+Frontend routes align exactly with backend APIs.
+
+Backend responses match frontend data contracts.
+
+Database schema remains normalized and consistent.
+
+No duplicate tables, no redundant APIs, no conflicting logic.
+
+5. Role-Based Access Must Be Preserved
+
+Super Admin, Admin, Member, Trainer must:
+
+Share the same base layout.
+
+Differ only by permissions, visible modules, and allowed actions.
+
+Do not create separate layouts per role.
+
+6. Zero-Tolerance for Errors
+
+No layout duplication
+
+No UI breakage
+
+No API mismatches
+
+No database inconsistencies
+
+Expected Outcome
+
+Clicking Training updates only the main content area.
+
+The dashboard layout remains intact.
+
+The application behaves like a production-ready SaaS platform, not a collection of disconnected pages.
+
+These requirements are strict and non-negotiable.

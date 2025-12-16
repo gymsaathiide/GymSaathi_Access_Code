@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import {
   ArrowLeft,
@@ -14,7 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -112,27 +112,9 @@ export default function GenerateWorkoutPage() {
     return sum + 3;
   }, 0);
 
-  const getSectionIcon = (type: string) => {
-    switch (type) {
-      case "mobility": return Activity;
-      case "strength": return Dumbbell;
-      case "cardio": return Zap;
-      default: return Dumbbell;
-    }
-  };
-
-  const getSectionColor = (type: string) => {
-    switch (type) {
-      case "mobility": return "from-teal-400 to-cyan-500";
-      case "strength": return "from-blue-400 to-indigo-500";
-      case "cardio": return "from-orange-400 to-red-500";
-      default: return "from-gray-400 to-gray-500";
-    }
-  };
-
   if (generateMutation.isPending && exercises.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#0f1419] flex items-center justify-center">
+      <div className="flex items-center justify-center p-8">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto" />
           <p className="text-white/60">Generating your workout...</p>
@@ -142,9 +124,9 @@ export default function GenerateWorkoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#0f1419] text-white pb-32">
+    <div className="space-y-4 pb-32">
       {/* Header Card */}
-      <div className="bg-gradient-to-br from-rose-300/90 to-rose-400/90 rounded-b-3xl overflow-hidden">
+      <div className="bg-gradient-to-br from-rose-300/90 to-rose-400/90 rounded-2xl overflow-hidden mx-4 sm:mx-6">
         <div className="px-4 py-4 flex items-center justify-between">
           <button
             onClick={() => setLocation("/member/training")}
@@ -156,23 +138,23 @@ export default function GenerateWorkoutPage() {
           <div className="w-9" />
         </div>
 
-        <div className="px-6 pb-8 pt-4">
-          <h2 className="text-3xl font-bold text-rose-900 capitalize mb-2">
+        <div className="px-6 pb-6 pt-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-rose-900 capitalize mb-1">
             {targetMuscle}
           </h2>
-          <h2 className="text-3xl font-bold text-rose-900">Workout</h2>
-          <div className="flex items-center gap-2 mt-4 text-rose-800">
-            <div className="w-5 h-5 rounded bg-rose-200/50" />
+          <h2 className="text-2xl sm:text-3xl font-bold text-rose-900">Workout</h2>
+          <div className="flex items-center gap-2 mt-3 text-rose-800 text-sm">
+            <div className="w-4 h-4 rounded bg-rose-200/50" />
             <span>{exercises.length} Exercises</span>
           </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      <div className="px-4 sm:px-6 space-y-4 sm:space-y-6">
         {/* Description */}
         <div>
           <h3 className="text-sm text-white/50 mb-2">Description</h3>
-          <p className="text-white/80">
+          <p className="text-white/80 text-sm sm:text-base">
             A targeted workout focusing on your {targetMuscle} muscles. This session includes
             mobility exercises to warm up, strength training for muscle development
             {includeCardio ? ", and cardio for fat burning" : ""}.
@@ -183,7 +165,7 @@ export default function GenerateWorkoutPage() {
         <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
           <div className="flex items-center gap-3">
             <Zap className="w-5 h-5 text-orange-400" />
-            <span>Include Cardio Finisher</span>
+            <span className="text-sm sm:text-base">Include Cardio Finisher</span>
           </div>
           <Switch
             checked={includeCardio}
@@ -200,9 +182,9 @@ export default function GenerateWorkoutPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-white/60" />
-                <span className="text-white/60">Estimated Time</span>
+                <span className="text-white/60 text-sm sm:text-base">Estimated Time</span>
               </div>
-              <span className="text-xl font-bold">{estimatedTime} min</span>
+              <span className="text-lg sm:text-xl font-bold">{estimatedTime} min</span>
             </div>
           </CardContent>
         </Card>
@@ -219,13 +201,13 @@ export default function GenerateWorkoutPage() {
 
           {/* Mobility Section */}
           {mobilityExercises.length > 0 && (
-            <Collapsible open={mobilityOpen} onOpenChange={setMobilityOpen} className="mb-4">
+            <Collapsible open={mobilityOpen} onOpenChange={setMobilityOpen} className="mb-3">
               <CollapsibleTrigger className="w-full">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-teal-500/10 border border-teal-500/20">
                   <div className="flex items-center gap-2">
                     <Activity className="w-5 h-5 text-teal-400" />
                     <span className="font-semibold text-teal-400">Mobility</span>
-                    <Badge variant="outline" className="text-teal-400 border-teal-400/30">
+                    <Badge variant="outline" className="text-teal-400 border-teal-400/30 text-xs">
                       {mobilityExercises.length}
                     </Badge>
                   </div>
@@ -242,13 +224,13 @@ export default function GenerateWorkoutPage() {
 
           {/* Strength Section */}
           {strengthExercises.length > 0 && (
-            <Collapsible open={strengthOpen} onOpenChange={setStrengthOpen} className="mb-4">
+            <Collapsible open={strengthOpen} onOpenChange={setStrengthOpen} className="mb-3">
               <CollapsibleTrigger className="w-full">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
                   <div className="flex items-center gap-2">
                     <Dumbbell className="w-5 h-5 text-blue-400" />
                     <span className="font-semibold text-blue-400">Strength</span>
-                    <Badge variant="outline" className="text-blue-400 border-blue-400/30">
+                    <Badge variant="outline" className="text-blue-400 border-blue-400/30 text-xs">
                       {strengthExercises.length}
                     </Badge>
                   </div>
@@ -265,13 +247,13 @@ export default function GenerateWorkoutPage() {
 
           {/* Cardio Section */}
           {cardioExercises.length > 0 && (
-            <Collapsible open={cardioOpen} onOpenChange={setCardioOpen} className="mb-4">
+            <Collapsible open={cardioOpen} onOpenChange={setCardioOpen} className="mb-3">
               <CollapsibleTrigger className="w-full">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
                   <div className="flex items-center gap-2">
                     <Zap className="w-5 h-5 text-orange-400" />
                     <span className="font-semibold text-orange-400">Cardio</span>
-                    <Badge variant="outline" className="text-orange-400 border-orange-400/30">
+                    <Badge variant="outline" className="text-orange-400 border-orange-400/30 text-xs">
                       {cardioExercises.length}
                     </Badge>
                   </div>
@@ -289,11 +271,11 @@ export default function GenerateWorkoutPage() {
       </div>
 
       {/* Bottom Action Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f] to-transparent">
+      <div className="fixed bottom-16 md:bottom-4 left-0 right-0 p-4 bg-gradient-to-t from-[hsl(220,26%,8%)] via-[hsl(220,26%,8%)] to-transparent">
         <div className="max-w-lg mx-auto space-y-3">
           <Button
             onClick={handleStartWorkout}
-            className="w-full py-6 text-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-2xl"
+            className="w-full py-5 sm:py-6 text-base sm:text-lg bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl sm:rounded-2xl"
           >
             <Play className="w-5 h-5 mr-2" />
             Start Workout
@@ -322,12 +304,12 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
 
   return (
     <Card className="bg-slate-800/50 border-white/10 overflow-hidden">
-      <CardContent className="p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-orange-500" />
-          <div>
-            <h4 className="font-semibold text-white">{exercise.name}</h4>
-            <p className="text-sm text-white/50">
+      <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+          <div className="min-w-0">
+            <h4 className="font-semibold text-white text-sm sm:text-base truncate">{exercise.name}</h4>
+            <p className="text-xs sm:text-sm text-white/50">
               {exercise.sets && exercise.reps
                 ? `${exercise.sets} × ${exercise.reps}`
                 : exercise.duration_seconds
@@ -336,8 +318,8 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
             </p>
           </div>
         </div>
-        <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center">
-          <Play className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500 flex items-center justify-center flex-shrink-0">
+          <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </div>
       </CardContent>
     </Card>

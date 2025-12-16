@@ -12,7 +12,6 @@ import {
   Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
 type Step = 1 | 2 | 3 | 4;
@@ -113,214 +112,207 @@ export default function TrainingOnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] to-[#0f1419] text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-black/50 border-b border-white/5">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-          <button onClick={handleBack} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-base sm:text-lg font-semibold">Set your goal</h1>
-          <div className="w-9" />
-        </div>
-      </header>
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 pb-32">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <button onClick={handleBack} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h1 className="text-lg sm:text-xl font-bold">Set Your Goal</h1>
+      </div>
 
       {/* Progress Bar */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex gap-2">
-          {[1, 2, 3, 4].map((s) => (
-            <div
-              key={s}
-              className={`flex-1 h-1 sm:h-1.5 rounded-full transition-all ${
-                s <= step ? "bg-white" : "bg-white/20"
-              }`}
-            />
-          ))}
-        </div>
+      <div className="flex gap-2">
+        {[1, 2, 3, 4].map((s) => (
+          <div
+            key={s}
+            className={`flex-1 h-1 sm:h-1.5 rounded-full transition-all ${
+              s <= step ? "bg-orange-500" : "bg-white/20"
+            }`}
+          />
+        ))}
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-28">
-        {/* Step 1: Gender */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">What's your gender?</h2>
-              <p className="text-white/60">This helps us personalize your experience</p>
-            </div>
-
-            <div className="space-y-3 mt-8">
-              {[
-                { id: "male", label: "Male", icon: User },
-                { id: "female", label: "Female", icon: User },
-                { id: "other", label: "Other", icon: Users },
-                { id: "prefer_not_to_say", label: "Prefer not to say", icon: User },
-              ].map((option) => {
-                const Icon = option.icon;
-                const isSelected = gender === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() => setGender(option.id as Gender)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
-                      isSelected
-                        ? "border-orange-500 bg-orange-500/10"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className="w-5 h-5 text-white/60" />
-                      <span className="font-medium">{option.label}</span>
-                    </div>
-                    {isSelected && (
-                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
-                        <Check className="w-4 h-4" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+      {/* Step 1: Gender */}
+      {step === 1 && (
+        <div className="space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-xl sm:text-2xl font-bold">What's your gender?</h2>
+            <p className="text-white/60 text-sm sm:text-base">This helps us personalize your experience</p>
           </div>
-        )}
 
-        {/* Step 2: Goal */}
-        {step === 2 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">What you goals Exercise?</h2>
-              <p className="text-white/60">Let's define you goals and will help you to achieve it</p>
-            </div>
-
-            <div className="space-y-3 mt-8">
-              {[
-                { id: "lose_weight", label: "Loss weight", desc: "Burn Calories & Get Ideal boody", icon: Flame },
-                { id: "gain_muscle", label: "Gain Muscle", desc: "Build mass & Strenght", icon: Dumbbell },
-                { id: "get_fitter", label: "Get Fitter", desc: "Feel more healty", icon: Heart },
-              ].map((option) => {
-                const Icon = option.icon;
-                const isSelected = goal === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() => setGoal(option.id as Goal)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
-                      isSelected
-                        ? "border-orange-500 bg-orange-500/10"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="flex-1 text-left">
-                      <div className="font-semibold">{option.label}</div>
-                      <div className="text-sm text-white/50">{option.desc}</div>
+          <div className="space-y-3 mt-6">
+            {[
+              { id: "male", label: "Male", icon: User },
+              { id: "female", label: "Female", icon: User },
+              { id: "other", label: "Other", icon: Users },
+              { id: "prefer_not_to_say", label: "Prefer not to say", icon: User },
+            ].map((option) => {
+              const Icon = option.icon;
+              const isSelected = gender === option.id;
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => setGender(option.id as Gender)}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
+                    isSelected
+                      ? "border-orange-500 bg-orange-500/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5 text-white/60" />
+                    <span className="font-medium">{option.label}</span>
+                  </div>
+                  {isSelected && (
+                    <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                      <Check className="w-4 h-4" />
                     </div>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-orange-500' : 'bg-white/10'}`}>
-                      {isSelected && <Check className="w-4 h-4" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Step 3: Focus Areas */}
-        {step === 3 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">Focus Areas</h2>
-              <p className="text-white/60">Select the muscles you want to focus on</p>
-            </div>
+      {/* Step 2: Goal */}
+      {step === 2 && (
+        <div className="space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-xl sm:text-2xl font-bold">What's your exercise goal?</h2>
+            <p className="text-white/60 text-sm sm:text-base">Let's define your goals and help you achieve them</p>
+          </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 mt-6 sm:mt-8">
-              {muscleGroups.map((muscle) => {
-                const isSelected = focusMuscles.includes(muscle.id);
-                return (
-                  <button
-                    key={muscle.id}
-                    onClick={() => toggleMuscle(muscle.id)}
-                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                      isSelected
-                        ? "border-orange-500 bg-orange-500/10"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
-                    }`}
+          <div className="space-y-3 mt-6">
+            {[
+              { id: "lose_weight", label: "Lose Weight", desc: "Burn calories & get ideal body", icon: Flame },
+              { id: "gain_muscle", label: "Gain Muscle", desc: "Build mass & strength", icon: Dumbbell },
+              { id: "get_fitter", label: "Get Fitter", desc: "Feel more healthy", icon: Heart },
+            ].map((option) => {
+              const Icon = option.icon;
+              const isSelected = goal === option.id;
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => setGoal(option.id as Goal)}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
+                    isSelected
+                      ? "border-orange-500 bg-orange-500/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold">{option.label}</div>
+                    <div className="text-sm text-white/50">{option.desc}</div>
+                  </div>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-orange-500' : 'bg-white/10'}`}>
+                    {isSelected && <Check className="w-4 h-4" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Focus Areas */}
+      {step === 3 && (
+        <div className="space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-xl sm:text-2xl font-bold">Focus Areas</h2>
+            <p className="text-white/60 text-sm sm:text-base">Select the muscles you want to focus on</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 mt-6">
+            {muscleGroups.map((muscle) => {
+              const isSelected = focusMuscles.includes(muscle.id);
+              return (
+                <button
+                  key={muscle.id}
+                  onClick={() => toggleMuscle(muscle.id)}
+                  className={`p-3 sm:p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 relative ${
+                    isSelected
+                      ? "border-orange-500 bg-orange-500/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: muscle.color + "30" }}
                   >
+                    <Target className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: muscle.color }} />
+                  </div>
+                  <span className="text-xs sm:text-sm font-medium">{muscle.label}</span>
+                  {isSelected && (
+                    <div className="absolute top-1 right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-orange-500 flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Fitness Level */}
+      {step === 4 && (
+        <div className="space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-xl sm:text-2xl font-bold">What's your fitness level?</h2>
+            <p className="text-white/60 text-sm sm:text-base">We'll customize training based on your current condition</p>
+          </div>
+
+          <div className="space-y-3 mt-6">
+            {[
+              { id: "beginner", label: "Beginner", desc: "New to fitness", color: "#4ECDC4" },
+              { id: "intermediate", label: "Intermediate", desc: "6+ months experience", color: "#FFA500" },
+              { id: "expert", label: "Expert", desc: "Advanced athlete", color: "#2ECDA7" },
+            ].map((level) => {
+              const isSelected = fitnessLevel === level.id;
+              return (
+                <button
+                  key={level.id}
+                  onClick={() => setFitnessLevel(level.id as FitnessLevel)}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
+                    isSelected
+                      ? "border-orange-500 bg-orange-500/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: muscle.color + "30" }}
+                      style={{ backgroundColor: level.color + "30" }}
                     >
-                      <Target className="w-5 h-5" style={{ color: muscle.color }} />
+                      <Dumbbell className="w-5 h-5" style={{ color: level.color }} />
                     </div>
-                    <span className="text-sm font-medium">{muscle.label}</span>
-                    {isSelected && (
-                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
-                        <Check className="w-3 h-3" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Fitness Level */}
-        {step === 4 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">What's Your fitness goal</h2>
-              <p className="text-white/60">The following is the training we choose based on your current condition</p>
-            </div>
-
-            <div className="space-y-3 mt-8">
-              {[
-                { id: "beginner", label: "Beginner", desc: "New to fitness", color: "#4ECDC4" },
-                { id: "intermediate", label: "Intermediate", desc: "6+ months experience", color: "#FFA500" },
-                { id: "expert", label: "Expert", desc: "Advanced athlete", color: "#2ECDA7" },
-              ].map((level) => {
-                const isSelected = fitnessLevel === level.id;
-                return (
-                  <button
-                    key={level.id}
-                    onClick={() => setFitnessLevel(level.id as FitnessLevel)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
-                      isSelected
-                        ? "border-orange-500 bg-orange-500/10"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: level.color + "30" }}
-                      >
-                        <Dumbbell className="w-5 h-5" style={{ color: level.color }} />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-semibold">{level.label}</div>
-                        <div className="text-sm text-white/50">{level.desc}</div>
-                      </div>
+                    <div className="text-left">
+                      <div className="font-semibold">{level.label}</div>
+                      <div className="text-sm text-white/50">{level.desc}</div>
                     </div>
-                    {isSelected && (
-                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
-                        <Check className="w-4 h-4" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                  {isSelected && (
+                    <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                      <Check className="w-4 h-4" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Bottom Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f] to-transparent">
-        <div className="max-w-2xl mx-auto flex gap-2 sm:gap-3">
+      <div className="fixed bottom-16 md:bottom-4 left-0 right-0 p-4 bg-gradient-to-t from-[hsl(220,26%,8%)] via-[hsl(220,26%,8%)] to-transparent">
+        <div className="max-w-2xl mx-auto flex gap-3">
           {step > 1 && (
             <Button
               onClick={handleBack}
               variant="outline"
-              className="flex-1 py-4 sm:py-6 border-white/20 bg-white/5 hover:bg-white/10 text-sm sm:text-base"
+              className="flex-1 py-5 sm:py-6 border-white/20 bg-white/5 hover:bg-white/10 text-sm sm:text-base"
             >
               Previous
             </Button>
@@ -328,7 +320,7 @@ export default function TrainingOnboardingPage() {
           <Button
             onClick={handleNext}
             disabled={!canProceed() || saveProfileMutation.isPending}
-            className="flex-1 py-4 sm:py-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 text-sm sm:text-base"
+            className="flex-1 py-5 sm:py-6 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 text-sm sm:text-base"
           >
             {saveProfileMutation.isPending
               ? "Saving..."
