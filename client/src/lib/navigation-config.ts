@@ -92,17 +92,26 @@ export function getNavItemsByRole(role?: string): NavItem[] {
   }
 }
 
-export function getBottomNavItems(role?: string): NavItem[] {
+export interface BottomNavConfig {
+  primaryItems: NavItem[];
+  overflowItems: NavItem[];
+  hasOverflow: boolean;
+}
+
+export function getBottomNavConfig(role?: string): BottomNavConfig {
   const allItems = getNavItemsByRole(role);
+  
   if (allItems.length <= 5) {
-    return allItems;
+    return {
+      primaryItems: allItems,
+      overflowItems: [],
+      hasOverflow: false,
+    };
   }
-  const primaryItems = allItems.slice(0, 4);
-  const rolePrefix = role === "superadmin" ? "" : `/${role}`;
-  primaryItems.push({
-    title: "More",
-    url: `${rolePrefix}/more`,
-    icon: Menu,
-  });
-  return primaryItems;
+  
+  return {
+    primaryItems: allItems.slice(0, 4),
+    overflowItems: allItems.slice(4),
+    hasOverflow: true,
+  };
 }
