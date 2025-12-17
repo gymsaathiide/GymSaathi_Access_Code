@@ -154,9 +154,9 @@ export function ModernLayout({ children }: ModernLayoutProps) {
             </div>
           </main>
 
-          {/* Mobile bottom nav */}
+          {/* Mobile & Tablet bottom nav - shows below 1024px (lg breakpoint) */}
           {showMobileNav && (
-            <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden pointer-events-auto">
+            <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden pointer-events-auto">
               <MobileBottomNav
                 currentPath={location}
                 onNavigate={(path) => navigate(path)}

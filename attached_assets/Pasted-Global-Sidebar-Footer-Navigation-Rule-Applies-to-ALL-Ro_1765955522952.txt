@@ -1,0 +1,130 @@
+Global Sidebar & Footer Navigation Rule
+
+(Applies to ALL Roles and ALL Sections)
+
+This navigation behavior must be implemented uniformly across the entire application, without exception.
+
+Roles Covered (Mandatory)
+
+Super Admin
+
+Admin
+
+Trainer
+
+Member
+
+No role should have different navigation behavior unless explicitly specified later.
+
+Device-Based Navigation Behavior
+1. Desktop View (≥ 1024px)
+
+Sidebar must be visible.
+
+Sidebar appears on the left side.
+
+All navigation items remain in the sidebar.
+
+Footer navigation must NOT be visible.
+
+Main content adjusts correctly next to the sidebar.
+
+This applies to:
+
+Super Admin dashboard
+
+Admin dashboard
+
+Trainer dashboard
+
+Member dashboard
+
+All internal pages (analytics, classes, diet planner, shop, etc.)
+
+2. Tablet View (≥ 768px and < 1024px)
+
+Sidebar must be completely hidden.
+
+Sidebar must not render at all (no collapse, no toggle).
+
+All sidebar navigation items must appear only in the footer menu.
+
+Footer menu:
+
+Fixed at the bottom
+
+Shows icons + labels
+
+Highlights active section
+
+Content uses full-width layout.
+
+Applies to every role and every page.
+
+3. Mobile View (< 768px)
+
+Sidebar must remain hidden.
+
+Sidebar content must be available only via footer menu.
+
+Footer menu must:
+
+Be fixed at the bottom
+
+Be touch-optimized
+
+Show active state clearly
+
+No horizontal scroll
+
+No content overlap with footer
+
+Single Navigation Source (Critical Requirement)
+
+Sidebar and footer must use one shared navigation configuration.
+
+No duplicate menus for:
+
+Super Admin
+
+Admin
+
+Trainer
+
+Member
+
+Role-based permissions should filter items from the same config, not separate menus.
+
+Example:
+
+navItems → filter by role → render as:
+- Sidebar (desktop)
+- Footer menu (tablet/mobile)
+
+Technical & UX Constraints (Non-Negotiable)
+
+Sidebar must never appear on tablet or mobile.
+
+Footer menu must never appear on desktop.
+
+No layout shifting or flickering on resize.
+
+Navigation must stay consistent across:
+
+Login → Dashboard → Internal pages
+
+Behavior must be tested on:
+
+All roles
+
+All screen sizes
+
+Acceptance Criteria
+
+Same navigation experience for all roles based solely on screen size.
+
+Zero UI duplication.
+
+Zero alignment issues.
+
+Zero navigation mismatch between sidebar and footer.
