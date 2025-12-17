@@ -29,7 +29,6 @@ export function ModernLayout({ children }: ModernLayoutProps) {
     };
 
     window.addEventListener("resize", handleResize);
-    // Check immediately in case we're already at desktop size
     handleResize();
 
     return () => {
@@ -54,26 +53,24 @@ export function ModernLayout({ children }: ModernLayoutProps) {
     user?.role === "trainer" ||
     user?.role === "member";
 
-  /**
-   * Layout behaviour:
-   * - Desktop (>=1024): Sidebar is visible (expand/collapse) and content sits in a max-width centered column.
-   * - Tablet (768-1023): Sidebar collapses to a slim rail; clicking opens overlay.
-   * - Mobile (<768): Sidebar is full-screen overlay when opened; header shows menu button.
-   *
-   * CSS is expressed with Tailwind utility classes and a few helper classes for smoother transitions.
-   */
-
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[hsl(220,26%,8%)] to-[hsl(220,26%,12%)] text-slate-100 antialiased">
-      {/* Root grid: left rail (sidebar) + content */}
-      <div className="relative flex h-full w-full">
-        {/* Desktop Sidebar column (kept in DOM for accessibility) */}
+    <div
+      className="
+        min-h-screen w-full
+        bg-[radial-gradient(circle_at_top_left,rgba(255,140,0,0.18),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.14),transparent_55%),#050814]
+        text-slate-100 antialiased
+      "
+    >
+      <div className="relative flex min-h-screen w-full">
+        {/* Desktop sidebar */}
         <aside
           aria-hidden={!sidebarOpen && !mobileMenuOpen}
           className={`
-            hidden lg:flex flex-col z-20
-            transition-all duration-300 ease-in-out
-            ${sidebarOpen ? "w-64" : "w-16"}
+            hidden lg:flex flex-col z-30
+            bg-[rgba(5,8,18,0.98)]
+            shadow-[0_0_50px_rgba(0,0,0,0.9)]
+            transition-[width] duration-300 ease-in-out
+            ${sidebarOpen ? "w-72" : "w-20"}
           `}
         >
           <ModernSidebar
@@ -84,12 +81,7 @@ export function ModernLayout({ children }: ModernLayoutProps) {
           />
         </aside>
 
-        {/* Tablet / Mobile overlay sidebar */}
-        {/* Visible on md and below as overlay; when mobileMenuOpen=true it covers content */}
-        {/*
-          - The overlay uses a full-screen fixed container on small screens.
-          - We keep it positioned above content (z-40) and animate opacity/transform.
-        */}
+        {/* Mobile / tablet overlay sidebar */}
         <div
           className={`
             fixed inset-0 z-40 md:hidden transition-opacity duration-200
@@ -101,10 +93,16 @@ export function ModernLayout({ children }: ModernLayoutProps) {
             role="button"
             aria-label="Close menu"
             onClick={() => setMobileMenuOpen(false)}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           />
           <div
-            className={`absolute left-0 top-0 bottom-0 w-80 bg-[rgba(6,8,12,0.96)] shadow-xl transform transition-transform duration-300 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
+            className={`
+              absolute left-0 top-0 bottom-0 w-72
+              bg-[rgba(5,8,18,0.98)]
+              shadow-[0_0_50px_rgba(0,0,0,0.9)]
+              transform transition-transform duration-300
+              ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+            `}
           >
             <ModernSidebar
               isOpen={true}
@@ -115,14 +113,21 @@ export function ModernLayout({ children }: ModernLayoutProps) {
           </div>
         </div>
 
-        {/* Main content column */}
+        {/* Main area */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Header — compact and consistent */}
-          <header className="sticky top-0 z-30 backdrop-blur-sm bg-[rgba(10,14,23,0.85)] border-b border-slate-800/60 shadow-sm p-5">
-            <div className="max-w-[1400px] mx-auto px-3  lg:px-6">
+          {/* Header */}
+          <header
+            className="
+              sticky top-0 z-20
+              backdrop-blur-xl
+              bg-[rgba(7,10,22,0.92)]
+              border-b border-slate-800/70
+              shadow-[0_18px_40px_rgba(15,23,42,0.85)]
+            "
+          >
+            <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
               <ModernHeader
                 onMenuClick={() => {
-                  // On small screens open mobile overlay, on large screens toggle collapse
                   if (window.innerWidth < 768) {
                     setMobileMenuOpen(true);
                   } else {
@@ -134,33 +139,22 @@ export function ModernLayout({ children }: ModernLayoutProps) {
             </div>
           </header>
 
-          {/* Top-level content area:
-              - mobile-first: full width with inner safe padding
-              - larger screens: content constrained and centered with subtle horizontal gap when sidebar is expanded
-          */}
-          <main className={`flex-1 overflow-auto bg-transparent px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 pb-20 md:pb-6`}>
-            <div
-              className={`
-                max-w-[1400px] mx-auto min-h-[60vh]
-                transition-all duration-300 ease-in-out
-              `}
-            >
-              {/* Content panel: edge-to-edge on mobile, centered and padded on larger screens */}
+          {/* Content – no padding on main, no padding on board */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="max-w-[1440px] mx-auto min-h-[60vh]">
               <div
-                className={`
-                  bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))]
-                  border border-slate-800/50 rounded-lg sm:rounded-xl
-                  shadow-[0_4px_20px_rgba(2,6,23,0.45)]
-                  overflow-hidden
-                `}
+                className="
+                
+                  bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.06),transparent_55%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(15,23,42,0.96))]
+                  shadow-[0_40px_120px_rgba(0,0,0,0.9)]
+                "
               >
-                {/* Add a small inner padding wrapper so children don't touch edges on phones */}
-                <div className="w-full px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5">{children}</div>
+                {children}
               </div>
             </div>
           </main>
 
-          {/* Mobile bottom nav (sticky) */}
+          {/* Mobile bottom nav */}
           {showMobileNav && (
             <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden pointer-events-auto">
               <MobileBottomNav
