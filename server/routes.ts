@@ -7039,6 +7039,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============= TRAINER ATTENDANCE ROUTES =============
+
+  // Trainer: Check in/out (self)
+  app.post('/api/trainer/attendance', requireRole('trainer'), async (req, res) => {
+    try {
+      const attendanceSchema = z.object({
+        action: z.enum(['checkIn', 'checkOut']),
+      });
+
+      const validationResult = attendanceSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        const error = fromZodError(validationResult.error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      const { action } = validationResult.data;
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+      if (!trainer) {
+        return res.status(404).json({ error: 'Trainer profile not found' });
+      }
+
+      const attendance = await storage.markTrainerAttendance(user.gymId, trainer.id, action, 'manual');
+      res.status(201).json(attendance);
+    } catch (error: any) {
+      console.error('Error marking trainer attendance:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Trainer: Get own active check-in
+  app.get('/api/trainer/attendance/my-checkin', requireRole('trainer'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+      if (!trainer) {
+        return res.status(404).json({ error: 'Trainer profile not found' });
+      }
+
+      const activeCheckIn = await storage.getTrainerActiveCheckIn(trainer.id);
+      res.json(activeCheckIn);
+    } catch (error: any) {
+      console.error('Error fetching trainer\'s active check-in:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Trainer: Get own attendance history
+  app.get('/api/trainer/attendance/history', requireRole('trainer'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.userId, user.id)).limit(1).then(rows => rows[0]);
+      if (!trainer) {
+        return res.status(404).json({ error: 'Trainer profile not found' });
+      }
+
+      const history = await storage.getTrainerAttendanceHistory(trainer.id);
+      res.json(history);
+    } catch (error: any) {
+      console.error('Error fetching trainer attendance history:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin: Get today's trainer attendance
+  app.get('/api/admin/trainer-attendance/today', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const attendance = await storage.getTodayTrainerAttendance(user.gymId);
+      res.json(attendance);
+    } catch (error: any) {
+      console.error('Error fetching today\'s trainer attendance:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin: Manual check-out for member
+  app.post('/api/admin/attendance/checkout/member/:memberId', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const member = await db!.select().from(schema.members).where(eq(schema.members.id, req.params.memberId)).limit(1).then(rows => rows[0]);
+      if (!member || member.gymId !== user.gymId) {
+        return res.status(404).json({ error: 'Member not found or does not belong to your gym' });
+      }
+
+      const result = await storage.adminCheckOutMember(user.gymId, req.params.memberId);
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error during admin check-out for member:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Admin: Manual check-out for trainer
+  app.post('/api/admin/attendance/checkout/trainer/:trainerId', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const trainer = await db!.select().from(schema.trainers).where(eq(schema.trainers.id, req.params.trainerId)).limit(1).then(rows => rows[0]);
+      if (!trainer || trainer.gymId !== user.gymId) {
+        return res.status(404).json({ error: 'Trainer not found or does not belong to your gym' });
+      }
+
+      const result = await storage.adminCheckOutTrainer(user.gymId, req.params.trainerId);
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error during admin check-out for trainer:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Superadmin: Cleanup old attendance records (7-day retention)
+  app.post('/api/superadmin/attendance/cleanup', requireRole('superadmin'), async (req, res) => {
+    try {
+      // Call the cleanup function directly via SQL
+      await db!.execute(sql`SELECT cleanup_old_attendance()`);
+      res.json({ success: true, message: 'Attendance records older than 7 days have been cleaned up' });
+    } catch (error: any) {
+      console.error('Error during attendance cleanup:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============= QR ATTENDANCE ROUTES =============
 
   // Admin: Get QR config for gym

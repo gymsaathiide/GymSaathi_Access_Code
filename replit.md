@@ -24,7 +24,12 @@ The system uses session-based authentication with a PostgreSQL store. Security f
 The platform features a dark theme only design with navy backgrounds and orange accents. Consistent layout components are used throughout. Comprehensive mobile responsiveness is implemented with defined breakpoints, a mobile bottom navigation, and typography scaling. The Diet Planner system features a redesigned premium UI with a two-zone layout, glass-effect cards, and sticky navigation.
 
 ## Key Features
--   **QR Attendance System**: Member check-in/check-out via QR codes.
+-   **QR Attendance System**: Comprehensive attendance tracking via Supabase PostgreSQL including:
+    -   Member check-in/check-out via QR codes
+    -   Trainer attendance tracking (check-in/check-out)
+    -   Admin manual check-out for both members and trainers
+    -   Supabase Row Level Security (RLS) policies for role-based access
+    -   7-day data retention with automatic cleanup via PostgreSQL function
 -   **Public Enquiry Form System**: Gym-branded lead generation forms.
 -   **Trainer Management System**: CRUD operations and dedicated dashboard.
 -   **Quick Action Dropdown**: Admin access to payment details and helpdesk.

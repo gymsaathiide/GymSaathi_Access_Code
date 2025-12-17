@@ -556,6 +556,23 @@ export const insertClassAttendanceSchema = createInsertSchema(classAttendance).o
 export type InsertClassAttendance = z.infer<typeof insertClassAttendanceSchema>;
 export type ClassAttendance = typeof classAttendance.$inferSelect;
 
+// Trainer Attendance (separate from member attendance)
+export const trainerAttendance = pgTable("trainer_attendance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  gymId: uuid("gym_id").references(() => gyms.id, { onDelete: "cascade" }).notNull(),
+  trainerId: uuid("trainer_id").notNull(), // Reference to trainers.id (forward reference handled separately)
+  checkInTime: timestamp("check_in_time").defaultNow(),
+  checkOutTime: timestamp("check_out_time"),
+  status: attendanceStatusEnum("status").default('in').notNull(),
+  exitType: exitTypeEnum("exit_type"),
+  source: text("source").default('manual'), // manual, qr_scan
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTrainerAttendanceSchema = createInsertSchema(trainerAttendance).omit({ id: true, createdAt: true, checkInTime: true, gymId: true });
+export type InsertTrainerAttendance = z.infer<typeof insertTrainerAttendanceSchema>;
+export type TrainerAttendance = typeof trainerAttendance.$inferSelect;
+
 // Trainers
 export const trainers = pgTable("trainers", {
   id: uuid("id").primaryKey().defaultRandom(),

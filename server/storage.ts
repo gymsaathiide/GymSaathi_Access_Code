@@ -2246,6 +2246,127 @@ class Storage {
     };
   }
 
+  // ============= TRAINER ATTENDANCE METHODS =============
+
+  async markTrainerAttendance(gymId: string, trainerId: string, action: 'checkIn' | 'checkOut', source: string = 'manual') {
+    if (action === 'checkIn') {
+      const existing = await getDb().select().from(schema.trainerAttendance).where(and(eq(schema.trainerAttendance.trainerId, trainerId), eq(schema.trainerAttendance.status, 'in'), isNull(schema.trainerAttendance.checkOutTime))).orderBy(desc(schema.trainerAttendance.checkInTime)).limit(1).then(rows => rows[0]);
+
+      if (existing) {
+        throw new Error('Trainer is already checked in');
+      }
+
+      const result = await getDb().insert(schema.trainerAttendance).values({ gymId, trainerId, source, status: 'in', exitType: null }).returning().then(rows => rows[0]);
+      return {
+        id: result.id,
+        gymId: result.gymId,
+        trainerId: result.trainerId,
+        checkInTime: result.checkInTime,
+        checkOutTime: result.checkOutTime,
+        status: result.status,
+        exitType: result.exitType,
+        source: result.source,
+        createdAt: result.createdAt,
+      };
+    } else {
+      const result = await getDb().update(schema.trainerAttendance).set({ checkOutTime: new Date(), status: 'out', exitType: 'manual' }).where(and(eq(schema.trainerAttendance.trainerId, trainerId), eq(schema.trainerAttendance.status, 'in'), isNull(schema.trainerAttendance.checkOutTime))).returning().then(rows => rows[0]);
+
+      if (!result) {
+        throw new Error('No active check-in found');
+      }
+      return {
+        id: result.id,
+        gymId: result.gymId,
+        trainerId: result.trainerId,
+        checkInTime: result.checkInTime,
+        checkOutTime: result.checkOutTime,
+        status: result.status,
+        exitType: result.exitType,
+        source: result.source,
+        createdAt: result.createdAt,
+      };
+    }
+  }
+
+  async getTrainerActiveCheckIn(trainerId: string) {
+    const row = await getDb().select().from(schema.trainerAttendance).where(and(eq(schema.trainerAttendance.trainerId, trainerId), isNull(schema.trainerAttendance.checkOutTime))).orderBy(desc(schema.trainerAttendance.checkInTime)).limit(1).then(rows => rows[0]);
+
+    if (!row) return null;
+    return {
+      id: row.id,
+      gymId: row.gymId,
+      trainerId: row.trainerId,
+      checkInTime: row.checkInTime,
+      checkOutTime: row.checkOutTime,
+      source: row.source,
+      createdAt: row.createdAt,
+    };
+  }
+
+  async getTodayTrainerAttendance(gymId: string) {
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const istToday = new Date(istNow.toISOString().split('T')[0]);
+    const todayStartUtc = new Date(istToday.getTime() - istOffset);
+
+    const data = await getDb().select({
+      attendance: schema.trainerAttendance,
+      trainer: schema.trainers
+    })
+      .from(schema.trainerAttendance)
+      .leftJoin(schema.trainers, eq(schema.trainerAttendance.trainerId, schema.trainers.id))
+      .where(and(eq(schema.trainerAttendance.gymId, gymId), gte(schema.trainerAttendance.checkInTime, todayStartUtc)))
+      .orderBy(desc(schema.trainerAttendance.checkInTime));
+
+    return data.map((row: any) => ({
+      id: row.attendance.id,
+      gymId: row.attendance.gymId,
+      trainerId: row.attendance.trainerId,
+      trainerName: row.trainer?.name || 'Unknown Trainer',
+      checkInTime: row.attendance.checkInTime,
+      checkOutTime: row.attendance.checkOutTime,
+      status: row.attendance.status,
+      exitType: row.attendance.exitType,
+      source: row.attendance.source,
+      createdAt: row.attendance.createdAt,
+    }));
+  }
+
+  async getTrainerAttendanceHistory(trainerId: string) {
+    const data = await getDb().select().from(schema.trainerAttendance).where(eq(schema.trainerAttendance.trainerId, trainerId)).orderBy(desc(schema.trainerAttendance.checkInTime)).limit(50);
+
+    return data.map((row: any) => ({
+      id: row.id,
+      gymId: row.gymId,
+      trainerId: row.trainerId,
+      checkInTime: row.checkInTime,
+      checkOutTime: row.checkOutTime,
+      status: row.status,
+      exitType: row.exitType,
+      source: row.source,
+      createdAt: row.createdAt,
+    }));
+  }
+
+  async adminCheckOutTrainer(gymId: string, trainerId: string) {
+    const result = await getDb().update(schema.trainerAttendance).set({ checkOutTime: new Date(), status: 'out', exitType: 'manual' }).where(and(eq(schema.trainerAttendance.trainerId, trainerId), eq(schema.trainerAttendance.gymId, gymId), eq(schema.trainerAttendance.status, 'in'), isNull(schema.trainerAttendance.checkOutTime))).returning().then(rows => rows[0]);
+
+    if (!result) {
+      throw new Error('No active check-in found for this trainer');
+    }
+    return result;
+  }
+
+  async adminCheckOutMember(gymId: string, memberId: string) {
+    const result = await getDb().update(schema.attendance).set({ checkOutTime: new Date(), status: 'out', exitType: 'manual' }).where(and(eq(schema.attendance.memberId, memberId), eq(schema.attendance.gymId, gymId), eq(schema.attendance.status, 'in'), isNull(schema.attendance.checkOutTime))).returning().then(rows => rows[0]);
+
+    if (!result) {
+      throw new Error('No active check-in found for this member');
+    }
+    return result;
+  }
+
   // QR Config Methods
   async getAttendanceQrConfig(gymId: string) {
     const row = await getDb().select().from(schema.attendanceQrConfig).where(eq(schema.attendanceQrConfig.gymId, gymId)).limit(1).then(rows => rows[0]);
