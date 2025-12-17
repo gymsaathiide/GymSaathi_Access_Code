@@ -35,21 +35,11 @@ The platform features a dark theme only design with navy backgrounds and orange 
 -   **Shop Orders Revenue Dashboard**: Comprehensive sales analytics for shop orders (Admin only).
 -   **Security Audit System**: Super Admin functional error tracking and dashboard.
 -   **Superadmin Profile & User Management**: Account and user management for Superadmins.
--   **Diet Planner System**: Comprehensive nutrition and fitness planning for members including:
+-   **Diet Planner System**: Comprehensive nutrition planning for members including:
     -   Dashboard Diet Plan Preview
     -   AI Diet Planner with personalized meal plan generation, body composition analysis, meal database, and plan persistence.
     -   Simplified Meal Plan Generators (Breakfast, Lunch, Dinner, Snacks).
-    -   Daily Nutrition Tracking, Workout Planner, and Progress Tracking.
--   **Muscle-Based Training System**: Dynamic workout session generation (not day-based plans) including:
-    -   Member onboarding flow (gender → goal → focus areas → fitness level)
-    -   Target muscle selection with exercise counts filtered by gym equipment
-    -   Smart exercise repetition avoidance (skips exercises used in last 2 sessions)
-    -   Exercise count based on fitness level: Beginner (4-5), Intermediate (5-6), Expert (6-7)
-    -   Workout sections: Mobility warm-up, Strength training, optional Cardio finisher
-    -   Active workout tracking with timer, completion status, and session statistics
-    -   Weight logging and progress tracking
-    -   Admin equipment management (enable/disable equipment per gym)
-    -   Superadmin exercise library management with CRUD operations (create, read, update, delete exercises with full validation)
+    -   Daily Nutrition Tracking and Progress Tracking.
 -   **Manage Meals**: Superadmin interface for managing meal database tables.
 -   **Permanent Member Deletion**: Admin functionality for complete member data removal with cascading deletions.
 
