@@ -160,39 +160,55 @@ export default function GymCheckIn() {
   const trainersInGym = trainerAttendance?.filter(r => r.status === 'in').length || 0;
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-gradient-to-br from-green-900/40 to-green-950/20 border-green-500/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Currently In Gym</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-green-100">Members In Gym</CardTitle>
+            <div className="p-2 bg-green-500/20 rounded-full">
+              <Users className="h-4 w-4 text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentlyInGym}</div>
-            <p className="text-xs text-muted-foreground">Active members right now</p>
+            <div className="text-3xl font-bold text-green-400">{currentlyInGym}</div>
+            <p className="text-xs text-green-200/60">Active members right now</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-orange-900/40 to-orange-950/20 border-orange-500/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Check-Ins Today</CardTitle>
-            <LogIn className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-orange-100">Trainers On Duty</CardTitle>
+            <div className="p-2 bg-orange-500/20 rounded-full">
+              <Dumbbell className="h-4 w-4 text-orange-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCheckIns}</div>
-            <p className="text-xs text-muted-foreground">Total visits today</p>
+            <div className="text-3xl font-bold text-orange-400">{trainersInGym}</div>
+            <p className="text-xs text-orange-200/60">Active trainers right now</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-900/40 to-blue-950/20 border-blue-500/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-100">Check-Ins Today</CardTitle>
+            <div className="p-2 bg-blue-500/20 rounded-full">
+              <LogIn className="h-4 w-4 text-blue-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-400">{totalCheckIns}</div>
+            <p className="text-xs text-blue-200/60">Total member visits today</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="bg-card-dark border-white/10">
         <CardHeader>
-          <CardTitle>Manual Check-In</CardTitle>
-          <CardDescription>Check in members manually (for edge cases)</CardDescription>
+          <CardTitle className="text-white">Manual Check-In</CardTitle>
+          <CardDescription className="text-white/60">Check in members manually (for edge cases)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-              <SelectTrigger className="flex-1" data-testid="select-member">
+              <SelectTrigger className="flex-1 bg-white/5 border-white/10" data-testid="select-member">
                 <SelectValue placeholder="Select member" />
               </SelectTrigger>
               <SelectContent>
@@ -212,6 +228,7 @@ export default function GymCheckIn() {
             <Button
               onClick={handleCheckIn}
               disabled={!selectedMemberId || checkInMutation.isPending}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
               data-testid="button-checkin-member"
             >
               <LogIn className="mr-2 h-4 w-4" />
@@ -221,73 +238,85 @@ export default function GymCheckIn() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-card-dark border-white/10">
         <CardHeader>
-          <CardTitle>Today's Attendance</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Today's Attendance</CardTitle>
+          <CardDescription className="text-white/60">
             Live view of people checked in today (auto-refreshes every 5 seconds)
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isAdmin ? (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="members" className="gap-2">
+              <TabsList className="mb-4 bg-white/5 border border-white/10 p-1">
+                <TabsTrigger 
+                  value="members" 
+                  className="gap-2 data-[state=active]:bg-green-500 data-[state=active]:text-white text-white/70"
+                >
                   <Users className="h-4 w-4" />
                   Members ({currentlyInGym} in gym)
                 </TabsTrigger>
-                <TabsTrigger value="trainers" className="gap-2">
+                <TabsTrigger 
+                  value="trainers" 
+                  className="gap-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white text-white/70"
+                >
                   <Dumbbell className="h-4 w-4" />
-                  Trainers ({trainersInGym} in gym)
+                  Trainers ({trainersInGym} on duty)
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="members">
                 {loadingAttendance ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                  <div className="text-center py-8 text-white/60">Loading...</div>
                 ) : todayAttendance && todayAttendance.length > 0 ? (
-                  <div className="rounded-md border">
+                  <div className="rounded-lg border border-green-500/20 bg-green-950/10 overflow-hidden">
+                    <div className="px-4 py-3 bg-green-500/10 border-b border-green-500/20">
+                      <h3 className="text-sm font-medium text-green-300 flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Member Attendance Log
+                      </h3>
+                    </div>
                     <TooltipProvider>
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Member</TableHead>
-                            <TableHead>Check-In Time</TableHead>
-                            <TableHead>Check-Out Time</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Source</TableHead>
-                            <TableHead>Action</TableHead>
+                          <TableRow className="border-green-500/20 hover:bg-green-500/5">
+                            <TableHead className="text-green-200">Member</TableHead>
+                            <TableHead className="text-green-200">Check-In</TableHead>
+                            <TableHead className="text-green-200">Check-Out</TableHead>
+                            <TableHead className="text-green-200">Status</TableHead>
+                            <TableHead className="text-green-200">Source</TableHead>
+                            <TableHead className="text-green-200">Action</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {todayAttendance.map((record: any) => (
-                            <TableRow key={record.id} data-testid={`row-attendance-${record.id}`}>
-                              <TableCell className="font-medium">{record.memberName}</TableCell>
+                            <TableRow key={record.id} className="border-green-500/10 hover:bg-green-500/5" data-testid={`row-attendance-${record.id}`}>
+                              <TableCell className="font-medium text-white">{record.memberName}</TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                <div className="flex items-center gap-2 text-white/80">
+                                  <Clock className="h-4 w-4 text-green-400" />
                                   {format(new Date(record.checkInTime), 'h:mm a')}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 {record.checkOutTime ? (
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <div className="flex items-center gap-2 text-white/80">
+                                    <Clock className="h-4 w-4 text-green-400" />
                                     {format(new Date(record.checkOutTime), 'h:mm a')}
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground">-</span>
+                                  <span className="text-white/40">-</span>
                                 )}
                               </TableCell>
                               <TableCell>
                                 {record.status === 'in' ? (
-                                  <Badge variant="default" data-testid={`badge-status-${record.id}`}>In Gym</Badge>
+                                  <Badge className="bg-green-500 text-white hover:bg-green-600" data-testid={`badge-status-${record.id}`}>In Gym</Badge>
                                 ) : record.exitType === 'auto' ? (
-                                  <Badge variant="secondary" className="bg-orange-100 text-orange-700" data-testid={`badge-status-${record.id}`}>
+                                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30" data-testid={`badge-status-${record.id}`}>
                                     Auto checked-out
                                   </Badge>
                                 ) : (
-                                  <Badge variant="secondary" data-testid={`badge-status-${record.id}`}>Checked Out</Badge>
+                                  <Badge className="bg-white/10 text-white/70" data-testid={`badge-status-${record.id}`}>Checked Out</Badge>
                                 )}
                               </TableCell>
                               <TableCell>
@@ -295,9 +324,9 @@ export default function GymCheckIn() {
                                   <TooltipTrigger asChild>
                                     <div className="flex items-center justify-center">
                                       {record.source === 'qr_scan' ? (
-                                        <QrCode className="h-4 w-4 text-primary" />
+                                        <QrCode className="h-4 w-4 text-green-400" />
                                       ) : (
-                                        <UserCheck className="h-4 w-4 text-muted-foreground" />
+                                        <UserCheck className="h-4 w-4 text-white/50" />
                                       )}
                                     </div>
                                   </TooltipTrigger>
@@ -310,10 +339,9 @@ export default function GymCheckIn() {
                                 {record.status === 'in' && (
                                   <Button
                                     size="sm"
-                                    variant="outline"
                                     onClick={() => checkoutMemberMutation.mutate(record.memberId)}
                                     disabled={checkoutMemberMutation.isPending}
-                                    className="gap-1"
+                                    className="gap-1 bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30"
                                   >
                                     <LogOut className="h-3 w-3" />
                                     Check Out
@@ -327,58 +355,65 @@ export default function GymCheckIn() {
                     </TooltipProvider>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No member check-ins today
+                  <div className="text-center py-12 text-white/60 bg-green-950/10 rounded-lg border border-green-500/20">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-green-400/40" />
+                    <p className="text-sm">No member check-ins today</p>
                   </div>
                 )}
               </TabsContent>
 
               <TabsContent value="trainers">
                 {loadingTrainerAttendance ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                  <div className="text-center py-8 text-white/60">Loading...</div>
                 ) : trainerAttendance && trainerAttendance.length > 0 ? (
-                  <div className="rounded-md border">
+                  <div className="rounded-lg border border-orange-500/20 bg-orange-950/10 overflow-hidden">
+                    <div className="px-4 py-3 bg-orange-500/10 border-b border-orange-500/20">
+                      <h3 className="text-sm font-medium text-orange-300 flex items-center gap-2">
+                        <Dumbbell className="h-4 w-4" />
+                        Trainer Attendance Log
+                      </h3>
+                    </div>
                     <TooltipProvider>
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Trainer</TableHead>
-                            <TableHead>Check-In Time</TableHead>
-                            <TableHead>Check-Out Time</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Source</TableHead>
-                            <TableHead>Action</TableHead>
+                          <TableRow className="border-orange-500/20 hover:bg-orange-500/5">
+                            <TableHead className="text-orange-200">Trainer</TableHead>
+                            <TableHead className="text-orange-200">Check-In</TableHead>
+                            <TableHead className="text-orange-200">Check-Out</TableHead>
+                            <TableHead className="text-orange-200">Status</TableHead>
+                            <TableHead className="text-orange-200">Source</TableHead>
+                            <TableHead className="text-orange-200">Action</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {trainerAttendance.map((record: any) => (
-                            <TableRow key={record.id} data-testid={`row-trainer-attendance-${record.id}`}>
-                              <TableCell className="font-medium">{record.trainerName}</TableCell>
+                            <TableRow key={record.id} className="border-orange-500/10 hover:bg-orange-500/5" data-testid={`row-trainer-attendance-${record.id}`}>
+                              <TableCell className="font-medium text-white">{record.trainerName}</TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                <div className="flex items-center gap-2 text-white/80">
+                                  <Clock className="h-4 w-4 text-orange-400" />
                                   {format(new Date(record.checkInTime), 'h:mm a')}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 {record.checkOutTime ? (
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <div className="flex items-center gap-2 text-white/80">
+                                    <Clock className="h-4 w-4 text-orange-400" />
                                     {format(new Date(record.checkOutTime), 'h:mm a')}
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground">-</span>
+                                  <span className="text-white/40">-</span>
                                 )}
                               </TableCell>
                               <TableCell>
                                 {record.status === 'in' ? (
-                                  <Badge variant="default">In Gym</Badge>
+                                  <Badge className="bg-orange-500 text-white hover:bg-orange-600">On Duty</Badge>
                                 ) : record.exitType === 'auto' ? (
-                                  <Badge variant="secondary" className="bg-orange-100 text-orange-700">
+                                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30">
                                     Auto checked-out
                                   </Badge>
                                 ) : (
-                                  <Badge variant="secondary">Checked Out</Badge>
+                                  <Badge className="bg-white/10 text-white/70">Off Duty</Badge>
                                 )}
                               </TableCell>
                               <TableCell>
@@ -386,9 +421,9 @@ export default function GymCheckIn() {
                                   <TooltipTrigger asChild>
                                     <div className="flex items-center justify-center">
                                       {record.source === 'qr_scan' ? (
-                                        <QrCode className="h-4 w-4 text-primary" />
+                                        <QrCode className="h-4 w-4 text-orange-400" />
                                       ) : (
-                                        <UserCheck className="h-4 w-4 text-muted-foreground" />
+                                        <UserCheck className="h-4 w-4 text-white/50" />
                                       )}
                                     </div>
                                   </TooltipTrigger>
@@ -401,10 +436,9 @@ export default function GymCheckIn() {
                                 {record.status === 'in' && (
                                   <Button
                                     size="sm"
-                                    variant="outline"
                                     onClick={() => checkoutTrainerMutation.mutate(record.trainerId)}
                                     disabled={checkoutTrainerMutation.isPending}
-                                    className="gap-1"
+                                    className="gap-1 bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30"
                                   >
                                     <LogOut className="h-3 w-3" />
                                     Check Out
@@ -418,8 +452,9 @@ export default function GymCheckIn() {
                     </TooltipProvider>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No trainer check-ins today
+                  <div className="text-center py-12 text-white/60 bg-orange-950/10 rounded-lg border border-orange-500/20">
+                    <Dumbbell className="h-12 w-12 mx-auto mb-3 text-orange-400/40" />
+                    <p className="text-sm">No trainer check-ins today</p>
                   </div>
                 )}
               </TabsContent>
