@@ -202,44 +202,6 @@ export default function GymCheckIn() {
 
       <Card className="bg-card-dark border-white/10">
         <CardHeader>
-          <CardTitle className="text-white">Manual Check-In</CardTitle>
-          <CardDescription className="text-white/60">Check in members manually (for edge cases)</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-              <SelectTrigger className="flex-1 bg-white/5 border-white/10" data-testid="select-member">
-                <SelectValue placeholder="Select member" />
-              </SelectTrigger>
-              <SelectContent>
-                {loadingMembers ? (
-                  <SelectItem value="loading" disabled>
-                    Loading...
-                  </SelectItem>
-                ) : (
-                  members?.map((member: any) => (
-                    <SelectItem key={member.id} value={member.id} data-testid={`select-member-${member.id}`}>
-                      {member.name} - {member.email}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            <Button
-              onClick={handleCheckIn}
-              disabled={!selectedMemberId || checkInMutation.isPending}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-              data-testid="button-checkin-member"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Check In
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card-dark border-white/10">
-        <CardHeader>
           <CardTitle className="text-white">Today's Attendance</CardTitle>
           <CardDescription className="text-white/60">
             Live view of people checked in today (auto-refreshes every 5 seconds)
