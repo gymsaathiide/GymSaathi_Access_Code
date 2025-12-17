@@ -146,58 +146,11 @@ export default function MemberDashboard() {
   );
   const upcomingClassesCount = scheduledClassesThisMonth.length;
 
-  const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch("/api/member/attendance/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw data;
-      }
-      return data;
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Checked Out!",
-        description: data.message || "You're checked out. See you again!",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/member/attendance/today"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/member/attendance/history"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/attendance"] });
-    },
-    onError: (error: any) => {
-      if (error.code === "NOT_IN_GYM") {
-        toast({
-          title: "Not Checked In",
-          description: "You are not currently checked in.",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to check out",
-          variant: "destructive",
-        });
-      }
-      refetchStatus();
-    },
-  });
-
   const isInGym = todayStatus?.status === "in_gym";
 
   const handleScannerClose = () => {
     setScannerOpen(false);
     refetchStatus();
-  };
-
-  const handleCheckout = () => {
-    checkoutMutation.mutate();
   };
 
   return (
