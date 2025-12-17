@@ -43,15 +43,7 @@ interface SearchResult {
   status?: string;
 }
 
-interface ModernHeaderProps {
-  onMenuClick?: () => void;
-  showMenuButton?: boolean;
-}
-
-export function ModernHeader({
-  onMenuClick,
-  showMenuButton = true,
-}: ModernHeaderProps) {
+export function ModernHeader() {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
@@ -190,15 +182,6 @@ export function ModernHeader({
   return (
     <header className="h-12 sm:h-14 px-2 sm:px-3 md:px-4 flex items-center justify-between gap-2 sm:gap-3 bg-transparent w-full">
       <div className="flex items-center gap-4">
-        {showMenuButton && (
-          <button
-            onClick={onMenuClick}
-            className="md:hidden p-2 rounded-lg transition-colors hover:bg-white/10 text-white/60 hover:text-white"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        )}
-
         <div className="hidden md:block">
           <p className="text-xs text-white/40">{formattedDate}</p>
           <h1 className="font-semibold text-white">
