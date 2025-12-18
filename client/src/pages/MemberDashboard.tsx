@@ -586,7 +586,7 @@ export default function MemberDashboard() {
                 Training Sessions
               </CardTitle>
             </div>
-            <Link href="/member/training">
+            <Link href="/member/workout-planner">
               <Button
                 variant="ghost"
                 size="sm"
@@ -610,7 +610,7 @@ export default function MemberDashboard() {
             <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 px-2">
               Get personalized workout sessions targeting specific muscle groups
             </p>
-            <Link href="/member/training">
+            <Link href="/member/workout-planner">
               <Button className="gap-2 bg-orange-500 hover:bg-orange-600 text-sm sm:text-base h-9 sm:h-10 px-4 sm:px-6">
                 <Dumbbell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Start Workout
