@@ -8119,9 +8119,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Member: Generate workout plan automatically
   app.post('/api/workout/member/generate-plan', requireRole('member'), async (req, res) => {
     try {
-      const user = await storage.getUserById(req.session!.userId!);
-      if (!user || !user.gymId) {
-        return res.status(400).json({ error: 'User must be associated with a gym' });
+      const userId = req.session!.userId!;
+      const user = await storage.getUserById(userId);
+      
+      // First try to get gymId from user lookup
+      let gymId = user?.gymId;
+      
+      // If no gymId from user, try to get directly from members table
+      if (!gymId) {
+        const memberRecord = await db!.select({ gymId: schema.members.gymId })
+          .from(schema.members)
+          .where(eq(schema.members.userId, userId))
+          .limit(1)
+          .then(rows => rows[0]);
+        
+        if (memberRecord) {
+          gymId = memberRecord.gymId;
+        }
+      }
+      
+      // Also check session gymId as fallback
+      if (!gymId && req.session?.gymId) {
+        gymId = req.session.gymId;
+      }
+      
+      if (!user || !gymId) {
+        console.error('User gym association missing:', { userId, userGymId: user?.gymId, sessionGymId: req.session?.gymId });
+        return res.status(400).json({ error: 'User must be associated with a gym. Please contact your gym admin.' });
       }
 
       const { goal, fitnessLevel, daysPerWeek } = req.body;
@@ -8133,10 +8157,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if exercises exist, seed if not
       const exercises = await db!.select({ count: sql<number>`count(*)` })
         .from(schema.exerciseLibrary)
-        .where(eq(schema.exerciseLibrary.gymId, user.gymId));
+        .where(eq(schema.exerciseLibrary.gymId, gymId));
 
       if (Number(exercises[0]?.count) === 0) {
-        await storage.seedExerciseLibrary(user.gymId);
+        await storage.seedExerciseLibrary(gymId);
       }
 
       // Deactivate any existing active plans
@@ -8147,7 +8171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(schema.workoutPlans.status, 'active')
         ));
 
-      const plan = await storage.generateWorkoutPlanForMember(user.gymId, user.id, {
+      const plan = await storage.generateWorkoutPlanForMember(gymId, user.id, {
         goal,
         fitnessLevel,
         daysPerWeek: Number(daysPerWeek),
