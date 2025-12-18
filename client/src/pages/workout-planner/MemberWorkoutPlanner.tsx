@@ -120,7 +120,10 @@ export default function MemberWorkoutPlanner() {
 
   const generatePlanMutation = useMutation({
     mutationFn: async (data: { goal: string; fitnessLevel: string; daysPerWeek: string }) => {
-      const response = await apiRequest('POST', '/api/workout/member/generate-plan', data);
+      const response = await apiRequest('POST', '/api/workout/member/generate-plan', {
+        ...data,
+        daysPerWeek: parseInt(data.daysPerWeek, 10),
+      });
       return response.json();
     },
     onSuccess: () => {
