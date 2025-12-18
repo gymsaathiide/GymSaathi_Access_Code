@@ -48,12 +48,14 @@ The platform features a dark theme only design with navy backgrounds and orange 
 -   **Manage Meals**: Superadmin interface for managing meal database tables.
 -   **Permanent Member Deletion**: Admin functionality for complete member data removal with cascading deletions.
 -   **Workout Planner System**: Comprehensive workout planning for members including:
-    -   Exercise library with muscle groups, equipment types, and difficulty levels
-    -   Customizable workout plans with goals (weight loss, muscle gain, strength, endurance)
-    -   Weekly workout scheduling with day-by-day exercise breakdowns
-    -   Workout logging and progress tracking
+    -   Exercise library with 24 seeded exercises across all muscle groups
+    -   Muscle groups: chest, back, shoulders, biceps, triceps, quads, hamstrings, glutes, calves, abs
+    -   Equipment types: barbell, dumbbells, cables, machines, bodyweight
+    -   Difficulty levels: beginner, intermediate, advanced
+    -   Auto-generated workout plans based on member preferences (goal, fitness level, days per week)
+    -   Workout splits: full body (3-day), upper/lower (4-day), push/pull/legs (5-6 day)
+    -   Member dashboard with weekly view, plan generation dialog, and workout tracking
     -   Admin/Trainer dashboard for creating and managing member plans
-    -   Member dashboard with active plan overview, weekly progress, and streak tracking
 
 # External Dependencies
 
