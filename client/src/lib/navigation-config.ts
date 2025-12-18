@@ -19,6 +19,7 @@ import {
   Apple,
   Activity,
   Utensils,
+  Zap,
 } from "lucide-react";
 
 export interface NavItem {
@@ -45,6 +46,7 @@ export const adminNavItems: NavItem[] = [
   { title: "Trainers", url: "/admin/trainers", icon: Dumbbell },
   { title: "Leads", url: "/admin/leads", icon: UserPlus },
   { title: "Plans", url: "/admin/plans", icon: ClipboardList },
+  { title: "Workout Planner", url: "/admin/workout-planner", icon: Zap },
   { title: "Classes", url: "/admin/classes", icon: Calendar },
   { title: "Attendance", url: "/admin/attendance", icon: ClipboardCheck },
   { title: "Billing", url: "/admin/billing", icon: CreditCard },
@@ -55,6 +57,7 @@ export const adminNavItems: NavItem[] = [
 export const trainerNavItems: NavItem[] = [
   { title: "Dashboard", url: "/trainer", icon: LayoutDashboard },
   { title: "Members", url: "/trainer/members", icon: Users },
+  { title: "Workout Planner", url: "/trainer/workout-planner", icon: Zap },
   { title: "Leads", url: "/trainer/leads", icon: UserPlus },
   { title: "Classes", url: "/trainer/classes", icon: Calendar },
   { title: "Attendance", url: "/trainer/attendance", icon: ClipboardCheck },
@@ -63,6 +66,7 @@ export const trainerNavItems: NavItem[] = [
 
 export const memberNavItems: NavItem[] = [
   { title: "Dashboard", url: "/member", icon: LayoutDashboard },
+  { title: "Workout Planner", url: "/member/workout-planner", icon: Zap },
   { title: "Body Report", url: "/member/diet-planner/body-composition", icon: Activity },
   { title: "Diet Planner", url: "/member/diet-planner", icon: Apple },
   { title: "Classes", url: "/member/classes", icon: Calendar },
