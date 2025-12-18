@@ -47,6 +47,13 @@ The platform features a dark theme only design with navy backgrounds and orange 
     -   Daily Nutrition Tracking and Progress Tracking.
 -   **Manage Meals**: Superadmin interface for managing meal database tables.
 -   **Permanent Member Deletion**: Admin functionality for complete member data removal with cascading deletions.
+-   **Workout Planner System**: Comprehensive workout planning for members including:
+    -   Exercise library with muscle groups, equipment types, and difficulty levels
+    -   Customizable workout plans with goals (weight loss, muscle gain, strength, endurance)
+    -   Weekly workout scheduling with day-by-day exercise breakdowns
+    -   Workout logging and progress tracking
+    -   Admin/Trainer dashboard for creating and managing member plans
+    -   Member dashboard with active plan overview, weekly progress, and streak tracking
 
 # External Dependencies
 

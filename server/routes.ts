@@ -7829,6 +7829,243 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ WORKOUT PLANNER API ============
+
+  // Get all exercises from the library
+  app.get('/api/workout/exercises', requireAuth, async (req, res) => {
+    try {
+      const exercises = await db!.select()
+        .from(schema.exerciseLibrary)
+        .where(eq(schema.exerciseLibrary.isActive, true))
+        .orderBy(schema.exerciseLibrary.name);
+      res.json(exercises);
+    } catch (error: any) {
+      console.error('Error fetching exercises:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Member: Get active workout plan
+  app.get('/api/workout/member/active-plan', requireRole('member'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const plans = await db!.select()
+        .from(schema.workoutPlans)
+        .where(and(
+          eq(schema.workoutPlans.memberId, user.id),
+          eq(schema.workoutPlans.status, 'active')
+        ))
+        .limit(1);
+
+      if (plans.length === 0) {
+        return res.json(null);
+      }
+
+      res.json(plans[0]);
+    } catch (error: any) {
+      console.error('Error fetching active plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Member: Get workout plan days
+  app.get('/api/workout/member/plan-days/:planId', requireRole('member'), async (req, res) => {
+    try {
+      const days = await db!.select()
+        .from(schema.workoutPlanDays)
+        .where(eq(schema.workoutPlanDays.planId, req.params.planId))
+        .orderBy(schema.workoutPlanDays.order);
+
+      const daysWithExercises = await Promise.all(days.map(async (day) => {
+        const exercises = await db!.select({
+          id: schema.workoutPlanExercises.id,
+          exerciseId: schema.workoutPlanExercises.exerciseId,
+          order: schema.workoutPlanExercises.order,
+          sets: schema.workoutPlanExercises.sets,
+          reps: schema.workoutPlanExercises.reps,
+          restSeconds: schema.workoutPlanExercises.restSeconds,
+          name: schema.exerciseLibrary.name,
+          muscleGroup: schema.exerciseLibrary.muscleGroup,
+          videoUrl: schema.exerciseLibrary.videoUrl,
+          instructions: schema.exerciseLibrary.instructions,
+        })
+          .from(schema.workoutPlanExercises)
+          .innerJoin(schema.exerciseLibrary, eq(schema.workoutPlanExercises.exerciseId, schema.exerciseLibrary.id))
+          .where(eq(schema.workoutPlanExercises.dayId, day.id))
+          .orderBy(schema.workoutPlanExercises.order);
+
+        return { ...day, exercises };
+      }));
+
+      res.json(daysWithExercises);
+    } catch (error: any) {
+      console.error('Error fetching plan days:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Member: Get weekly progress
+  app.get('/api/workout/member/weekly-progress', requireRole('member'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const logs = await db!.select()
+        .from(schema.workoutLogs)
+        .where(and(
+          eq(schema.workoutLogs.memberId, user.id),
+          eq(schema.workoutLogs.isCompleted, true),
+          sql`${schema.workoutLogs.workoutDate} >= ${weekStart.toISOString()}`
+        ));
+
+      res.json({
+        completed: logs.length,
+        streak: logs.length,
+      });
+    } catch (error: any) {
+      console.error('Error fetching weekly progress:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Member: Start a workout
+  app.post('/api/workout/member/start-workout/:dayId', requireRole('member'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const day = await db!.select()
+        .from(schema.workoutPlanDays)
+        .where(eq(schema.workoutPlanDays.id, req.params.dayId))
+        .limit(1);
+
+      if (day.length === 0) {
+        return res.status(404).json({ error: 'Workout day not found' });
+      }
+
+      const log = await db!.insert(schema.workoutLogs).values({
+        gymId: user.gymId,
+        memberId: user.id,
+        planId: day[0].planId,
+        dayId: req.params.dayId,
+        workoutDate: new Date(),
+        startTime: new Date(),
+        isCompleted: false,
+      }).returning();
+
+      res.json(log[0]);
+    } catch (error: any) {
+      console.error('Error starting workout:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin/Trainer: Get all workout plans
+  app.get('/api/workout/admin/plans', requireRole('admin', 'trainer'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const plans = await db!.select()
+        .from(schema.workoutPlans)
+        .where(eq(schema.workoutPlans.gymId, user.gymId))
+        .orderBy(desc(schema.workoutPlans.createdAt));
+
+      const plansWithMembers = await Promise.all(plans.map(async (plan) => {
+        const member = await db!.select({ name: schema.members.name })
+          .from(schema.members)
+          .where(eq(schema.members.id, plan.memberId))
+          .limit(1);
+        return {
+          ...plan,
+          memberName: member[0]?.name || 'Unknown',
+        };
+      }));
+
+      res.json(plansWithMembers);
+    } catch (error: any) {
+      console.error('Error fetching workout plans:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin/Trainer: Get workout stats
+  app.get('/api/workout/admin/stats', requireRole('admin', 'trainer'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const activePlans = await db!.select({ count: sql<number>`count(*)` })
+        .from(schema.workoutPlans)
+        .where(and(
+          eq(schema.workoutPlans.gymId, user.gymId),
+          eq(schema.workoutPlans.status, 'active')
+        ));
+
+      const membersWithPlans = await db!.select({ count: sql<number>`count(distinct ${schema.workoutPlans.memberId})` })
+        .from(schema.workoutPlans)
+        .where(eq(schema.workoutPlans.gymId, user.gymId));
+
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const workoutsThisWeek = await db!.select({ count: sql<number>`count(*)` })
+        .from(schema.workoutLogs)
+        .where(and(
+          eq(schema.workoutLogs.gymId, user.gymId),
+          eq(schema.workoutLogs.isCompleted, true),
+          sql`${schema.workoutLogs.workoutDate} >= ${weekStart.toISOString()}`
+        ));
+
+      res.json({
+        activePlans: Number(activePlans[0]?.count || 0),
+        membersWithPlans: Number(membersWithPlans[0]?.count || 0),
+        workoutsThisWeek: Number(workoutsThisWeek[0]?.count || 0),
+      });
+    } catch (error: any) {
+      console.error('Error fetching workout stats:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin/Trainer: Delete workout plan
+  app.delete('/api/workout/admin/plans/:planId', requireRole('admin', 'trainer'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      await db!.delete(schema.workoutPlans)
+        .where(and(
+          eq(schema.workoutPlans.id, req.params.planId),
+          eq(schema.workoutPlans.gymId, user.gymId)
+        ));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting workout plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ NOTIFICATIONS API ============
 
   // Get notifications for current user
