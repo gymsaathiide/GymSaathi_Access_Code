@@ -2692,6 +2692,181 @@ class Storage {
     if (!row) return null;
     return row;
   }
+
+  // ============= WORKOUT PLANNER STORAGE METHODS =============
+
+  async seedExerciseLibrary(gymId: string) {
+    const existingExercises = await getDb().select({ count: sql<number>`count(*)` })
+      .from(schema.exerciseLibrary)
+      .where(eq(schema.exerciseLibrary.gymId, gymId));
+
+    if (Number(existingExercises[0]?.count) > 0) {
+      return { message: 'Exercises already exist for this gym', seeded: false };
+    }
+
+    const exercises: schema.InsertExerciseLibrary[] = [
+      { name: 'Barbell Bench Press', muscleGroup: 'chest', equipmentType: 'barbell', difficulty: 'intermediate', defaultSets: 4, defaultReps: '8-12', instructions: 'Lie flat on bench, grip barbell slightly wider than shoulder width. Lower to chest, press up.', gymId, isActive: true },
+      { name: 'Incline Dumbbell Press', muscleGroup: 'chest', equipmentType: 'dumbbells', difficulty: 'intermediate', defaultSets: 3, defaultReps: '10-12', instructions: 'Set bench to 30-45 degrees. Press dumbbells from shoulder level to above chest.', gymId, isActive: true },
+      { name: 'Push-ups', muscleGroup: 'chest', equipmentType: 'bodyweight', difficulty: 'beginner', defaultSets: 3, defaultReps: '15-20', instructions: 'Keep body straight, lower chest to floor, push back up.', gymId, isActive: true },
+      { name: 'Cable Crossover', muscleGroup: 'chest', equipmentType: 'cables', difficulty: 'intermediate', defaultSets: 3, defaultReps: '12-15', instructions: 'Stand between cables, bring handles together in arc motion at chest level.', gymId, isActive: true },
+      { name: 'Barbell Back Squat', muscleGroup: 'quads', equipmentType: 'barbell', difficulty: 'intermediate', defaultSets: 4, defaultReps: '8-10', instructions: 'Bar on upper back, feet shoulder width. Squat down until thighs parallel, drive up.', gymId, isActive: true },
+      { name: 'Romanian Deadlift', muscleGroup: 'hamstrings', equipmentType: 'barbell', difficulty: 'intermediate', defaultSets: 3, defaultReps: '10-12', instructions: 'Hold barbell, hinge at hips keeping back straight, lower to mid-shin, return.', gymId, isActive: true },
+      { name: 'Leg Press', muscleGroup: 'quads', equipmentType: 'machines', difficulty: 'beginner', defaultSets: 4, defaultReps: '12-15', instructions: 'Sit in machine, feet shoulder width on platform. Press up, lower with control.', gymId, isActive: true },
+      { name: 'Walking Lunges', muscleGroup: 'glutes', equipmentType: 'bodyweight', difficulty: 'beginner', defaultSets: 3, defaultReps: '12 each leg', instructions: 'Step forward into lunge, alternate legs while walking.', gymId, isActive: true },
+      { name: 'Lat Pulldown', muscleGroup: 'back', equipmentType: 'cables', difficulty: 'beginner', defaultSets: 4, defaultReps: '10-12', instructions: 'Grip bar wide, pull down to upper chest, squeeze back muscles.', gymId, isActive: true },
+      { name: 'Barbell Row', muscleGroup: 'back', equipmentType: 'barbell', difficulty: 'intermediate', defaultSets: 4, defaultReps: '8-10', instructions: 'Bend at hips, pull barbell to lower chest, squeeze shoulder blades.', gymId, isActive: true },
+      { name: 'Seated Cable Row', muscleGroup: 'back', equipmentType: 'cables', difficulty: 'beginner', defaultSets: 3, defaultReps: '12-15', instructions: 'Sit upright, pull handle to torso, squeeze back.', gymId, isActive: true },
+      { name: 'Pull-ups', muscleGroup: 'back', equipmentType: 'bodyweight', difficulty: 'advanced', defaultSets: 3, defaultReps: '8-12', instructions: 'Grip bar overhand, pull chin above bar, lower with control.', gymId, isActive: true },
+      { name: 'Overhead Press', muscleGroup: 'shoulders', equipmentType: 'barbell', difficulty: 'intermediate', defaultSets: 4, defaultReps: '8-10', instructions: 'Bar at shoulders, press overhead, lower with control.', gymId, isActive: true },
+      { name: 'Lateral Raises', muscleGroup: 'shoulders', equipmentType: 'dumbbells', difficulty: 'beginner', defaultSets: 3, defaultReps: '12-15', instructions: 'Arms at sides, raise dumbbells to shoulder height, lower slowly.', gymId, isActive: true },
+      { name: 'Face Pulls', muscleGroup: 'shoulders', equipmentType: 'cables', difficulty: 'beginner', defaultSets: 3, defaultReps: '15-20', instructions: 'Pull rope to face level, separate ends at peak, squeeze rear delts.', gymId, isActive: true },
+      { name: 'Barbell Curl', muscleGroup: 'biceps', equipmentType: 'barbell', difficulty: 'beginner', defaultSets: 3, defaultReps: '10-12', instructions: 'Stand with barbell, curl up keeping elbows fixed, lower slowly.', gymId, isActive: true },
+      { name: 'Tricep Pushdown', muscleGroup: 'triceps', equipmentType: 'cables', difficulty: 'beginner', defaultSets: 3, defaultReps: '12-15', instructions: 'Push cable down extending elbows, squeeze triceps at bottom.', gymId, isActive: true },
+      { name: 'Hammer Curls', muscleGroup: 'biceps', equipmentType: 'dumbbells', difficulty: 'beginner', defaultSets: 3, defaultReps: '10-12', instructions: 'Hold dumbbells with neutral grip, curl up alternating arms.', gymId, isActive: true },
+      { name: 'Skull Crushers', muscleGroup: 'triceps', equipmentType: 'barbell', difficulty: 'intermediate', defaultSets: 3, defaultReps: '10-12', instructions: 'Lie on bench, lower bar to forehead, extend arms up.', gymId, isActive: true },
+      { name: 'Plank', muscleGroup: 'abs', equipmentType: 'bodyweight', difficulty: 'beginner', defaultSets: 3, defaultReps: '30-60 sec', instructions: 'Hold push-up position on forearms, keep body straight.', gymId, isActive: true },
+      { name: 'Hanging Leg Raises', muscleGroup: 'abs', equipmentType: 'bodyweight', difficulty: 'intermediate', defaultSets: 3, defaultReps: '12-15', instructions: 'Hang from bar, raise legs to 90 degrees, lower with control.', gymId, isActive: true },
+      { name: 'Cable Crunches', muscleGroup: 'abs', equipmentType: 'cables', difficulty: 'beginner', defaultSets: 3, defaultReps: '15-20', instructions: 'Kneel below cable, crunch down bringing elbows to thighs.', gymId, isActive: true },
+      { name: 'Deadlift', muscleGroup: 'back', equipmentType: 'barbell', difficulty: 'advanced', defaultSets: 4, defaultReps: '5-8', instructions: 'Stand over bar, grip outside knees, drive through heels, lockout at top.', gymId, isActive: true },
+      { name: 'Calf Raises', muscleGroup: 'calves', equipmentType: 'machines', difficulty: 'beginner', defaultSets: 4, defaultReps: '15-20', instructions: 'Stand on edge of platform, raise heels, lower below platform level.', gymId, isActive: true },
+    ];
+
+    await getDb().insert(schema.exerciseLibrary).values(exercises);
+    return { message: `Seeded ${exercises.length} exercises`, seeded: true };
+  }
+
+  async getExercisesByMuscleGroup(gymId: string, muscleGroup: 'chest' | 'back' | 'shoulders' | 'biceps' | 'triceps' | 'forearms' | 'abs' | 'obliques' | 'quads' | 'hamstrings' | 'glutes' | 'calves' | 'full_body' | 'cardio') {
+    return await getDb().select()
+      .from(schema.exerciseLibrary)
+      .where(and(
+        eq(schema.exerciseLibrary.gymId, gymId),
+        eq(schema.exerciseLibrary.muscleGroup, muscleGroup),
+        eq(schema.exerciseLibrary.isActive, true)
+      ));
+  }
+
+  async createWorkoutPlan(data: {
+    gymId: string;
+    memberId: string;
+    trainerId?: string;
+    name: string;
+    description?: string;
+    goal: 'weight_loss' | 'muscle_gain' | 'strength' | 'endurance' | 'flexibility' | 'general_fitness' | 'sports_performance';
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    split: 'full_body' | 'upper_lower' | 'push_pull_legs' | 'body_part_split' | 'custom';
+    daysPerWeek: number;
+    durationWeeks: number;
+  }) {
+    const plan = await getDb().insert(schema.workoutPlans).values({
+      ...data,
+      currentWeek: 1,
+      startDate: new Date(),
+    }).returning();
+    return plan[0];
+  }
+
+  async generateWorkoutPlanForMember(gymId: string, memberId: string, profile: { goal: 'weight_loss' | 'muscle_gain' | 'strength' | 'endurance' | 'flexibility' | 'general_fitness' | 'sports_performance'; fitnessLevel: 'beginner' | 'intermediate' | 'advanced'; daysPerWeek: number }) {
+    const { goal, fitnessLevel, daysPerWeek } = profile;
+
+    type MuscleGroup = 'chest' | 'back' | 'shoulders' | 'biceps' | 'triceps' | 'abs' | 'quads' | 'hamstrings' | 'glutes';
+    const splitConfigs: Record<number, { name: 'full_body' | 'upper_lower' | 'push_pull_legs'; days: { name: string; muscles: MuscleGroup[] }[] }> = {
+      3: {
+        name: 'full_body',
+        days: [
+          { name: 'Day A - Full Body', muscles: ['chest', 'back', 'quads', 'shoulders', 'abs'] },
+          { name: 'Day B - Full Body', muscles: ['chest', 'back', 'hamstrings', 'biceps', 'triceps'] },
+          { name: 'Day C - Full Body', muscles: ['chest', 'back', 'glutes', 'shoulders', 'abs'] },
+        ]
+      },
+      4: {
+        name: 'upper_lower',
+        days: [
+          { name: 'Upper Body A', muscles: ['chest', 'back', 'shoulders', 'biceps'] },
+          { name: 'Lower Body A', muscles: ['quads', 'hamstrings', 'glutes', 'abs'] },
+          { name: 'Upper Body B', muscles: ['chest', 'back', 'shoulders', 'triceps'] },
+          { name: 'Lower Body B', muscles: ['quads', 'hamstrings', 'glutes', 'abs'] },
+        ]
+      },
+      5: {
+        name: 'push_pull_legs',
+        days: [
+          { name: 'Push', muscles: ['chest', 'shoulders', 'triceps'] },
+          { name: 'Pull', muscles: ['back', 'biceps'] },
+          { name: 'Legs', muscles: ['quads', 'hamstrings', 'glutes'] },
+          { name: 'Upper', muscles: ['chest', 'back', 'shoulders'] },
+          { name: 'Lower + Core', muscles: ['quads', 'hamstrings', 'abs'] },
+        ]
+      },
+      6: {
+        name: 'push_pull_legs',
+        days: [
+          { name: 'Push A', muscles: ['chest', 'shoulders', 'triceps'] },
+          { name: 'Pull A', muscles: ['back', 'biceps'] },
+          { name: 'Legs A', muscles: ['quads', 'hamstrings', 'glutes'] },
+          { name: 'Push B', muscles: ['chest', 'shoulders', 'triceps'] },
+          { name: 'Pull B', muscles: ['back', 'biceps'] },
+          { name: 'Legs B', muscles: ['quads', 'hamstrings', 'abs'] },
+        ]
+      }
+    };
+
+    const splitConfig = splitConfigs[daysPerWeek] || splitConfigs[4];
+
+    const plan = await this.createWorkoutPlan({
+      gymId,
+      memberId,
+      name: `${splitConfig.name.replace('_', ' ')} - ${goal.replace('_', ' ')}`,
+      description: `Auto-generated ${fitnessLevel} level plan for ${goal.replace('_', ' ')}`,
+      goal,
+      difficulty: fitnessLevel,
+      split: splitConfig.name,
+      daysPerWeek,
+      durationWeeks: 8,
+    });
+
+    for (let i = 0; i < splitConfig.days.length; i++) {
+      const dayConfig = splitConfig.days[i];
+      const day = await getDb().insert(schema.workoutPlanDays).values({
+        planId: plan.id,
+        dayNumber: i + 1,
+        name: dayConfig.name,
+        description: `Target: ${dayConfig.muscles.join(', ')}`,
+        targetMuscles: dayConfig.muscles.join(','),
+        isRestDay: false,
+        estimatedDuration: 45 + (dayConfig.muscles.length * 5),
+        order: i + 1,
+      }).returning();
+
+      let exerciseOrder = 1;
+      for (const muscle of dayConfig.muscles) {
+        const exercises = await this.getExercisesByMuscleGroup(gymId, muscle);
+        const selected = exercises.slice(0, 2);
+        for (const ex of selected) {
+          await getDb().insert(schema.workoutPlanExercises).values({
+            dayId: day[0].id,
+            exerciseId: ex.id,
+            order: exerciseOrder++,
+            sets: ex.defaultSets || 3,
+            reps: ex.defaultReps || '10-12',
+            restSeconds: fitnessLevel === 'beginner' ? 90 : fitnessLevel === 'intermediate' ? 60 : 45,
+          });
+        }
+      }
+    }
+
+    for (let i = splitConfig.days.length; i < 7; i++) {
+      await getDb().insert(schema.workoutPlanDays).values({
+        planId: plan.id,
+        dayNumber: i + 1,
+        name: 'Rest Day',
+        description: 'Recovery and stretching',
+        isRestDay: true,
+        order: i + 1,
+      });
+    }
+
+    return plan;
+  }
 }
 
 export const storage = new Storage();

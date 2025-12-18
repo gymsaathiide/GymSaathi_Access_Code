@@ -8,6 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Zap, 
@@ -20,7 +34,8 @@ import {
   TrendingUp,
   ChevronRight,
   AlertCircle,
-  Flame
+  Flame,
+  Loader2
 } from "lucide-react";
 import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
 
@@ -66,6 +81,12 @@ export default function MemberWorkoutPlanner() {
   const { toast } = useToast();
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [generateForm, setGenerateForm] = useState({
+    goal: '',
+    fitnessLevel: '',
+    daysPerWeek: '',
+  });
 
   const { data: activePlan, isLoading: loadingPlan } = useQuery<WorkoutPlan>({
     queryKey: ['/api/workout/member/active-plan'],
@@ -93,6 +114,29 @@ export default function MemberWorkoutPlanner() {
       toast({
         title: "Workout Started",
         description: "Good luck with your training!",
+      });
+    },
+  });
+
+  const generatePlanMutation = useMutation({
+    mutationFn: async (data: { goal: string; fitnessLevel: string; daysPerWeek: string }) => {
+      const response = await apiRequest('POST', '/api/workout/member/generate-plan', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workout/member/active-plan'] });
+      setShowGenerateDialog(false);
+      setGenerateForm({ goal: '', fitnessLevel: '', daysPerWeek: '' });
+      toast({
+        title: "Workout Plan Generated!",
+        description: "Your personalized workout plan is ready.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate workout plan",
+        variant: "destructive",
       });
     },
   });
@@ -146,11 +190,92 @@ export default function MemberWorkoutPlanner() {
             <p className="text-white/60 mb-6 max-w-md mx-auto">
               You don't have an active workout plan yet. Complete your profile or ask your trainer to assign one.
             </p>
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Button 
+              onClick={() => setShowGenerateDialog(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
               Generate My Plan
             </Button>
           </CardContent>
         </Card>
+
+        <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+          <DialogContent className="bg-card-dark border-white/10">
+            <DialogHeader>
+              <DialogTitle className="text-white">Generate Your Workout Plan</DialogTitle>
+              <DialogDescription className="text-white/60">
+                Tell us about your fitness goals to create a personalized plan
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">What is your fitness goal?</label>
+                <Select value={generateForm.goal} onValueChange={(v) => setGenerateForm(f => ({ ...f, goal: v }))}>
+                  <SelectTrigger className="bg-white/5 border-white/10">
+                    <SelectValue placeholder="Select your goal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weight_loss">Weight Loss</SelectItem>
+                    <SelectItem value="muscle_gain">Muscle Gain</SelectItem>
+                    <SelectItem value="strength">Build Strength</SelectItem>
+                    <SelectItem value="endurance">Improve Endurance</SelectItem>
+                    <SelectItem value="general_fitness">General Fitness</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">Your fitness level?</label>
+                <Select value={generateForm.fitnessLevel} onValueChange={(v) => setGenerateForm(f => ({ ...f, fitnessLevel: v }))}>
+                  <SelectTrigger className="bg-white/5 border-white/10">
+                    <SelectValue placeholder="Select your level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="beginner">Beginner (new to fitness)</SelectItem>
+                    <SelectItem value="intermediate">Intermediate (1-2 years)</SelectItem>
+                    <SelectItem value="advanced">Advanced (3+ years)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-white/70">How many days per week can you train?</label>
+                <Select value={generateForm.daysPerWeek} onValueChange={(v) => setGenerateForm(f => ({ ...f, daysPerWeek: v }))}>
+                  <SelectTrigger className="bg-white/5 border-white/10">
+                    <SelectValue placeholder="Select days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 days per week</SelectItem>
+                    <SelectItem value="4">4 days per week</SelectItem>
+                    <SelectItem value="5">5 days per week</SelectItem>
+                    <SelectItem value="6">6 days per week</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowGenerateDialog(false)}
+                className="border-white/10"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => generatePlanMutation.mutate(generateForm)}
+                disabled={!generateForm.goal || !generateForm.fitnessLevel || !generateForm.daysPerWeek || generatePlanMutation.isPending}
+                className="bg-orange-500 hover:bg-orange-600"
+              >
+                {generatePlanMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate Plan'
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

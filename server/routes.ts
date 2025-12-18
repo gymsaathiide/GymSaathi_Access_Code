@@ -8066,6 +8066,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Seed exercise library
+  app.post('/api/workout/admin/seed-exercises', requireRole('admin'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const result = await storage.seedExerciseLibrary(user.gymId);
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error seeding exercises:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin/Trainer: Create workout plan for member
+  app.post('/api/workout/admin/create-plan', requireRole('admin', 'trainer'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const { memberId, name, goal, difficulty, split, daysPerWeek, durationWeeks, description } = req.body;
+
+      if (!memberId || !name || !goal || !difficulty || !split || !daysPerWeek) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const plan = await storage.createWorkoutPlan({
+        gymId: user.gymId,
+        memberId,
+        trainerId: user.id,
+        name,
+        description,
+        goal,
+        difficulty,
+        split,
+        daysPerWeek,
+        durationWeeks: durationWeeks || 8,
+      });
+
+      res.json(plan);
+    } catch (error: any) {
+      console.error('Error creating workout plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Member: Generate workout plan automatically
+  app.post('/api/workout/member/generate-plan', requireRole('member'), async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.session!.userId!);
+      if (!user || !user.gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const { goal, fitnessLevel, daysPerWeek } = req.body;
+
+      if (!goal || !fitnessLevel || !daysPerWeek) {
+        return res.status(400).json({ error: 'Missing required fields: goal, fitnessLevel, daysPerWeek' });
+      }
+
+      // Check if exercises exist, seed if not
+      const exercises = await db!.select({ count: sql<number>`count(*)` })
+        .from(schema.exerciseLibrary)
+        .where(eq(schema.exerciseLibrary.gymId, user.gymId));
+
+      if (Number(exercises[0]?.count) === 0) {
+        await storage.seedExerciseLibrary(user.gymId);
+      }
+
+      // Deactivate any existing active plans
+      await db!.update(schema.workoutPlans)
+        .set({ status: 'archived' })
+        .where(and(
+          eq(schema.workoutPlans.memberId, user.id),
+          eq(schema.workoutPlans.status, 'active')
+        ));
+
+      const plan = await storage.generateWorkoutPlanForMember(user.gymId, user.id, {
+        goal,
+        fitnessLevel,
+        daysPerWeek: Number(daysPerWeek),
+      });
+
+      res.json(plan);
+    } catch (error: any) {
+      console.error('Error generating workout plan:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ NOTIFICATIONS API ============
 
   // Get notifications for current user
