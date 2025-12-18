@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -33,9 +34,17 @@ import {
   Target,
   TrendingUp,
   ChevronRight,
+  ChevronLeft,
   AlertCircle,
   Flame,
-  Loader2
+  Loader2,
+  Timer,
+  SkipForward,
+  Home,
+  Building2,
+  Check,
+  X,
+  Trophy
 } from "lucide-react";
 import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
 
@@ -76,16 +85,81 @@ type WorkoutExercise = {
   instructions?: string;
 };
 
+type WorkoutPreferences = {
+  id: string;
+  fitnessGoal: string;
+  experienceLevel: string;
+  preferredDaysPerWeek: number;
+  sessionDurationMinutes: number;
+  preferHomeWorkout: boolean;
+  injuries: string | null;
+  profileStatus: string;
+};
+
+type ExerciseLog = {
+  log: {
+    id: string;
+    exerciseId: string;
+    status: string;
+    startTime: string | null;
+    endTime: string | null;
+    duration: number | null;
+  };
+  exercise: {
+    id: string;
+    name: string;
+    muscleGroup: string;
+    instructions: string | null;
+  } | null;
+};
+
+type WorkoutSession = {
+  session: {
+    id: string;
+    startTime: string;
+    isCompleted: boolean;
+  };
+  exerciseLogs: ExerciseLog[];
+};
+
+const TIMER_STORAGE_KEY = 'workout_timer_state';
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
 export default function MemberWorkoutPlanner() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Multi-step form state
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
-  const [generateForm, setGenerateForm] = useState({
-    goal: '',
-    fitnessLevel: '',
-    daysPerWeek: '',
+  const [formStep, setFormStep] = useState(1);
+  const [preferencesForm, setPreferencesForm] = useState({
+    fitnessGoal: '',
+    experienceLevel: '',
+    preferredDaysPerWeek: '',
+    sessionDurationMinutes: '',
+    preferHomeWorkout: '',
+    injuries: '',
+  });
+
+  // Workout execution state
+  const [isExecutingWorkout, setIsExecutingWorkout] = useState(false);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [exerciseTimer, setExerciseTimer] = useState(0);
+  const [totalTimer, setTotalTimer] = useState(0);
+  const [isExerciseActive, setIsExerciseActive] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+
+  // Fetch preferences
+  const { data: preferences } = useQuery<WorkoutPreferences>({
+    queryKey: ['/api/workout/member/preferences'],
+    enabled: !!user,
   });
 
   const { data: activePlan, isLoading: loadingPlan } = useQuery<WorkoutPlan>({
@@ -103,33 +177,106 @@ export default function MemberWorkoutPlanner() {
     enabled: !!user,
   });
 
-  const startWorkoutMutation = useMutation({
-    mutationFn: async (dayId: string) => {
-      const response = await apiRequest('POST', `/api/workout/member/start-workout/${dayId}`, {});
+  const { data: activeSession, refetch: refetchSession } = useQuery<WorkoutSession | null>({
+    queryKey: ['/api/workout/session/active'],
+    enabled: !!user && isExecutingWorkout,
+  });
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isExecutingWorkout && !showSummary) {
+      interval = setInterval(() => {
+        setTotalTimer(prev => prev + 1);
+        if (isExerciseActive) {
+          setExerciseTimer(prev => prev + 1);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isExecutingWorkout, isExerciseActive, showSummary]);
+
+  // Save timer state to localStorage
+  useEffect(() => {
+    if (isExecutingWorkout && activeSession) {
+      localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify({
+        sessionId: activeSession.session.id,
+        totalTimer,
+        exerciseTimer,
+        currentExerciseIndex,
+        isExerciseActive,
+        timestamp: Date.now(),
+      }));
+    }
+  }, [isExecutingWorkout, activeSession, totalTimer, exerciseTimer, currentExerciseIndex, isExerciseActive]);
+
+  // Restore timer state on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem(TIMER_STORAGE_KEY);
+    if (savedState && activeSession) {
+      try {
+        const state = JSON.parse(savedState);
+        if (state.sessionId === activeSession.session.id) {
+          const elapsed = Math.floor((Date.now() - state.timestamp) / 1000);
+          setTotalTimer(state.totalTimer + elapsed);
+          setExerciseTimer(state.isExerciseActive ? state.exerciseTimer + elapsed : state.exerciseTimer);
+          setCurrentExerciseIndex(state.currentExerciseIndex);
+          setIsExerciseActive(state.isExerciseActive);
+          setIsExecutingWorkout(true);
+        }
+      } catch (e) {
+        console.error('Failed to restore timer state:', e);
+      }
+    }
+  }, [activeSession]);
+
+  // Save preferences mutation
+  const savePreferencesMutation = useMutation({
+    mutationFn: async (data: typeof preferencesForm) => {
+      const response = await apiRequest('POST', '/api/workout/member/preferences', {
+        fitnessGoal: data.fitnessGoal,
+        experienceLevel: data.experienceLevel,
+        preferredDaysPerWeek: parseInt(data.preferredDaysPerWeek, 10),
+        sessionDurationMinutes: parseInt(data.sessionDurationMinutes, 10),
+        preferHomeWorkout: data.preferHomeWorkout === 'home',
+        injuries: data.injuries || null,
+      });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/workout/member/weekly-progress'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/workout/member/active-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout/member/preferences'] });
+      setFormStep(7); // Move to confirmation step
+    },
+    onError: (error: any) => {
       toast({
-        title: "Workout Started",
-        description: "Good luck with your training!",
+        title: "Error",
+        description: error.message || "Failed to save preferences",
+        variant: "destructive",
       });
     },
   });
 
   const generatePlanMutation = useMutation({
-    mutationFn: async (data: { goal: string; fitnessLevel: string; daysPerWeek: string }) => {
+    mutationFn: async () => {
       const response = await apiRequest('POST', '/api/workout/member/generate-plan', {
-        ...data,
-        daysPerWeek: parseInt(data.daysPerWeek, 10),
+        goal: preferencesForm.fitnessGoal,
+        fitnessLevel: preferencesForm.experienceLevel,
+        daysPerWeek: parseInt(preferencesForm.preferredDaysPerWeek, 10),
       });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workout/member/active-plan'] });
       setShowGenerateDialog(false);
-      setGenerateForm({ goal: '', fitnessLevel: '', daysPerWeek: '' });
+      setFormStep(1);
+      setPreferencesForm({
+        fitnessGoal: '',
+        experienceLevel: '',
+        preferredDaysPerWeek: '',
+        sessionDurationMinutes: '',
+        preferHomeWorkout: '',
+        injuries: '',
+      });
       toast({
         title: "Workout Plan Generated!",
         description: "Your personalized workout plan is ready.",
@@ -144,138 +291,610 @@ export default function MemberWorkoutPlanner() {
     },
   });
 
+  // Start workout session
+  const startSessionMutation = useMutation({
+    mutationFn: async (data: { planId: string; dayId: string }) => {
+      const response = await apiRequest('POST', '/api/workout/session/start', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchSession();
+      setIsExecutingWorkout(true);
+      setCurrentExerciseIndex(0);
+      setExerciseTimer(0);
+      setTotalTimer(0);
+      setIsExerciseActive(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start workout",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Start exercise
+  const startExerciseMutation = useMutation({
+    mutationFn: async (exerciseLogId: string) => {
+      const response = await apiRequest('POST', `/api/workout/exercise/${exerciseLogId}/start`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsExerciseActive(true);
+      setExerciseTimer(0);
+      refetchSession();
+    },
+  });
+
+  // Complete exercise
+  const completeExerciseMutation = useMutation({
+    mutationFn: async (data: { exerciseLogId: string; status: 'completed' | 'skipped' }) => {
+      const response = await apiRequest('POST', `/api/workout/exercise/${data.exerciseLogId}/complete`, { status: data.status });
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      setIsExerciseActive(false);
+      refetchSession();
+      
+      // Check if this was the last exercise
+      if (activeSession && currentExerciseIndex >= activeSession.exerciseLogs.length - 1) {
+        // Complete the session
+        completeSessionMutation.mutate({
+          sessionId: activeSession.session.id,
+          totalDuration: Math.floor(totalTimer / 60),
+        });
+      } else {
+        // Move to next exercise
+        setCurrentExerciseIndex(prev => prev + 1);
+        setExerciseTimer(0);
+      }
+      
+      toast({
+        title: variables.status === 'completed' ? "Exercise Completed!" : "Exercise Skipped",
+        description: variables.status === 'completed' ? "Great job! Keep going!" : "Moving to the next exercise",
+      });
+    },
+  });
+
+  // Complete session
+  const completeSessionMutation = useMutation({
+    mutationFn: async (data: { sessionId: string; totalDuration: number }) => {
+      const response = await apiRequest('POST', `/api/workout/session/${data.sessionId}/complete`, { totalDuration: data.totalDuration });
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowSummary(true);
+      localStorage.removeItem(TIMER_STORAGE_KEY);
+    },
+  });
+
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const getGoalColor = (goal: string) => {
-    const colors: Record<string, string> = {
-      weight_loss: "bg-green-500",
-      muscle_gain: "bg-blue-500",
-      strength: "bg-purple-500",
-      endurance: "bg-orange-500",
-      flexibility: "bg-pink-500",
-      general_fitness: "bg-cyan-500",
-    };
-    return colors[goal] || "bg-gray-500";
+  const isFormStepValid = useCallback(() => {
+    switch (formStep) {
+      case 1: return !!preferencesForm.fitnessGoal;
+      case 2: return !!preferencesForm.experienceLevel;
+      case 3: return !!preferencesForm.preferredDaysPerWeek;
+      case 4: return !!preferencesForm.sessionDurationMinutes;
+      case 5: return !!preferencesForm.preferHomeWorkout;
+      case 6: return true; // Injuries is optional
+      default: return true;
+    }
+  }, [formStep, preferencesForm]);
+
+  const handleNextStep = () => {
+    if (formStep === 6) {
+      savePreferencesMutation.mutate(preferencesForm);
+    } else {
+      setFormStep(prev => prev + 1);
+    }
   };
 
-  const getDifficultyBadge = (difficulty: string) => {
-    const colors: Record<string, string> = {
-      beginner: "bg-green-500/20 text-green-300 border-green-500/30",
-      intermediate: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-      advanced: "bg-red-500/20 text-red-300 border-red-500/30",
-    };
-    return colors[difficulty] || "bg-gray-500/20 text-gray-300";
+  const handleGeneratePlan = () => {
+    generatePlanMutation.mutate();
   };
 
-  if (loadingPlan) {
-    return (
-      <div className="p-6 space-y-6">
-        <PageHeader title="Workout Planner" description="Loading your workout plan..." />
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
+  // Workout Execution View
+  if (isExecutingWorkout && activeSession) {
+    const currentExercise = activeSession.exerciseLogs[currentExerciseIndex];
+    const completedCount = activeSession.exerciseLogs.filter(e => e.log.status === 'completed').length;
+    const totalExercises = activeSession.exerciseLogs.length;
+    const progress = (completedCount / totalExercises) * 100;
+
+    // Summary screen
+    if (showSummary) {
+      const totalDuration = Math.floor(totalTimer / 60);
+      const skippedCount = activeSession.exerciseLogs.filter(e => e.log.status === 'skipped').length;
+
+      return (
+        <div className="p-6 space-y-6 pb-24">
+          <Card className="bg-gradient-to-br from-green-500/20 to-emerald-600/20 border-green-500/30">
+            <CardContent className="pt-8 text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
+                <Trophy className="h-10 w-10 text-green-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Workout Complete!</h2>
+              <p className="text-white/60 mb-6">Great job on finishing your workout!</p>
+              
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                <div className="bg-white/5 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-green-400">{completedCount}</div>
+                  <div className="text-xs text-white/60">Completed</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-orange-400">{skippedCount}</div>
+                  <div className="text-xs text-white/60">Skipped</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4">
+                  <div className="text-2xl font-bold text-blue-400">{totalDuration}m</div>
+                  <div className="text-xs text-white/60">Duration</div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => {
+                  setIsExecutingWorkout(false);
+                  setShowSummary(false);
+                  queryClient.invalidateQueries({ queryKey: ['/api/workout/member/weekly-progress'] });
+                }}
+                className="bg-green-500 hover:bg-green-600"
+              >
+                Back to Dashboard
+              </Button>
+            </CardContent>
+          </Card>
         </div>
+      );
+    }
+
+    return (
+      <div className="p-6 space-y-4 pb-24">
+        {/* Timer Header */}
+        <Card className="bg-gradient-to-r from-orange-500/20 to-red-500/20 border-orange-500/30">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Timer className="h-5 w-5 text-orange-500" />
+                <div>
+                  <div className="text-xs text-white/60">Total Time</div>
+                  <div className="text-xl font-mono font-bold text-white">{formatTime(totalTimer)}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-white/60">Progress</div>
+                <div className="text-lg font-bold text-white">{completedCount}/{totalExercises}</div>
+              </div>
+            </div>
+            <Progress value={progress} className="mt-3 h-2" />
+          </CardContent>
+        </Card>
+
+        {/* Current Exercise */}
+        {currentExercise && (
+          <Card className="border-orange-500/30">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <Badge variant="outline" className="border-orange-500/50 text-orange-400">
+                  Exercise {currentExerciseIndex + 1} of {totalExercises}
+                </Badge>
+                {isExerciseActive && (
+                  <div className="flex items-center gap-2 bg-orange-500/20 px-3 py-1 rounded-full">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-mono text-orange-400">{formatTime(exerciseTimer)}</span>
+                  </div>
+                )}
+              </div>
+              <CardTitle className="text-xl mt-2">{currentExercise.exercise?.name || 'Exercise'}</CardTitle>
+              <CardDescription className="capitalize">
+                {currentExercise.exercise?.muscleGroup?.replace('_', ' ')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {currentExercise.exercise?.instructions && (
+                <div className="bg-white/5 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-white/80 mb-2">Instructions</h4>
+                  <p className="text-sm text-white/60">{currentExercise.exercise.instructions}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                {!isExerciseActive ? (
+                  <Button 
+                    onClick={() => startExerciseMutation.mutate(currentExercise.log.id)}
+                    disabled={startExerciseMutation.isPending}
+                    className="flex-1 bg-green-500 hover:bg-green-600"
+                  >
+                    {startExerciseMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Start Exercise
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      onClick={() => completeExerciseMutation.mutate({ exerciseLogId: currentExercise.log.id, status: 'completed' })}
+                      disabled={completeExerciseMutation.isPending}
+                      className="flex-1 bg-green-500 hover:bg-green-600"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Complete
+                    </Button>
+                    <Button 
+                      onClick={() => completeExerciseMutation.mutate({ exerciseLogId: currentExercise.log.id, status: 'skipped' })}
+                      disabled={completeExerciseMutation.isPending}
+                      variant="outline"
+                      className="border-white/20"
+                    >
+                      <SkipForward className="h-4 w-4 mr-2" />
+                      Skip
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Exercise List */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">All Exercises</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {activeSession.exerciseLogs.map((exercise, index) => (
+              <div 
+                key={exercise.log.id}
+                className={`flex items-center justify-between p-3 rounded-lg ${
+                  index === currentExerciseIndex ? 'bg-orange-500/20 border border-orange-500/30' :
+                  exercise.log.status === 'completed' ? 'bg-green-500/10' :
+                  exercise.log.status === 'skipped' ? 'bg-white/5 opacity-50' :
+                  'bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                    exercise.log.status === 'completed' ? 'bg-green-500 text-white' :
+                    exercise.log.status === 'skipped' ? 'bg-white/20 text-white/50' :
+                    index === currentExerciseIndex ? 'bg-orange-500 text-white' :
+                    'bg-white/10 text-white/50'
+                  }`}>
+                    {exercise.log.status === 'completed' ? <Check className="h-3 w-3" /> :
+                     exercise.log.status === 'skipped' ? <X className="h-3 w-3" /> :
+                     index + 1}
+                  </div>
+                  <span className={exercise.log.status === 'skipped' ? 'line-through text-white/50' : ''}>
+                    {exercise.exercise?.name}
+                  </span>
+                </div>
+                {exercise.log.duration && (
+                  <span className="text-xs text-white/60">{formatTime(exercise.log.duration)}</span>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* End Workout Button */}
+        <Button 
+          variant="outline" 
+          className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+          onClick={() => {
+            if (activeSession) {
+              completeSessionMutation.mutate({
+                sessionId: activeSession.session.id,
+                totalDuration: Math.floor(totalTimer / 60),
+              });
+            }
+          }}
+        >
+          End Workout Early
+        </Button>
       </div>
     );
   }
 
+  if (loadingPlan) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  // No active plan - show generate dialog
   if (!activePlan) {
     return (
       <div className="p-6 space-y-6 pb-24">
-        <PageHeader title="Workout Planner" description="Your personalized workout journey" />
+        <PageHeader 
+          title="Workout Planner" 
+          description="Get your personalized workout plan"
+        />
         
-        <Card className="bg-gradient-to-br from-orange-900/40 to-orange-950/20 border-orange-500/20">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-4">
-              <Zap className="h-8 w-8 text-orange-400" />
+        <Card className="border-dashed border-2 border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
+          <CardContent className="pt-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <Dumbbell className="h-8 w-8 text-orange-500" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No Active Workout Plan</h3>
             <p className="text-white/60 mb-6 max-w-md mx-auto">
-              You don't have an active workout plan yet. Complete your profile or ask your trainer to assign one.
+              Create your personalized workout plan by telling us about your fitness goals and preferences.
             </p>
             <Button 
               onClick={() => setShowGenerateDialog(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
-              Generate My Plan
+              Create My Plan
             </Button>
           </CardContent>
         </Card>
 
-        <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-          <DialogContent className="bg-card-dark border-white/10">
+        {/* Multi-step Generation Dialog */}
+        <Dialog open={showGenerateDialog} onOpenChange={(open) => {
+          setShowGenerateDialog(open);
+          if (!open) {
+            setFormStep(1);
+          }
+        }}>
+          <DialogContent className="bg-card-dark border-white/10 max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-white">Generate Your Workout Plan</DialogTitle>
+              <DialogTitle className="text-white">
+                {formStep === 7 ? 'Ready to Generate!' : `Step ${formStep} of 6`}
+              </DialogTitle>
               <DialogDescription className="text-white/60">
-                Tell us about your fitness goals to create a personalized plan
+                {formStep === 7 ? 'Your preferences are saved. Generate your plan now!' : 'Tell us about your fitness goals'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm text-white/70">What is your fitness goal?</label>
-                <Select value={generateForm.goal} onValueChange={(v) => setGenerateForm(f => ({ ...f, goal: v }))}>
-                  <SelectTrigger className="bg-white/5 border-white/10">
-                    <SelectValue placeholder="Select your goal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weight_loss">Weight Loss</SelectItem>
-                    <SelectItem value="muscle_gain">Muscle Gain</SelectItem>
-                    <SelectItem value="strength">Build Strength</SelectItem>
-                    <SelectItem value="endurance">Improve Endurance</SelectItem>
-                    <SelectItem value="general_fitness">General Fitness</SelectItem>
-                  </SelectContent>
-                </Select>
+
+            {/* Progress indicator */}
+            {formStep < 7 && (
+              <div className="flex gap-1 mb-4">
+                {[1, 2, 3, 4, 5, 6].map((step) => (
+                  <div 
+                    key={step}
+                    className={`h-1 flex-1 rounded-full ${step <= formStep ? 'bg-orange-500' : 'bg-white/10'}`}
+                  />
+                ))}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm text-white/70">Your fitness level?</label>
-                <Select value={generateForm.fitnessLevel} onValueChange={(v) => setGenerateForm(f => ({ ...f, fitnessLevel: v }))}>
-                  <SelectTrigger className="bg-white/5 border-white/10">
-                    <SelectValue placeholder="Select your level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="beginner">Beginner (new to fitness)</SelectItem>
-                    <SelectItem value="intermediate">Intermediate (1-2 years)</SelectItem>
-                    <SelectItem value="advanced">Advanced (3+ years)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm text-white/70">How many days per week can you train?</label>
-                <Select value={generateForm.daysPerWeek} onValueChange={(v) => setGenerateForm(f => ({ ...f, daysPerWeek: v }))}>
-                  <SelectTrigger className="bg-white/5 border-white/10">
-                    <SelectValue placeholder="Select days" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">3 days per week</SelectItem>
-                    <SelectItem value="4">4 days per week</SelectItem>
-                    <SelectItem value="5">5 days per week</SelectItem>
-                    <SelectItem value="6">6 days per week</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            )}
+
+            <div className="py-4">
+              {/* Step 1: Fitness Goal */}
+              {formStep === 1 && (
+                <div className="space-y-4">
+                  <label className="text-sm text-white/70">What is your primary fitness goal?</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { value: 'weight_loss', label: 'Weight Loss', icon: '🔥' },
+                      { value: 'muscle_gain', label: 'Build Muscle', icon: '💪' },
+                      { value: 'strength', label: 'Increase Strength', icon: '🏋️' },
+                      { value: 'endurance', label: 'Improve Endurance', icon: '🏃' },
+                      { value: 'general_fitness', label: 'General Fitness', icon: '⚡' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setPreferencesForm(f => ({ ...f, fitnessGoal: option.value }))}
+                        className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${
+                          preferencesForm.fitnessGoal === option.value 
+                            ? 'border-orange-500 bg-orange-500/10' 
+                            : 'border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <span className="text-2xl">{option.icon}</span>
+                        <span className="text-white">{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Experience Level */}
+              {formStep === 2 && (
+                <div className="space-y-4">
+                  <label className="text-sm text-white/70">What's your fitness experience level?</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { value: 'beginner', label: 'Beginner', desc: 'New to fitness (0-1 year)' },
+                      { value: 'intermediate', label: 'Intermediate', desc: 'Regular training (1-3 years)' },
+                      { value: 'advanced', label: 'Advanced', desc: 'Experienced (3+ years)' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setPreferencesForm(f => ({ ...f, experienceLevel: option.value }))}
+                        className={`text-left p-4 rounded-lg border transition-all ${
+                          preferencesForm.experienceLevel === option.value 
+                            ? 'border-orange-500 bg-orange-500/10' 
+                            : 'border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-white font-medium">{option.label}</div>
+                        <div className="text-sm text-white/60">{option.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Days per Week */}
+              {formStep === 3 && (
+                <div className="space-y-4">
+                  <label className="text-sm text-white/70">How many days per week can you train?</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['3', '4', '5', '6'].map((days) => (
+                      <button
+                        key={days}
+                        onClick={() => setPreferencesForm(f => ({ ...f, preferredDaysPerWeek: days }))}
+                        className={`p-4 rounded-lg border text-center transition-all ${
+                          preferencesForm.preferredDaysPerWeek === days 
+                            ? 'border-orange-500 bg-orange-500/10' 
+                            : 'border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-2xl font-bold text-white">{days}</div>
+                        <div className="text-xs text-white/60">days</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Session Duration */}
+              {formStep === 4 && (
+                <div className="space-y-4">
+                  <label className="text-sm text-white/70">How long can you work out per session?</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: '30', label: '30 min' },
+                      { value: '45', label: '45 min' },
+                      { value: '60', label: '60 min' },
+                      { value: '90', label: '90 min' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setPreferencesForm(f => ({ ...f, sessionDurationMinutes: option.value }))}
+                        className={`p-4 rounded-lg border text-center transition-all ${
+                          preferencesForm.sessionDurationMinutes === option.value 
+                            ? 'border-orange-500 bg-orange-500/10' 
+                            : 'border-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <Clock className="h-5 w-5 mx-auto mb-1 text-white/60" />
+                        <div className="text-white font-medium">{option.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Workout Preference */}
+              {formStep === 5 && (
+                <div className="space-y-4">
+                  <label className="text-sm text-white/70">Where do you prefer to work out?</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setPreferencesForm(f => ({ ...f, preferHomeWorkout: 'home' }))}
+                      className={`p-6 rounded-lg border text-center transition-all ${
+                        preferencesForm.preferHomeWorkout === 'home' 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <Home className="h-8 w-8 mx-auto mb-2 text-orange-400" />
+                      <div className="text-white font-medium">At Home</div>
+                      <div className="text-xs text-white/60 mt-1">Minimal equipment</div>
+                    </button>
+                    <button
+                      onClick={() => setPreferencesForm(f => ({ ...f, preferHomeWorkout: 'gym' }))}
+                      className={`p-6 rounded-lg border text-center transition-all ${
+                        preferencesForm.preferHomeWorkout === 'gym' 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <Building2 className="h-8 w-8 mx-auto mb-2 text-orange-400" />
+                      <div className="text-white font-medium">At Gym</div>
+                      <div className="text-xs text-white/60 mt-1">Full equipment</div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 6: Injuries */}
+              {formStep === 6 && (
+                <div className="space-y-4">
+                  <label className="text-sm text-white/70">Do you have any injuries or medical conditions we should know about? (Optional)</label>
+                  <Textarea
+                    placeholder="E.g., Lower back pain, knee injury, shoulder issues..."
+                    value={preferencesForm.injuries}
+                    onChange={(e) => setPreferencesForm(f => ({ ...f, injuries: e.target.value }))}
+                    className="bg-white/5 border-white/10 min-h-[100px]"
+                  />
+                  <p className="text-xs text-white/50">
+                    This helps us create a safer workout plan for you. Leave blank if none.
+                  </p>
+                </div>
+              )}
+
+              {/* Step 7: Confirmation */}
+              {formStep === 7 && (
+                <div className="space-y-4">
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
+                    <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <div className="text-white font-medium">Preferences Saved!</div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/60">Goal:</span>
+                      <span className="text-white capitalize">{preferencesForm.fitnessGoal.replace('_', ' ')}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/60">Level:</span>
+                      <span className="text-white capitalize">{preferencesForm.experienceLevel}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/60">Days/Week:</span>
+                      <span className="text-white">{preferencesForm.preferredDaysPerWeek}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/60">Duration:</span>
+                      <span className="text-white">{preferencesForm.sessionDurationMinutes} min</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/60">Location:</span>
+                      <span className="text-white capitalize">{preferencesForm.preferHomeWorkout}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex justify-end gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowGenerateDialog(false)}
-                className="border-white/10"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => generatePlanMutation.mutate(generateForm)}
-                disabled={!generateForm.goal || !generateForm.fitnessLevel || !generateForm.daysPerWeek || generatePlanMutation.isPending}
-                className="bg-orange-500 hover:bg-orange-600"
-              >
-                {generatePlanMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Plan'
-                )}
-              </Button>
+
+            {/* Navigation buttons */}
+            <div className="flex gap-3">
+              {formStep > 1 && formStep < 7 && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFormStep(prev => prev - 1)}
+                  className="border-white/10"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Back
+                </Button>
+              )}
+              
+              {formStep < 7 ? (
+                <Button 
+                  onClick={handleNextStep}
+                  disabled={!isFormStepValid() || savePreferencesMutation.isPending}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600"
+                >
+                  {savePreferencesMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  {formStep === 6 ? 'Save & Continue' : 'Next'}
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleGeneratePlan}
+                  disabled={generatePlanMutation.isPending}
+                  className="flex-1 bg-green-500 hover:bg-green-600"
+                >
+                  {generatePlanMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Generate My Plan
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -283,267 +902,109 @@ export default function MemberWorkoutPlanner() {
     );
   }
 
+  // Main workout planner view with active plan
   return (
     <div className="p-6 space-y-6 pb-24">
       <PageHeader 
-        title="Workout Planner" 
-        description={`Week ${activePlan.currentWeek} of ${activePlan.durationWeeks}`} 
+        title="My Workout Plan" 
+        description={activePlan.name}
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-orange-900/40 to-orange-950/20 border-orange-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-100 flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Current Plan
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-semibold text-white">{activePlan.name}</p>
-            <Badge className={getDifficultyBadge(activePlan.difficulty)}>
-              {activePlan.difficulty}
+      {/* Plan Overview */}
+      <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+              {activePlan.split.replace('_', ' ')}
             </Badge>
-          </CardContent>
-        </Card>
+            <Badge variant="outline" className="border-white/20">
+              Week {activePlan.currentWeek} of {activePlan.durationWeeks}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-white">{activePlan.daysPerWeek}</div>
+              <div className="text-xs text-white/60">Days/Week</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-orange-400 capitalize">{activePlan.goal.replace('_', ' ')}</div>
+              <div className="text-xs text-white/60">Goal</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white capitalize">{activePlan.difficulty}</div>
+              <div className="text-xs text-white/60">Level</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card className="bg-gradient-to-br from-blue-900/40 to-blue-950/20 border-blue-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-100 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-semibold text-white">
-              {(weeklyProgress as any)?.completed || 0} / {activePlan.daysPerWeek} workouts
-            </p>
-            <Progress 
-              value={((weeklyProgress as any)?.completed || 0) / activePlan.daysPerWeek * 100} 
-              className="h-2 mt-2"
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-900/40 to-green-950/20 border-green-500/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-100 flex items-center gap-2">
-              <Flame className="h-4 w-4" />
-              Streak
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-semibold text-white">
-              {(weeklyProgress as any)?.streak || 0} days
-            </p>
-            <p className="text-xs text-green-200/60">Keep it up!</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-white/5 border border-white/10">
-          <TabsTrigger 
-            value="overview" 
-            className="data-[state=active]:bg-orange-500 data-[state=active]:text-white text-white/70"
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Weekly Overview
-          </TabsTrigger>
-          <TabsTrigger 
-            value="today"
-            className="data-[state=active]:bg-orange-500 data-[state=active]:text-white text-white/70"
-          >
-            <Dumbbell className="h-4 w-4 mr-2" />
-            Today's Workout
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4 mt-4">
-          <Card className="bg-card-dark border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white">This Week's Schedule</CardTitle>
-              <CardDescription className="text-white/60">
-                Tap on a day to see workout details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-2">
-                {weekDays.map((date, index) => {
-                  const dayNumber = index + 1;
-                  const workoutDay = workoutDays?.find(d => d.dayNumber === dayNumber);
-                  const isActive = isToday(date);
-                  
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => workoutDay && setSelectedDay(workoutDay)}
-                      className={`p-3 rounded-lg text-center transition-all ${
-                        isActive 
-                          ? 'bg-orange-500 text-white' 
-                          : workoutDay?.isRestDay
-                            ? 'bg-white/5 text-white/40'
-                            : workoutDay
-                              ? 'bg-white/10 text-white hover:bg-white/20'
-                              : 'bg-white/5 text-white/30'
-                      }`}
-                    >
-                      <p className="text-xs font-medium">{format(date, 'EEE')}</p>
-                      <p className="text-lg font-bold">{format(date, 'd')}</p>
-                      {workoutDay && !workoutDay.isRestDay && (
-                        <Dumbbell className="h-3 w-3 mx-auto mt-1 opacity-60" />
-                      )}
-                      {workoutDay?.isRestDay && (
-                        <p className="text-[10px] mt-1">Rest</p>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {selectedDay && (
-            <Card className="bg-card-dark border-white/10">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-white">{selectedDay.name}</CardTitle>
-                    <CardDescription className="text-white/60">
-                      {selectedDay.description || `Day ${selectedDay.dayNumber}`}
-                    </CardDescription>
-                  </div>
-                  {!selectedDay.isRestDay && (
-                    <Button 
-                      onClick={() => startWorkoutMutation.mutate(selectedDay.id)}
-                      className="bg-orange-500 hover:bg-orange-600"
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Workout
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              {!selectedDay.isRestDay && (
-                <CardContent>
-                  <div className="space-y-3">
-                    {selectedDay.exercises?.map((exercise, idx) => (
-                      <div 
-                        key={exercise.id}
-                        className="flex items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-semibold text-sm">
-                          {idx + 1}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-white">{exercise.name}</p>
-                          <p className="text-sm text-white/60">
-                            {exercise.sets} sets × {exercise.reps} reps
-                          </p>
-                        </div>
-                        <Badge className="bg-white/10 text-white/70">
-                          {exercise.muscleGroup}
-                        </Badge>
-                        <ChevronRight className="h-5 w-5 text-white/40" />
+      {/* Weekly Schedule */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-orange-500" />
+            This Week's Schedule
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingDays ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {workoutDays?.map((day) => {
+                const dayDate = weekDays[day.dayNumber - 1];
+                const isCurrentDay = dayDate && isToday(dayDate);
+                
+                return (
+                  <div 
+                    key={day.id}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-all ${
+                      isCurrentDay ? 'bg-orange-500/20 border border-orange-500/30' :
+                      day.isRestDay ? 'bg-white/5 opacity-60' : 'bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center ${
+                        isCurrentDay ? 'bg-orange-500' : 'bg-white/10'
+                      }`}>
+                        <span className="text-xs text-white/60">{dayDate ? format(dayDate, 'EEE') : ''}</span>
+                        <span className="text-sm font-bold">{dayDate ? format(dayDate, 'd') : day.dayNumber}</span>
                       </div>
-                    ))}
-                    {(!selectedDay.exercises || selectedDay.exercises.length === 0) && (
-                      <p className="text-center text-white/40 py-8">
-                        No exercises added to this day yet
-                      </p>
+                      <div>
+                        <div className="font-medium text-white">{day.name}</div>
+                        {!day.isRestDay && (
+                          <div className="text-xs text-white/60">{day.estimatedDuration} min</div>
+                        )}
+                      </div>
+                    </div>
+                    {!day.isRestDay && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          startSessionMutation.mutate({ planId: activePlan.id, dayId: day.id });
+                        }}
+                        disabled={startSessionMutation.isPending}
+                        className="bg-orange-500 hover:bg-orange-600"
+                      >
+                        {startSessionMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-1" />
+                            Start
+                          </>
+                        )}
+                      </Button>
                     )}
                   </div>
-                </CardContent>
-              )}
-            </Card>
+                );
+              })}
+            </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="today" className="space-y-4 mt-4">
-          {(() => {
-            const todayNumber = new Date().getDay() || 7;
-            const todayWorkout = workoutDays?.find(d => d.dayNumber === todayNumber);
-            
-            if (!todayWorkout) {
-              return (
-                <Card className="bg-card-dark border-white/10">
-                  <CardContent className="p-8 text-center">
-                    <AlertCircle className="h-12 w-12 mx-auto mb-4 text-white/40" />
-                    <h3 className="text-lg font-semibold text-white mb-2">No Workout Scheduled</h3>
-                    <p className="text-white/60">Today is a rest day or no workout is assigned.</p>
-                  </CardContent>
-                </Card>
-              );
-            }
-
-            if (todayWorkout.isRestDay) {
-              return (
-                <Card className="bg-gradient-to-br from-blue-900/40 to-blue-950/20 border-blue-500/20">
-                  <CardContent className="p-8 text-center">
-                    <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-                      <Clock className="h-8 w-8 text-blue-400" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-white mb-2">Rest Day</h3>
-                    <p className="text-white/60">Take it easy today. Your muscles are recovering and growing!</p>
-                  </CardContent>
-                </Card>
-              );
-            }
-
-            return (
-              <Card className="bg-card-dark border-white/10">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-white">{todayWorkout.name}</CardTitle>
-                      <CardDescription className="text-white/60 flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {todayWorkout.estimatedDuration || 45} min
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Dumbbell className="h-4 w-4" />
-                          {todayWorkout.exercises?.length || 0} exercises
-                        </span>
-                      </CardDescription>
-                    </div>
-                    <Button 
-                      onClick={() => startWorkoutMutation.mutate(todayWorkout.id)}
-                      className="bg-orange-500 hover:bg-orange-600"
-                      size="lg"
-                    >
-                      <Play className="h-5 w-5 mr-2" />
-                      Start Workout
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {todayWorkout.exercises?.map((exercise, idx) => (
-                      <div 
-                        key={exercise.id}
-                        className="flex items-center gap-4 p-4 rounded-lg bg-white/5"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold">
-                          {idx + 1}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-white">{exercise.name}</p>
-                          <p className="text-sm text-white/60">
-                            {exercise.sets} sets × {exercise.reps} • {exercise.restSeconds}s rest
-                          </p>
-                        </div>
-                        <Badge className="bg-white/10 text-white/70 capitalize">
-                          {exercise.muscleGroup.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

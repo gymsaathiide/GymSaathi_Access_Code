@@ -1,0 +1,212 @@
+ADD PRE-GENERATION INPUT FLOW + WORKOUT TIMER
+❌ CURRENT PROBLEMS
+
+Workout plan is generated randomly when clicking Generate Plan
+
+No mandatory user inputs are collected
+
+No exercise timer or total workout time tracking exists
+
+All three issues must be fixed together.
+
+🎯 REQUIRED BEHAVIOR (STRICT)
+
+Workout plan must NOT be generated until mandatory inputs are collected
+
+Workout execution must include:
+
+Per-exercise timer
+
+Total workout session timer
+
+User must complete an exercise before starting the next exercise of the same day
+
+1️⃣ INTERCEPT “GENERATE PLAN” ACTION
+
+When user clicks Generate Plan:
+
+❌ Do NOT generate workout
+✅ Open step-based input flow
+
+2️⃣ MANDATORY INPUT FLOW (HARD BLOCK)
+
+Collect and validate:
+
+Fitness Goal
+
+Experience Level
+
+Workout Days per Week
+
+Session Duration
+
+Workout Preference (Home/Gym)
+
+Injury / Medical Condition
+
+🚫 Disable Generate Plan until all fields are filled.
+
+3️⃣ BACKEND VALIDATION (NODE.JS + TYPESCRIPT)
+
+Workout generation API must enforce:
+
+IF mandatory fields missing
+  RETURN 422 (validation error)
+DO NOT generate plan
+
+4️⃣ DATABASE STORAGE (SUPABASE)
+
+Save collected inputs to member_profiles table.
+
+Add fields if missing:
+
+goal
+
+experience_level
+
+workout_days
+
+session_duration
+
+workout_preference
+
+injury_notes
+
+profile_status = "basic"
+
+5️⃣ WORKOUT PLAN GENERATION RULE
+
+Generate workout plan ONLY AFTER:
+
+Mandatory inputs exist
+
+User explicitly confirms plan generation
+
+❌ Remove all random plan generation logic
+
+6️⃣ WORKOUT EXECUTION TIMER (NEW FEATURE)
+⏱️ Exercise Timer
+
+When user clicks Start Exercise:
+
+Start exercise-level timer
+
+Show live elapsed time on screen
+
+Stop timer when:
+
+User marks exercise as completed
+
+User skips exercise
+
+⏱️ Total Workout Timer
+
+When user starts first exercise of the day:
+
+Start global workout session timer
+
+Timer runs across all exercises of that workout day
+
+Stop timer only when:
+
+All exercises for that day are completed
+
+Or user ends workout manually
+
+UI REQUIREMENTS
+
+Display:
+
+Current exercise time
+
+Total workout time (persistent header or footer)
+
+Timer must continue correctly when:
+
+Switching exercises
+
+Screen re-renders
+
+Timer must pause/resume safely
+
+7️⃣ EXERCISE FLOW CONTROL (STRICT)
+
+User CANNOT start the next exercise until:
+
+Current exercise is marked completed OR skipped
+
+Next exercise unlocks only after previous is finished
+
+8️⃣ WORKOUT LOGGING (SUPABASE)
+
+Store the following:
+
+Per Exercise
+
+exercise_start_time
+
+exercise_end_time
+
+exercise_duration
+
+status (completed/skipped)
+
+Per Workout Session
+
+workout_start_time
+
+workout_end_time
+
+total_workout_duration
+
+All values must be stored reliably and accurately.
+
+9️⃣ UI/UX BEHAVIOR
+
+Clear Start Exercise button
+
+Disabled Next Exercise until current is completed
+
+Completion state animation after each exercise
+
+Workout summary screen showing:
+
+Total exercises completed
+
+Total time spent
+
+10️⃣ TEST CASES (MANDATORY)
+
+Start first exercise → both timers start
+
+Complete exercise → exercise timer stops
+
+Start next exercise → total timer continues
+
+Complete all exercises → total timer stops
+
+Refresh page mid-workout → timers resume correctly
+
+Mobile & desktop → no UI break
+
+🚫 WHAT NOT TO DO
+
+Do not auto-start next exercise
+
+Do not reset total timer between exercises
+
+Do not generate random workouts
+
+Do not skip validation
+
+✅ FINAL GOAL
+
+Workout experience must be:
+
+✔ Controlled
+✔ Measurable
+✔ Sequential
+✔ Time-tracked
+✔ Personalized
+
+The user should clearly see how much time each exercise took and total time spent on the workout.

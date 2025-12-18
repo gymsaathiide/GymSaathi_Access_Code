@@ -2867,6 +2867,170 @@ class Storage {
 
     return plan;
   }
+
+  // ============= MEMBER WORKOUT PREFERENCES =============
+
+  async getMemberWorkoutPreferences(memberId: string) {
+    return await getDb().select()
+      .from(schema.memberWorkoutPreferences)
+      .where(eq(schema.memberWorkoutPreferences.memberId, memberId))
+      .limit(1)
+      .then(rows => rows[0] || null);
+  }
+
+  async saveMemberWorkoutPreferences(memberId: string, gymId: string, data: {
+    fitnessGoal: 'weight_loss' | 'muscle_gain' | 'strength' | 'endurance' | 'flexibility' | 'general_fitness' | 'sports_performance';
+    experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+    preferredDaysPerWeek: number;
+    sessionDurationMinutes: number;
+    preferHomeWorkout: boolean;
+    injuries?: string;
+  }) {
+    const existing = await this.getMemberWorkoutPreferences(memberId);
+    
+    if (existing) {
+      return await getDb().update(schema.memberWorkoutPreferences)
+        .set({
+          ...data,
+          profileStatus: 'basic',
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.memberWorkoutPreferences.id, existing.id))
+        .returning()
+        .then(rows => rows[0]);
+    }
+
+    return await getDb().insert(schema.memberWorkoutPreferences).values({
+      memberId,
+      gymId,
+      ...data,
+      profileStatus: 'basic',
+    }).returning().then(rows => rows[0]);
+  }
+
+  // ============= WORKOUT SESSION LOGGING =============
+
+  async createWorkoutSession(data: {
+    gymId: string;
+    memberId: string;
+    planId?: string;
+    dayId?: string;
+    workoutDate: Date;
+  }) {
+    return await getDb().insert(schema.workoutLogs).values({
+      ...data,
+      startTime: new Date(),
+      isCompleted: false,
+    }).returning().then(rows => rows[0]);
+  }
+
+  async getActiveWorkoutSession(memberId: string) {
+    return await getDb().select()
+      .from(schema.workoutLogs)
+      .where(and(
+        eq(schema.workoutLogs.memberId, memberId),
+        eq(schema.workoutLogs.isCompleted, false)
+      ))
+      .orderBy(desc(schema.workoutLogs.createdAt))
+      .limit(1)
+      .then(rows => rows[0] || null);
+  }
+
+  async completeWorkoutSession(sessionId: string, totalDuration: number) {
+    return await getDb().update(schema.workoutLogs)
+      .set({
+        endTime: new Date(),
+        totalDuration,
+        isCompleted: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.workoutLogs.id, sessionId))
+      .returning()
+      .then(rows => rows[0]);
+  }
+
+  async getWorkoutSessionWithExercises(sessionId: string) {
+    const session = await getDb().select()
+      .from(schema.workoutLogs)
+      .where(eq(schema.workoutLogs.id, sessionId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    if (!session) return null;
+
+    const exerciseLogs = await getDb().select({
+      log: schema.workoutExerciseLogs,
+      exercise: schema.exerciseLibrary,
+    })
+      .from(schema.workoutExerciseLogs)
+      .leftJoin(schema.exerciseLibrary, eq(schema.workoutExerciseLogs.exerciseId, schema.exerciseLibrary.id))
+      .where(eq(schema.workoutExerciseLogs.workoutLogId, sessionId))
+      .orderBy(asc(schema.workoutExerciseLogs.createdAt));
+
+    return { session, exerciseLogs };
+  }
+
+  // ============= EXERCISE LOGGING =============
+
+  async createExerciseLog(data: {
+    workoutLogId: string;
+    exerciseId: string;
+    planExerciseId?: string;
+  }) {
+    return await getDb().insert(schema.workoutExerciseLogs).values({
+      ...data,
+      status: 'pending',
+    }).returning().then(rows => rows[0]);
+  }
+
+  async startExercise(exerciseLogId: string) {
+    return await getDb().update(schema.workoutExerciseLogs)
+      .set({
+        startTime: new Date(),
+        status: 'pending',
+      })
+      .where(eq(schema.workoutExerciseLogs.id, exerciseLogId))
+      .returning()
+      .then(rows => rows[0]);
+  }
+
+  async completeExercise(exerciseLogId: string, status: 'completed' | 'skipped', setsCompleted?: number) {
+    const endTime = new Date();
+    const exerciseLog = await getDb().select()
+      .from(schema.workoutExerciseLogs)
+      .where(eq(schema.workoutExerciseLogs.id, exerciseLogId))
+      .limit(1)
+      .then(rows => rows[0]);
+
+    let duration = 0;
+    if (exerciseLog?.startTime) {
+      duration = Math.floor((endTime.getTime() - new Date(exerciseLog.startTime).getTime()) / 1000);
+    }
+
+    return await getDb().update(schema.workoutExerciseLogs)
+      .set({
+        endTime,
+        duration,
+        status,
+        setsCompleted: setsCompleted || 0,
+      })
+      .where(eq(schema.workoutExerciseLogs.id, exerciseLogId))
+      .returning()
+      .then(rows => rows[0]);
+  }
+
+  async getExerciseLogsBySession(sessionId: string) {
+    return await getDb().select({
+      log: schema.workoutExerciseLogs,
+      exercise: schema.exerciseLibrary,
+      planExercise: schema.workoutPlanExercises,
+    })
+      .from(schema.workoutExerciseLogs)
+      .leftJoin(schema.exerciseLibrary, eq(schema.workoutExerciseLogs.exerciseId, schema.exerciseLibrary.id))
+      .leftJoin(schema.workoutPlanExercises, eq(schema.workoutExerciseLogs.planExerciseId, schema.workoutPlanExercises.id))
+      .where(eq(schema.workoutExerciseLogs.workoutLogId, sessionId))
+      .orderBy(asc(schema.workoutExerciseLogs.createdAt));
+  }
 }
 
 export const storage = new Storage();

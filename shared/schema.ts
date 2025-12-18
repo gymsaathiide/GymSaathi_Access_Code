@@ -1327,6 +1327,9 @@ export const workoutExerciseLogs = pgTable("workout_exercise_logs", {
   exerciseId: uuid("exercise_id").notNull().references(() => exerciseLibrary.id),
   planExerciseId: uuid("plan_exercise_id").references(() => workoutPlanExercises.id),
   status: exerciseStatusEnum("status").default('pending'),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // in seconds
   setsCompleted: integer("sets_completed").default(0),
   repsPerSet: text("reps_per_set"), // JSON array of reps per set
   weightPerSet: text("weight_per_set"), // JSON array of weights per set
@@ -1339,6 +1342,9 @@ export const insertWorkoutExerciseLogSchema = createInsertSchema(workoutExercise
 export type InsertWorkoutExerciseLog = z.infer<typeof insertWorkoutExerciseLogSchema>;
 export type WorkoutExerciseLog = typeof workoutExerciseLogs.$inferSelect;
 
+// Profile status enum
+export const profileStatusEnum = pgEnum('profile_status', ['incomplete', 'basic', 'complete']);
+
 // Member Workout Preferences - workout preferences for auto-generation
 export const memberWorkoutPreferences = pgTable("member_workout_preferences", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -1350,8 +1356,9 @@ export const memberWorkoutPreferences = pgTable("member_workout_preferences", {
   sessionDurationMinutes: integer("session_duration_minutes").default(60),
   preferredEquipment: text("preferred_equipment"), // JSON array
   preferredSplit: workoutSplitEnum("preferred_split"),
-  injuries: text("injuries"), // JSON array of body parts to avoid
+  injuries: text("injuries"), // Text description of injuries/medical conditions
   preferHomeWorkout: boolean("prefer_home_workout").default(false),
+  profileStatus: profileStatusEnum("profile_status").default('incomplete'),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -8184,6 +8184,217 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ WORKOUT PREFERENCES API ============
+
+  // Get member workout preferences
+  app.get('/api/workout/member/preferences', requireRole('member'), async (req, res) => {
+    try {
+      const userId = req.session!.userId!;
+      const preferences = await storage.getMemberWorkoutPreferences(userId);
+      res.json(preferences);
+    } catch (error: any) {
+      console.error('Error fetching workout preferences:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Save member workout preferences (mandatory before plan generation)
+  app.post('/api/workout/member/preferences', requireRole('member'), async (req, res) => {
+    try {
+      const userId = req.session!.userId!;
+      const user = await storage.getUserById(userId);
+      
+      let gymId = user?.gymId;
+      if (!gymId) {
+        const memberRecord = await db!.select({ gymId: schema.members.gymId })
+          .from(schema.members)
+          .where(eq(schema.members.userId, userId))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = memberRecord?.gymId;
+      }
+      if (!gymId && req.session?.gymId) {
+        gymId = req.session.gymId;
+      }
+      
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const { fitnessGoal, experienceLevel, preferredDaysPerWeek, sessionDurationMinutes, preferHomeWorkout, injuries } = req.body;
+
+      // Validate mandatory fields - return 422 if missing
+      if (!fitnessGoal || !experienceLevel || !preferredDaysPerWeek || !sessionDurationMinutes || preferHomeWorkout === undefined) {
+        return res.status(422).json({ 
+          error: 'Missing required fields',
+          requiredFields: ['fitnessGoal', 'experienceLevel', 'preferredDaysPerWeek', 'sessionDurationMinutes', 'preferHomeWorkout'],
+          missingFields: [
+            !fitnessGoal && 'fitnessGoal',
+            !experienceLevel && 'experienceLevel',
+            !preferredDaysPerWeek && 'preferredDaysPerWeek',
+            !sessionDurationMinutes && 'sessionDurationMinutes',
+            preferHomeWorkout === undefined && 'preferHomeWorkout',
+          ].filter(Boolean)
+        });
+      }
+
+      const preferences = await storage.saveMemberWorkoutPreferences(userId, gymId, {
+        fitnessGoal,
+        experienceLevel,
+        preferredDaysPerWeek: Number(preferredDaysPerWeek),
+        sessionDurationMinutes: Number(sessionDurationMinutes),
+        preferHomeWorkout: Boolean(preferHomeWorkout),
+        injuries: injuries || null,
+      });
+
+      res.json(preferences);
+    } catch (error: any) {
+      console.error('Error saving workout preferences:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ WORKOUT SESSION LOGGING API ============
+
+  // Start a workout session
+  app.post('/api/workout/session/start', requireRole('member'), async (req, res) => {
+    try {
+      const userId = req.session!.userId!;
+      const user = await storage.getUserById(userId);
+      
+      let gymId = user?.gymId || req.session?.gymId;
+      if (!gymId) {
+        const memberRecord = await db!.select({ gymId: schema.members.gymId })
+          .from(schema.members)
+          .where(eq(schema.members.userId, userId))
+          .limit(1)
+          .then(rows => rows[0]);
+        gymId = memberRecord?.gymId;
+      }
+      
+      if (!gymId) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+
+      const { planId, dayId } = req.body;
+
+      // Check for existing active session
+      const existingSession = await storage.getActiveWorkoutSession(userId);
+      if (existingSession) {
+        return res.json(existingSession); // Return existing session
+      }
+
+      const session = await storage.createWorkoutSession({
+        gymId,
+        memberId: userId,
+        planId,
+        dayId,
+        workoutDate: new Date(),
+      });
+
+      // Create exercise logs for all exercises in this day
+      if (dayId) {
+        const dayExercises = await db!.select({
+          exercise: schema.workoutPlanExercises,
+          library: schema.exerciseLibrary,
+        })
+          .from(schema.workoutPlanExercises)
+          .leftJoin(schema.exerciseLibrary, eq(schema.workoutPlanExercises.exerciseId, schema.exerciseLibrary.id))
+          .where(eq(schema.workoutPlanExercises.dayId, dayId))
+          .orderBy(asc(schema.workoutPlanExercises.order));
+
+        for (const { exercise } of dayExercises) {
+          await storage.createExerciseLog({
+            workoutLogId: session.id,
+            exerciseId: exercise.exerciseId,
+            planExerciseId: exercise.id,
+          });
+        }
+      }
+
+      // Return session with exercise logs
+      const sessionWithExercises = await storage.getWorkoutSessionWithExercises(session.id);
+      res.json(sessionWithExercises);
+    } catch (error: any) {
+      console.error('Error starting workout session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get active workout session
+  app.get('/api/workout/session/active', requireRole('member'), async (req, res) => {
+    try {
+      const userId = req.session!.userId!;
+      const session = await storage.getActiveWorkoutSession(userId);
+      
+      if (!session) {
+        return res.json(null);
+      }
+
+      const sessionWithExercises = await storage.getWorkoutSessionWithExercises(session.id);
+      res.json(sessionWithExercises);
+    } catch (error: any) {
+      console.error('Error fetching active session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete workout session
+  app.post('/api/workout/session/:sessionId/complete', requireRole('member'), async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { totalDuration } = req.body;
+
+      const session = await storage.completeWorkoutSession(sessionId, totalDuration || 0);
+      res.json(session);
+    } catch (error: any) {
+      console.error('Error completing workout session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Start an exercise
+  app.post('/api/workout/exercise/:exerciseLogId/start', requireRole('member'), async (req, res) => {
+    try {
+      const { exerciseLogId } = req.params;
+      const exerciseLog = await storage.startExercise(exerciseLogId);
+      res.json(exerciseLog);
+    } catch (error: any) {
+      console.error('Error starting exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete or skip an exercise
+  app.post('/api/workout/exercise/:exerciseLogId/complete', requireRole('member'), async (req, res) => {
+    try {
+      const { exerciseLogId } = req.params;
+      const { status, setsCompleted } = req.body;
+
+      if (!['completed', 'skipped'].includes(status)) {
+        return res.status(400).json({ error: 'Status must be completed or skipped' });
+      }
+
+      const exerciseLog = await storage.completeExercise(exerciseLogId, status, setsCompleted);
+      res.json(exerciseLog);
+    } catch (error: any) {
+      console.error('Error completing exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get exercise logs for a session
+  app.get('/api/workout/session/:sessionId/exercises', requireRole('member'), async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const exercises = await storage.getExerciseLogsBySession(sessionId);
+      res.json(exercises);
+    } catch (error: any) {
+      console.error('Error fetching exercise logs:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ NOTIFICATIONS API ============
 
   // Get notifications for current user
