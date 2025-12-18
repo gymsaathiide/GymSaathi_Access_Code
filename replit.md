@@ -52,8 +52,13 @@ The platform features a dark theme only design with navy backgrounds and orange 
     -   Muscle groups: chest, back, shoulders, biceps, triceps, quads, hamstrings, glutes, calves, abs
     -   Equipment types: barbell, dumbbells, cables, machines, bodyweight
     -   Difficulty levels: beginner, intermediate, advanced
-    -   Auto-generated workout plans based on member preferences (goal, fitness level, days per week)
+    -   **Mandatory User Input Flow**: 6-step form requiring fitness goal, experience level, days/week, session duration, workout preference (home/gym), and optional injuries before plan generation
+    -   Backend validation returns 422 if mandatory fields are missing
+    -   No auto-filled or random data - all plan data comes from explicit user input
     -   Workout splits: full body (3-day), upper/lower (4-day), push/pull/legs (5-6 day)
+    -   **Timed Workout Execution**: Per-exercise timer and total session timer with localStorage persistence
+    -   **Sequential Exercise Flow**: Users must complete or skip each exercise before moving to next
+    -   **Workout Summary Screen**: Shows completed/skipped exercises and total duration
     -   Member dashboard with weekly view, plan generation dialog, and workout tracking
     -   Admin/Trainer dashboard for creating and managing member plans
 

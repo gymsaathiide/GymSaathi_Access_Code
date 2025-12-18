@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -16,13 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Zap, 
@@ -31,12 +23,8 @@ import {
   Dumbbell, 
   Play, 
   CheckCircle2, 
-  Target,
-  TrendingUp,
   ChevronRight,
   ChevronLeft,
-  AlertCircle,
-  Flame,
   Loader2,
   Timer,
   SkipForward,
@@ -44,9 +32,10 @@ import {
   Building2,
   Check,
   X,
-  Trophy
+  Trophy,
+  RefreshCw
 } from "lucide-react";
-import { format, startOfWeek, addDays, isToday, isSameDay } from "date-fns";
+import { format, startOfWeek, addDays, isToday } from "date-fns";
 
 type WorkoutPlan = {
   id: string;
@@ -93,14 +82,14 @@ type WorkoutPreferences = {
   sessionDurationMinutes: number;
   preferHomeWorkout: boolean;
   injuries: string | null;
-  profileStatus: string;
+  profileStatus: 'incomplete' | 'basic' | 'complete';
 };
 
 type ExerciseLog = {
   log: {
     id: string;
     exerciseId: string;
-    status: string;
+    status: 'pending' | 'completed' | 'skipped';
     startTime: string | null;
     endTime: string | null;
     duration: number | null;
@@ -133,8 +122,6 @@ function formatTime(seconds: number): string {
 export default function MemberWorkoutPlanner() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedDay, setSelectedDay] = useState<WorkoutDay | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
   
   // Multi-step form state
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
@@ -155,14 +142,15 @@ export default function MemberWorkoutPlanner() {
   const [totalTimer, setTotalTimer] = useState(0);
   const [isExerciseActive, setIsExerciseActive] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch preferences
-  const { data: preferences } = useQuery<WorkoutPreferences>({
+  // Fetch preferences - CRITICAL: This determines if user has completed setup
+  const { data: preferences, isLoading: loadingPreferences } = useQuery<WorkoutPreferences | null>({
     queryKey: ['/api/workout/member/preferences'],
     enabled: !!user,
   });
 
-  const { data: activePlan, isLoading: loadingPlan } = useQuery<WorkoutPlan>({
+  const { data: activePlan, isLoading: loadingPlan } = useQuery<WorkoutPlan | null>({
     queryKey: ['/api/workout/member/active-plan'],
     enabled: !!user,
   });
@@ -172,29 +160,28 @@ export default function MemberWorkoutPlanner() {
     enabled: !!activePlan?.id,
   });
 
-  const { data: weeklyProgress } = useQuery({
-    queryKey: ['/api/workout/member/weekly-progress'],
-    enabled: !!user,
-  });
-
-  // Always check for active session on mount to enable restoration
+  // Always check for active session on mount
   const { data: activeSession, refetch: refetchSession, isSuccess: sessionLoaded } = useQuery<WorkoutSession | null>({
     queryKey: ['/api/workout/session/active'],
     enabled: !!user,
   });
 
-  // Timer effect
+  // Timer effect - use ref to avoid stale closures
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     if (isExecutingWorkout && !showSummary) {
-      interval = setInterval(() => {
+      timerRef.current = setInterval(() => {
         setTotalTimer(prev => prev + 1);
         if (isExerciseActive) {
           setExerciseTimer(prev => prev + 1);
         }
       }, 1000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [isExecutingWorkout, isExerciseActive, showSummary]);
 
   // Save timer state to localStorage
@@ -215,7 +202,6 @@ export default function MemberWorkoutPlanner() {
   useEffect(() => {
     if (!sessionLoaded || !activeSession) return;
     
-    // There's an active session - restore state
     const savedState = localStorage.getItem(TIMER_STORAGE_KEY);
     if (savedState) {
       try {
@@ -234,13 +220,11 @@ export default function MemberWorkoutPlanner() {
       }
     }
     
-    // Active session exists but no valid saved state - still resume workout
-    // Calculate elapsed time from session start
+    // Active session exists but no valid saved state - resume from session data
     const sessionStart = new Date(activeSession.session.startTime).getTime();
     const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
     setTotalTimer(elapsed);
     
-    // Find current exercise index based on completion status
     const pendingIndex = activeSession.exerciseLogs.findIndex(e => e.log.status === 'pending');
     setCurrentExerciseIndex(pendingIndex >= 0 ? pendingIndex : 0);
     setIsExecutingWorkout(true);
@@ -257,11 +241,15 @@ export default function MemberWorkoutPlanner() {
         preferHomeWorkout: data.preferHomeWorkout === 'home',
         injuries: data.injuries || null,
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save preferences');
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workout/member/preferences'] });
-      setFormStep(7); // Move to confirmation step
+      setFormStep(7);
     },
     onError: (error: any) => {
       toast({
@@ -279,10 +267,15 @@ export default function MemberWorkoutPlanner() {
         fitnessLevel: preferencesForm.experienceLevel,
         daysPerWeek: parseInt(preferencesForm.preferredDaysPerWeek, 10),
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate plan');
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/workout/member/active-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout/member/preferences'] });
       setShowGenerateDialog(false);
       setFormStep(1);
       setPreferencesForm({
@@ -307,21 +300,35 @@ export default function MemberWorkoutPlanner() {
     },
   });
 
-  // Start workout session
+  // Start workout session - OPTIMISTIC: Update UI immediately
   const startSessionMutation = useMutation({
     mutationFn: async (data: { planId: string; dayId: string }) => {
       const response = await apiRequest('POST', '/api/workout/session/start', data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to start workout');
+      }
       return response.json();
     },
-    onSuccess: () => {
-      refetchSession();
+    onMutate: () => {
+      // Optimistically update UI immediately when button is clicked
       setIsExecutingWorkout(true);
       setCurrentExerciseIndex(0);
       setExerciseTimer(0);
       setTotalTimer(0);
       setIsExerciseActive(false);
+      setShowSummary(false);
+    },
+    onSuccess: () => {
+      refetchSession();
+      toast({
+        title: "Workout Started!",
+        description: "Good luck with your training!",
+      });
     },
     onError: (error: any) => {
+      // Rollback on error
+      setIsExecutingWorkout(false);
       toast({
         title: "Error",
         description: error.message || "Failed to start workout",
@@ -330,16 +337,29 @@ export default function MemberWorkoutPlanner() {
     },
   });
 
-  // Start exercise
+  // Start exercise - IMMEDIATE response
   const startExerciseMutation = useMutation({
     mutationFn: async (exerciseLogId: string) => {
+      // Optimistically update UI first
+      setIsExerciseActive(true);
+      setExerciseTimer(0);
+      
       const response = await apiRequest('POST', `/api/workout/exercise/${exerciseLogId}/start`, {});
+      if (!response.ok) {
+        throw new Error('Failed to start exercise');
+      }
       return response.json();
     },
     onSuccess: () => {
-      setIsExerciseActive(true);
-      setExerciseTimer(0);
       refetchSession();
+    },
+    onError: (error: any) => {
+      setIsExerciseActive(false);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start exercise",
+        variant: "destructive",
+      });
     },
   });
 
@@ -347,28 +367,36 @@ export default function MemberWorkoutPlanner() {
   const completeExerciseMutation = useMutation({
     mutationFn: async (data: { exerciseLogId: string; status: 'completed' | 'skipped' }) => {
       const response = await apiRequest('POST', `/api/workout/exercise/${data.exerciseLogId}/complete`, { status: data.status });
+      if (!response.ok) {
+        throw new Error('Failed to complete exercise');
+      }
       return response.json();
     },
     onSuccess: (_, variables) => {
       setIsExerciseActive(false);
+      setExerciseTimer(0);
       refetchSession();
       
       // Check if this was the last exercise
       if (activeSession && currentExerciseIndex >= activeSession.exerciseLogs.length - 1) {
-        // Complete the session
         completeSessionMutation.mutate({
           sessionId: activeSession.session.id,
-          totalDuration: Math.floor(totalTimer / 60),
+          totalDuration: totalTimer,
         });
       } else {
-        // Move to next exercise
         setCurrentExerciseIndex(prev => prev + 1);
-        setExerciseTimer(0);
       }
       
       toast({
         title: variables.status === 'completed' ? "Exercise Completed!" : "Exercise Skipped",
         description: variables.status === 'completed' ? "Great job! Keep going!" : "Moving to the next exercise",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete exercise",
+        variant: "destructive",
       });
     },
   });
@@ -377,11 +405,26 @@ export default function MemberWorkoutPlanner() {
   const completeSessionMutation = useMutation({
     mutationFn: async (data: { sessionId: string; totalDuration: number }) => {
       const response = await apiRequest('POST', `/api/workout/session/${data.sessionId}/complete`, { totalDuration: data.totalDuration });
+      if (!response.ok) {
+        throw new Error('Failed to complete session');
+      }
       return response.json();
     },
     onSuccess: () => {
       setShowSummary(true);
+      setIsExerciseActive(false);
       localStorage.removeItem(TIMER_STORAGE_KEY);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete workout",
+        variant: "destructive",
+      });
     },
   });
 
@@ -395,7 +438,7 @@ export default function MemberWorkoutPlanner() {
       case 3: return !!preferencesForm.preferredDaysPerWeek;
       case 4: return !!preferencesForm.sessionDurationMinutes;
       case 5: return !!preferencesForm.preferHomeWorkout;
-      case 6: return true; // Injuries is optional
+      case 6: return true;
       default: return true;
     }
   }, [formStep, preferencesForm]);
@@ -412,16 +455,28 @@ export default function MemberWorkoutPlanner() {
     generatePlanMutation.mutate();
   };
 
+  // CRITICAL: Check if user has completed the mandatory setup
+  const hasValidPreferences = preferences && preferences.profileStatus === 'basic';
+
+  // Loading state
+  if (loadingPreferences || loadingPlan) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
   // Workout Execution View
-  if (isExecutingWorkout && activeSession) {
+  if (isExecutingWorkout && activeSession && activeSession.exerciseLogs.length > 0) {
     const currentExercise = activeSession.exerciseLogs[currentExerciseIndex];
     const completedCount = activeSession.exerciseLogs.filter(e => e.log.status === 'completed').length;
     const totalExercises = activeSession.exerciseLogs.length;
-    const progress = (completedCount / totalExercises) * 100;
+    const progress = totalExercises > 0 ? (completedCount / totalExercises) * 100 : 0;
 
     // Summary screen
     if (showSummary) {
-      const totalDuration = Math.floor(totalTimer / 60);
+      const totalDurationMins = Math.floor(totalTimer / 60);
       const skippedCount = activeSession.exerciseLogs.filter(e => e.log.status === 'skipped').length;
 
       return (
@@ -444,7 +499,7 @@ export default function MemberWorkoutPlanner() {
                   <div className="text-xs text-white/60">Skipped</div>
                 </div>
                 <div className="bg-white/5 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-blue-400">{totalDuration}m</div>
+                  <div className="text-2xl font-bold text-blue-400">{totalDurationMins}m</div>
                   <div className="text-xs text-white/60">Duration</div>
                 </div>
               </div>
@@ -453,7 +508,11 @@ export default function MemberWorkoutPlanner() {
                 onClick={() => {
                   setIsExecutingWorkout(false);
                   setShowSummary(false);
+                  setCurrentExerciseIndex(0);
+                  setTotalTimer(0);
+                  setExerciseTimer(0);
                   queryClient.invalidateQueries({ queryKey: ['/api/workout/member/weekly-progress'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/workout/session/active'] });
                 }}
                 className="bg-green-500 hover:bg-green-600"
               >
@@ -520,12 +579,12 @@ export default function MemberWorkoutPlanner() {
                   <Button 
                     onClick={() => startExerciseMutation.mutate(currentExercise.log.id)}
                     disabled={startExerciseMutation.isPending}
-                    className="flex-1 bg-green-500 hover:bg-green-600"
+                    className="flex-1 bg-green-500 hover:bg-green-600 h-12 text-base"
                   >
                     {startExerciseMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
                     ) : (
-                      <Play className="h-4 w-4 mr-2" />
+                      <Play className="h-5 w-5 mr-2" />
                     )}
                     Start Exercise
                   </Button>
@@ -534,18 +593,22 @@ export default function MemberWorkoutPlanner() {
                     <Button 
                       onClick={() => completeExerciseMutation.mutate({ exerciseLogId: currentExercise.log.id, status: 'completed' })}
                       disabled={completeExerciseMutation.isPending}
-                      className="flex-1 bg-green-500 hover:bg-green-600"
+                      className="flex-1 bg-green-500 hover:bg-green-600 h-12 text-base"
                     >
-                      <Check className="h-4 w-4 mr-2" />
+                      {completeExerciseMutation.isPending ? (
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      ) : (
+                        <Check className="h-5 w-5 mr-2" />
+                      )}
                       Complete
                     </Button>
                     <Button 
                       onClick={() => completeExerciseMutation.mutate({ exerciseLogId: currentExercise.log.id, status: 'skipped' })}
                       disabled={completeExerciseMutation.isPending}
                       variant="outline"
-                      className="border-white/20"
+                      className="border-white/20 h-12"
                     >
-                      <SkipForward className="h-4 w-4 mr-2" />
+                      <SkipForward className="h-5 w-5 mr-2" />
                       Skip
                     </Button>
                   </>
@@ -586,7 +649,7 @@ export default function MemberWorkoutPlanner() {
                     {exercise.exercise?.name}
                   </span>
                 </div>
-                {exercise.log.duration && (
+                {exercise.log.duration && exercise.log.duration > 0 && (
                   <span className="text-xs text-white/60">{formatTime(exercise.log.duration)}</span>
                 )}
               </div>
@@ -602,32 +665,29 @@ export default function MemberWorkoutPlanner() {
             if (activeSession) {
               completeSessionMutation.mutate({
                 sessionId: activeSession.session.id,
-                totalDuration: Math.floor(totalTimer / 60),
+                totalDuration: totalTimer,
               });
             }
           }}
+          disabled={completeSessionMutation.isPending}
         >
+          {completeSessionMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : null}
           End Workout Early
         </Button>
       </div>
     );
   }
 
-  if (loadingPlan) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    );
-  }
-
-  // No active plan - show generate dialog
-  if (!activePlan) {
+  // NO PREFERENCES SET - Show mandatory setup flow
+  // This is the ONLY way to create a plan - user MUST complete this flow
+  if (!hasValidPreferences) {
     return (
       <div className="p-6 space-y-6 pb-24">
         <PageHeader 
           title="Workout Planner" 
-          description="Get your personalized workout plan"
+          description="Create your personalized workout plan"
         />
         
         <Card className="border-dashed border-2 border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
@@ -635,9 +695,9 @@ export default function MemberWorkoutPlanner() {
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
               <Dumbbell className="h-8 w-8 text-orange-500" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No Active Workout Plan</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">Let's Get Started!</h3>
             <p className="text-white/60 mb-6 max-w-md mx-auto">
-              Create your personalized workout plan by telling us about your fitness goals and preferences.
+              Tell us about your fitness goals and preferences to create your personalized workout plan.
             </p>
             <Button 
               onClick={() => setShowGenerateDialog(true)}
@@ -665,7 +725,6 @@ export default function MemberWorkoutPlanner() {
               </DialogDescription>
             </DialogHeader>
 
-            {/* Progress indicator */}
             {formStep < 7 && (
               <div className="flex gap-1 mb-4">
                 {[1, 2, 3, 4, 5, 6].map((step) => (
@@ -678,7 +737,6 @@ export default function MemberWorkoutPlanner() {
             )}
 
             <div className="py-4">
-              {/* Step 1: Fitness Goal */}
               {formStep === 1 && (
                 <div className="space-y-4">
                   <label className="text-sm text-white/70">What is your primary fitness goal?</label>
@@ -707,7 +765,6 @@ export default function MemberWorkoutPlanner() {
                 </div>
               )}
 
-              {/* Step 2: Experience Level */}
               {formStep === 2 && (
                 <div className="space-y-4">
                   <label className="text-sm text-white/70">What's your fitness experience level?</label>
@@ -734,7 +791,6 @@ export default function MemberWorkoutPlanner() {
                 </div>
               )}
 
-              {/* Step 3: Days per Week */}
               {formStep === 3 && (
                 <div className="space-y-4">
                   <label className="text-sm text-white/70">How many days per week can you train?</label>
@@ -757,7 +813,6 @@ export default function MemberWorkoutPlanner() {
                 </div>
               )}
 
-              {/* Step 4: Session Duration */}
               {formStep === 4 && (
                 <div className="space-y-4">
                   <label className="text-sm text-white/70">How long can you work out per session?</label>
@@ -785,7 +840,6 @@ export default function MemberWorkoutPlanner() {
                 </div>
               )}
 
-              {/* Step 5: Workout Preference */}
               {formStep === 5 && (
                 <div className="space-y-4">
                   <label className="text-sm text-white/70">Where do you prefer to work out?</label>
@@ -818,10 +872,9 @@ export default function MemberWorkoutPlanner() {
                 </div>
               )}
 
-              {/* Step 6: Injuries */}
               {formStep === 6 && (
                 <div className="space-y-4">
-                  <label className="text-sm text-white/70">Do you have any injuries or medical conditions we should know about? (Optional)</label>
+                  <label className="text-sm text-white/70">Do you have any injuries or medical conditions? (Optional)</label>
                   <Textarea
                     placeholder="E.g., Lower back pain, knee injury, shoulder issues..."
                     value={preferencesForm.injuries}
@@ -829,12 +882,11 @@ export default function MemberWorkoutPlanner() {
                     className="bg-white/5 border-white/10 min-h-[100px]"
                   />
                   <p className="text-xs text-white/50">
-                    This helps us create a safer workout plan for you. Leave blank if none.
+                    This helps us create a safer workout plan. Leave blank if none.
                   </p>
                 </div>
               )}
 
-              {/* Step 7: Confirmation */}
               {formStep === 7 && (
                 <div className="space-y-4">
                   <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
@@ -860,14 +912,19 @@ export default function MemberWorkoutPlanner() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-white/60">Location:</span>
-                      <span className="text-white capitalize">{preferencesForm.preferHomeWorkout}</span>
+                      <span className="text-white capitalize">{preferencesForm.preferHomeWorkout === 'home' ? 'Home' : 'Gym'}</span>
                     </div>
+                    {preferencesForm.injuries && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/60">Notes:</span>
+                        <span className="text-white">{preferencesForm.injuries.substring(0, 30)}...</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Navigation buttons */}
             <div className="flex gap-3">
               {formStep > 1 && formStep < 7 && (
                 <Button 
@@ -918,7 +975,78 @@ export default function MemberWorkoutPlanner() {
     );
   }
 
-  // Main workout planner view with active plan
+  // USER HAS VALID PREFERENCES - Check if plan exists
+  if (!activePlan) {
+    // Preferences exist but no plan yet - allow generation
+    return (
+      <div className="p-6 space-y-6 pb-24">
+        <PageHeader 
+          title="Workout Planner" 
+          description="Generate your workout plan"
+        />
+        
+        <Card className="border-dashed border-2 border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
+          <CardContent className="pt-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
+              <Dumbbell className="h-8 w-8 text-orange-500" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Ready to Generate Your Plan</h3>
+            <p className="text-white/60 mb-4 max-w-md mx-auto">
+              Based on your preferences, we'll create a personalized workout plan for you.
+            </p>
+            
+            {/* Show saved preferences summary */}
+            <div className="bg-white/5 rounded-lg p-4 mb-6 max-w-sm mx-auto text-left space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-white/60">Goal:</span>
+                <span className="text-white capitalize">{preferences?.fitnessGoal?.replace('_', ' ')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/60">Level:</span>
+                <span className="text-white capitalize">{preferences?.experienceLevel}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/60">Days/Week:</span>
+                <span className="text-white">{preferences?.preferredDaysPerWeek}</span>
+              </div>
+            </div>
+
+            <Button 
+              onClick={() => {
+                if (preferences) {
+                  setPreferencesForm({
+                    fitnessGoal: preferences.fitnessGoal,
+                    experienceLevel: preferences.experienceLevel,
+                    preferredDaysPerWeek: String(preferences.preferredDaysPerWeek),
+                    sessionDurationMinutes: String(preferences.sessionDurationMinutes),
+                    preferHomeWorkout: preferences.preferHomeWorkout ? 'home' : 'gym',
+                    injuries: preferences.injuries || '',
+                  });
+                  generatePlanMutation.mutate();
+                }
+              }}
+              disabled={generatePlanMutation.isPending}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              {generatePlanMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Generate My Plan
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ACTIVE PLAN EXISTS - Show plan view with user's actual data
   return (
     <div className="p-6 space-y-6 pb-24">
       <PageHeader 
@@ -926,12 +1054,12 @@ export default function MemberWorkoutPlanner() {
         description={activePlan.name}
       />
 
-      {/* Plan Overview */}
+      {/* Plan Overview - Shows data from user's saved preferences */}
       <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
             <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
-              {activePlan.split.replace('_', ' ')}
+              {activePlan.split?.replace('_', ' ') || 'Custom'}
             </Badge>
             <Badge variant="outline" className="border-white/20">
               Week {activePlan.currentWeek} of {activePlan.durationWeeks}
@@ -943,7 +1071,7 @@ export default function MemberWorkoutPlanner() {
               <div className="text-xs text-white/60">Days/Week</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-orange-400 capitalize">{activePlan.goal.replace('_', ' ')}</div>
+              <div className="text-2xl font-bold text-orange-400 capitalize">{activePlan.goal?.replace('_', ' ')}</div>
               <div className="text-xs text-white/60">Goal</div>
             </div>
             <div>
@@ -967,9 +1095,9 @@ export default function MemberWorkoutPlanner() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
             </div>
-          ) : (
+          ) : workoutDays && workoutDays.length > 0 ? (
             <div className="space-y-2">
-              {workoutDays?.map((day) => {
+              {workoutDays.map((day) => {
                 const dayDate = weekDays[day.dayNumber - 1];
                 const isCurrentDay = dayDate && isToday(dayDate);
                 
@@ -1018,9 +1146,289 @@ export default function MemberWorkoutPlanner() {
                 );
               })}
             </div>
+          ) : (
+            <div className="text-center py-8 text-white/60">
+              No workout days found. Try regenerating your plan.
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Regenerate Plan Option */}
+      <Card className="border-white/10">
+        <CardContent className="pt-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-white">Want a different plan?</div>
+              <div className="text-xs text-white/60">Update your preferences and generate a new plan</div>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowGenerateDialog(true)}
+              className="border-white/20"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Update
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Multi-step Dialog for updating preferences */}
+      <Dialog open={showGenerateDialog} onOpenChange={(open) => {
+        setShowGenerateDialog(open);
+        if (!open) {
+          setFormStep(1);
+        }
+      }}>
+        <DialogContent className="bg-card-dark border-white/10 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {formStep === 7 ? 'Ready to Generate!' : `Step ${formStep} of 6`}
+            </DialogTitle>
+            <DialogDescription className="text-white/60">
+              {formStep === 7 ? 'Your preferences are saved. Generate your plan now!' : 'Update your fitness preferences'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {formStep < 7 && (
+            <div className="flex gap-1 mb-4">
+              {[1, 2, 3, 4, 5, 6].map((step) => (
+                <div 
+                  key={step}
+                  className={`h-1 flex-1 rounded-full ${step <= formStep ? 'bg-orange-500' : 'bg-white/10'}`}
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="py-4">
+            {formStep === 1 && (
+              <div className="space-y-4">
+                <label className="text-sm text-white/70">What is your primary fitness goal?</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { value: 'weight_loss', label: 'Weight Loss', icon: '🔥' },
+                    { value: 'muscle_gain', label: 'Build Muscle', icon: '💪' },
+                    { value: 'strength', label: 'Increase Strength', icon: '🏋️' },
+                    { value: 'endurance', label: 'Improve Endurance', icon: '🏃' },
+                    { value: 'general_fitness', label: 'General Fitness', icon: '⚡' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setPreferencesForm(f => ({ ...f, fitnessGoal: option.value }))}
+                      className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${
+                        preferencesForm.fitnessGoal === option.value 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-2xl">{option.icon}</span>
+                      <span className="text-white">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {formStep === 2 && (
+              <div className="space-y-4">
+                <label className="text-sm text-white/70">What's your fitness experience level?</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { value: 'beginner', label: 'Beginner', desc: 'New to fitness (0-1 year)' },
+                    { value: 'intermediate', label: 'Intermediate', desc: 'Regular training (1-3 years)' },
+                    { value: 'advanced', label: 'Advanced', desc: 'Experienced (3+ years)' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setPreferencesForm(f => ({ ...f, experienceLevel: option.value }))}
+                      className={`text-left p-4 rounded-lg border transition-all ${
+                        preferencesForm.experienceLevel === option.value 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-white font-medium">{option.label}</div>
+                      <div className="text-sm text-white/60">{option.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {formStep === 3 && (
+              <div className="space-y-4">
+                <label className="text-sm text-white/70">How many days per week can you train?</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['3', '4', '5', '6'].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => setPreferencesForm(f => ({ ...f, preferredDaysPerWeek: days }))}
+                      className={`p-4 rounded-lg border text-center transition-all ${
+                        preferencesForm.preferredDaysPerWeek === days 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-2xl font-bold text-white">{days}</div>
+                      <div className="text-xs text-white/60">days</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {formStep === 4 && (
+              <div className="space-y-4">
+                <label className="text-sm text-white/70">How long can you work out per session?</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: '30', label: '30 min' },
+                    { value: '45', label: '45 min' },
+                    { value: '60', label: '60 min' },
+                    { value: '90', label: '90 min' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setPreferencesForm(f => ({ ...f, sessionDurationMinutes: option.value }))}
+                      className={`p-4 rounded-lg border text-center transition-all ${
+                        preferencesForm.sessionDurationMinutes === option.value 
+                          ? 'border-orange-500 bg-orange-500/10' 
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <Clock className="h-5 w-5 mx-auto mb-1 text-white/60" />
+                      <div className="text-white font-medium">{option.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {formStep === 5 && (
+              <div className="space-y-4">
+                <label className="text-sm text-white/70">Where do you prefer to work out?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPreferencesForm(f => ({ ...f, preferHomeWorkout: 'home' }))}
+                    className={`p-6 rounded-lg border text-center transition-all ${
+                      preferencesForm.preferHomeWorkout === 'home' 
+                        ? 'border-orange-500 bg-orange-500/10' 
+                        : 'border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <Home className="h-8 w-8 mx-auto mb-2 text-orange-400" />
+                    <div className="text-white font-medium">At Home</div>
+                    <div className="text-xs text-white/60 mt-1">Minimal equipment</div>
+                  </button>
+                  <button
+                    onClick={() => setPreferencesForm(f => ({ ...f, preferHomeWorkout: 'gym' }))}
+                    className={`p-6 rounded-lg border text-center transition-all ${
+                      preferencesForm.preferHomeWorkout === 'gym' 
+                        ? 'border-orange-500 bg-orange-500/10' 
+                        : 'border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    <Building2 className="h-8 w-8 mx-auto mb-2 text-orange-400" />
+                    <div className="text-white font-medium">At Gym</div>
+                    <div className="text-xs text-white/60 mt-1">Full equipment</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {formStep === 6 && (
+              <div className="space-y-4">
+                <label className="text-sm text-white/70">Do you have any injuries or medical conditions? (Optional)</label>
+                <Textarea
+                  placeholder="E.g., Lower back pain, knee injury, shoulder issues..."
+                  value={preferencesForm.injuries}
+                  onChange={(e) => setPreferencesForm(f => ({ ...f, injuries: e.target.value }))}
+                  className="bg-white/5 border-white/10 min-h-[100px]"
+                />
+              </div>
+            )}
+
+            {formStep === 7 && (
+              <div className="space-y-4">
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
+                  <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                  <div className="text-white font-medium">Preferences Saved!</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/60">Goal:</span>
+                    <span className="text-white capitalize">{preferencesForm.fitnessGoal.replace('_', ' ')}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/60">Level:</span>
+                    <span className="text-white capitalize">{preferencesForm.experienceLevel}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/60">Days/Week:</span>
+                    <span className="text-white">{preferencesForm.preferredDaysPerWeek}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/60">Duration:</span>
+                    <span className="text-white">{preferencesForm.sessionDurationMinutes} min</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/60">Location:</span>
+                    <span className="text-white capitalize">{preferencesForm.preferHomeWorkout === 'home' ? 'Home' : 'Gym'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            {formStep > 1 && formStep < 7 && (
+              <Button 
+                variant="outline" 
+                onClick={() => setFormStep(prev => prev - 1)}
+                className="border-white/10"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+            )}
+            
+            {formStep < 7 ? (
+              <Button 
+                onClick={handleNextStep}
+                disabled={!isFormStepValid() || savePreferencesMutation.isPending}
+                className="flex-1 bg-orange-500 hover:bg-orange-600"
+              >
+                {savePreferencesMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                {formStep === 6 ? 'Save & Continue' : 'Next'}
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleGeneratePlan}
+                disabled={generatePlanMutation.isPending}
+                className="flex-1 bg-green-500 hover:bg-green-600"
+              >
+                {generatePlanMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Generate New Plan
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
