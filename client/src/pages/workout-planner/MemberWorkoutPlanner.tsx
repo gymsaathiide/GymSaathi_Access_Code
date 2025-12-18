@@ -177,9 +177,10 @@ export default function MemberWorkoutPlanner() {
     enabled: !!user,
   });
 
-  const { data: activeSession, refetch: refetchSession } = useQuery<WorkoutSession | null>({
+  // Always check for active session on mount to enable restoration
+  const { data: activeSession, refetch: refetchSession, isSuccess: sessionLoaded } = useQuery<WorkoutSession | null>({
     queryKey: ['/api/workout/session/active'],
-    enabled: !!user && isExecutingWorkout,
+    enabled: !!user,
   });
 
   // Timer effect
@@ -210,10 +211,13 @@ export default function MemberWorkoutPlanner() {
     }
   }, [isExecutingWorkout, activeSession, totalTimer, exerciseTimer, currentExerciseIndex, isExerciseActive]);
 
-  // Restore timer state on mount
+  // Restore workout state on mount when active session exists
   useEffect(() => {
+    if (!sessionLoaded || !activeSession) return;
+    
+    // There's an active session - restore state
     const savedState = localStorage.getItem(TIMER_STORAGE_KEY);
-    if (savedState && activeSession) {
+    if (savedState) {
       try {
         const state = JSON.parse(savedState);
         if (state.sessionId === activeSession.session.id) {
@@ -223,12 +227,24 @@ export default function MemberWorkoutPlanner() {
           setCurrentExerciseIndex(state.currentExerciseIndex);
           setIsExerciseActive(state.isExerciseActive);
           setIsExecutingWorkout(true);
+          return;
         }
       } catch (e) {
         console.error('Failed to restore timer state:', e);
       }
     }
-  }, [activeSession]);
+    
+    // Active session exists but no valid saved state - still resume workout
+    // Calculate elapsed time from session start
+    const sessionStart = new Date(activeSession.session.startTime).getTime();
+    const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+    setTotalTimer(elapsed);
+    
+    // Find current exercise index based on completion status
+    const pendingIndex = activeSession.exerciseLogs.findIndex(e => e.log.status === 'pending');
+    setCurrentExerciseIndex(pendingIndex >= 0 ? pendingIndex : 0);
+    setIsExecutingWorkout(true);
+  }, [sessionLoaded, activeSession]);
 
   // Save preferences mutation
   const savePreferencesMutation = useMutation({
