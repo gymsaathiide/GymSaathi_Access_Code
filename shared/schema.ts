@@ -1377,3 +1377,172 @@ export const trainerWorkoutAssignments = pgTable("trainer_workout_assignments", 
   assignedAt: timestamp("assigned_at").defaultNow(),
   notes: text("notes"),
 });
+
+// ============================================================
+// NEW WORKOUT PLANNER SYSTEM (On-Demand, Muscle-Group Based)
+// ============================================================
+
+// Training priority enum for new workout planner
+export const trainingPriorityEnum = pgEnum('training_priority', ['strength', 'stamina', 'flexibility']);
+
+// Workout session status enum
+export const workoutSessionStatusEnum = pgEnum('workout_session_status', ['planned', 'in_progress', 'completed', 'cancelled']);
+
+// Exercise type enum for library categorization
+export const exerciseTypeEnum = pgEnum('exercise_type', ['main', 'stretching', 'cardio']);
+
+// Workout Muscle Groups - master list of muscle groups
+export const workoutMuscleGroups = pgTable("workout_muscle_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  exerciseCount: integer("exercise_count").default(0),
+  stretchingCount: integer("stretching_count").default(0),
+  iconName: text("icon_name"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWorkoutMuscleGroupSchema = createInsertSchema(workoutMuscleGroups).omit({ id: true, createdAt: true });
+export type InsertWorkoutMuscleGroup = z.infer<typeof insertWorkoutMuscleGroupSchema>;
+export type WorkoutMuscleGroup = typeof workoutMuscleGroups.$inferSelect;
+
+// Workout Exercises - main exercise library (main, stretching types)
+export const workoutExercises = pgTable("workout_exercises", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  muscleGroupId: uuid("muscle_group_id").notNull().references(() => workoutMuscleGroups.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  description: text("description"),
+  instructions: text("instructions"),
+  videoUrl: text("video_url"),
+  imageUrl: text("image_url"),
+  exerciseType: exerciseTypeEnum("exercise_type").notNull().default('main'),
+  difficulty: experienceLevelEnum("difficulty").default('beginner'),
+  equipment: text("equipment"),
+  targetReps: text("target_reps"),
+  targetSets: integer("target_sets"),
+  restSeconds: integer("rest_seconds").default(60),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertWorkoutExerciseSchema = createInsertSchema(workoutExercises).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertWorkoutExercise = z.infer<typeof insertWorkoutExerciseSchema>;
+export type WorkoutExercise = typeof workoutExercises.$inferSelect;
+
+// Workout Cardio Library - global cardio exercises (not muscle-specific)
+export const workoutCardioLibrary = pgTable("workout_cardio_library", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  instructions: text("instructions"),
+  videoUrl: text("video_url"),
+  imageUrl: text("image_url"),
+  duration: text("duration"),
+  intensity: text("intensity"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertWorkoutCardioSchema = createInsertSchema(workoutCardioLibrary).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertWorkoutCardio = z.infer<typeof insertWorkoutCardioSchema>;
+export type WorkoutCardio = typeof workoutCardioLibrary.$inferSelect;
+
+// Member Workout Profile - onboarding data (3 steps)
+export const memberWorkoutProfile = pgTable("member_workout_profile", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  memberId: uuid("member_id").notNull().unique(),
+  gymId: uuid("gym_id").notNull(),
+  fitnessGoal: text("fitness_goal"), // fat_loss, muscle_gain, strength, general_fitness
+  experienceLevel: experienceLevelEnum("experience_level"),
+  trainingPriority: trainingPriorityEnum("training_priority"),
+  currentWeight: decimal("current_weight", { precision: 6, scale: 2 }),
+  height: decimal("height", { precision: 5, scale: 2 }),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMemberWorkoutProfileSchema = createInsertSchema(memberWorkoutProfile).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMemberWorkoutProfile = z.infer<typeof insertMemberWorkoutProfileSchema>;
+export type MemberWorkoutProfile = typeof memberWorkoutProfile.$inferSelect;
+
+// Workout Training Sessions - active and completed workout sessions
+export const workoutTrainingSessions = pgTable("workout_training_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  memberId: uuid("member_id").notNull(),
+  gymId: uuid("gym_id").notNull(),
+  muscleGroupId: uuid("muscle_group_id").notNull().references(() => workoutMuscleGroups.id),
+  status: workoutSessionStatusEnum("status").default('planned'),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  totalDuration: integer("total_duration"), // in seconds
+  stretchingCompleted: boolean("stretching_completed").default(false),
+  cardioExerciseId: uuid("cardio_exercise_id").references(() => workoutCardioLibrary.id),
+  cardioCompleted: boolean("cardio_completed").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWorkoutTrainingSessionSchema = createInsertSchema(workoutTrainingSessions).omit({ id: true, createdAt: true });
+export type InsertWorkoutTrainingSession = z.infer<typeof insertWorkoutTrainingSessionSchema>;
+export type WorkoutTrainingSession = typeof workoutTrainingSessions.$inferSelect;
+
+// Workout Session Exercises - exercises in each session
+export const workoutSessionExercises = pgTable("workout_session_exercises", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull().references(() => workoutTrainingSessions.id, { onDelete: 'cascade' }),
+  exerciseId: uuid("exercise_id").notNull().references(() => workoutExercises.id),
+  exerciseType: exerciseTypeEnum("exercise_type").notNull(),
+  sortOrder: integer("sort_order").default(0),
+  isCompleted: boolean("is_completed").default(false),
+  isSkipped: boolean("is_skipped").default(false),
+  setsCompleted: integer("sets_completed").default(0),
+  repsPerSet: text("reps_per_set"),
+  weightPerSet: text("weight_per_set"),
+  duration: integer("duration"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWorkoutSessionExerciseSchema = createInsertSchema(workoutSessionExercises).omit({ id: true, createdAt: true });
+export type InsertWorkoutSessionExercise = z.infer<typeof insertWorkoutSessionExerciseSchema>;
+export type WorkoutSessionExercise = typeof workoutSessionExercises.$inferSelect;
+
+// Member Exercise History - for rotation tracking
+export const memberExerciseHistory = pgTable("member_exercise_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  memberId: uuid("member_id").notNull(),
+  gymId: uuid("gym_id").notNull(),
+  muscleGroupId: uuid("muscle_group_id").notNull().references(() => workoutMuscleGroups.id),
+  exerciseId: uuid("exercise_id").notNull().references(() => workoutExercises.id),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+  usageCount: integer("usage_count").default(1),
+});
+
+export const insertMemberExerciseHistorySchema = createInsertSchema(memberExerciseHistory).omit({ id: true });
+export type InsertMemberExerciseHistory = z.infer<typeof insertMemberExerciseHistorySchema>;
+export type MemberExerciseHistory = typeof memberExerciseHistory.$inferSelect;
+
+// Workout Reports - completed workout reports for calendar
+export const workoutReports = pgTable("workout_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  memberId: uuid("member_id").notNull(),
+  gymId: uuid("gym_id").notNull(),
+  sessionId: uuid("session_id").notNull().references(() => workoutTrainingSessions.id, { onDelete: 'cascade' }),
+  workoutDate: timestamp("workout_date").notNull(),
+  muscleGroupId: uuid("muscle_group_id").notNull().references(() => workoutMuscleGroups.id),
+  muscleGroupName: text("muscle_group_name").notNull(),
+  stretchingExercises: text("stretching_exercises"), // JSON array
+  mainExercises: text("main_exercises"), // JSON array
+  cardioExercise: text("cardio_exercise"), // JSON object
+  totalDuration: integer("total_duration"), // in seconds
+  isCompleted: boolean("is_completed").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWorkoutReportSchema = createInsertSchema(workoutReports).omit({ id: true, createdAt: true });
+export type InsertWorkoutReport = z.infer<typeof insertWorkoutReportSchema>;
+export type WorkoutReport = typeof workoutReports.$inferSelect;

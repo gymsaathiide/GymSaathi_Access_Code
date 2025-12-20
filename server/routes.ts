@@ -8395,6 +8395,740 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ NEW WORKOUT PLANNER API (On-Demand, Muscle-Group Based) ============
+
+  // Helper to get member context from session
+  async function getMemberContextFromSession(req: any): Promise<{ memberId: string; gymId: string } | null> {
+    const userId = req.session?.userId;
+    if (!userId) return null;
+    
+    const user = await storage.getUserById(userId);
+    let gymId = user?.gymId || req.session?.gymId;
+    let memberId = userId;
+    
+    if (!gymId) {
+      const memberRecord = await db!.select({ gymId: schema.members.gymId, id: schema.members.id })
+        .from(schema.members)
+        .where(eq(schema.members.userId, userId))
+        .limit(1)
+        .then(rows => rows[0]);
+      if (memberRecord) {
+        gymId = memberRecord.gymId;
+        memberId = memberRecord.id;
+      }
+    }
+    
+    if (!gymId) return null;
+    return { memberId, gymId };
+  }
+
+  // Get member workout profile (onboarding status)
+  app.get('/api/workout-planner/profile', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      
+      const result = await db!.execute(sql`
+        SELECT * FROM member_workout_profile WHERE member_id = ${memberId} AND gym_id = ${gymId}
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.json({ onboardingCompleted: false, profile: null });
+      }
+      
+      const profile = result.rows[0] as any;
+      res.json({ onboardingCompleted: profile.onboarding_completed, profile });
+    } catch (error: any) {
+      console.error('Error fetching workout profile:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Save/update member workout profile (onboarding)
+  app.post('/api/workout-planner/profile', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { fitnessGoal, experienceLevel, trainingPriority, currentWeight, height } = req.body;
+      
+      if (!fitnessGoal || !experienceLevel || !trainingPriority) {
+        return res.status(400).json({ error: 'All onboarding fields are required: fitnessGoal, experienceLevel, trainingPriority' });
+      }
+      
+      const result = await db!.execute(sql`
+        INSERT INTO member_workout_profile (member_id, gym_id, fitness_goal, experience_level, training_priority, current_weight, height, onboarding_completed, updated_at)
+        VALUES (${memberId}, ${gymId}, ${fitnessGoal}, ${experienceLevel}::experience_level, ${trainingPriority}::training_priority, ${currentWeight || null}, ${height || null}, true, NOW())
+        ON CONFLICT (member_id) 
+        DO UPDATE SET fitness_goal = ${fitnessGoal}, experience_level = ${experienceLevel}::experience_level, training_priority = ${trainingPriority}::training_priority, 
+                      current_weight = ${currentWeight || null}, height = ${height || null}, onboarding_completed = true, updated_at = NOW()
+        RETURNING *
+      `);
+      
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error saving workout profile:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all muscle groups with exercise counts
+  app.get('/api/workout-planner/muscle-groups', requireRole('member'), async (req, res) => {
+    try {
+      const result = await db!.execute(sql`
+        SELECT mg.*, 
+               COUNT(*) FILTER (WHERE we.exercise_type = 'main') as actual_exercise_count,
+               COUNT(*) FILTER (WHERE we.exercise_type = 'stretching') as actual_stretching_count
+        FROM workout_muscle_groups mg
+        LEFT JOIN workout_exercises we ON we.muscle_group_id = mg.id AND we.is_active = true
+        GROUP BY mg.id
+        ORDER BY mg.sort_order
+      `);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Error fetching muscle groups:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get cardio options
+  app.get('/api/workout-planner/cardio', requireRole('member'), async (req, res) => {
+    try {
+      const result = await db!.execute(sql`
+        SELECT * FROM workout_cardio_library WHERE is_active = true ORDER BY name
+      `);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Error fetching cardio options:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate workout session for a muscle group
+  app.post('/api/workout-planner/generate-session', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { muscleGroupId, includeCardio } = req.body;
+      
+      if (!muscleGroupId) {
+        return res.status(400).json({ error: 'Muscle group is required' });
+      }
+      
+      // Get member profile for experience level
+      const profileResult = await db!.execute(sql`
+        SELECT * FROM member_workout_profile WHERE member_id = ${memberId} AND gym_id = ${gymId}
+      `);
+      
+      if (profileResult.rows.length === 0 || !(profileResult.rows[0] as any).onboarding_completed) {
+        return res.status(400).json({ error: 'Please complete onboarding first' });
+      }
+      
+      const profile = profileResult.rows[0] as any;
+      const experienceLevel = profile.experience_level || 'beginner';
+      
+      // Determine exercise count based on experience
+      let exerciseCount: number;
+      switch (experienceLevel) {
+        case 'advanced': exerciseCount = 7; break;
+        case 'intermediate': exerciseCount = 6; break;
+        default: exerciseCount = 5;
+      }
+      
+      // Get exercises the member has done recently (for rotation)
+      const recentExercisesResult = await db!.execute(sql`
+        SELECT exercise_id FROM member_exercise_history 
+        WHERE member_id = ${memberId} AND gym_id = ${gymId} AND muscle_group_id = ${muscleGroupId} 
+        AND last_used_at > NOW() - INTERVAL '7 days'
+      `);
+      const recentExerciseIds = recentExercisesResult.rows.map((r: any) => r.exercise_id);
+      
+      // Get stretching exercises (mandatory) - simplified query without dynamic exclusion
+      let stretchingResult;
+      if (recentExerciseIds.length > 0) {
+        stretchingResult = await db!.execute(sql`
+          SELECT * FROM workout_exercises 
+          WHERE muscle_group_id = ${muscleGroupId} AND exercise_type = 'stretching' AND is_active = true
+          AND id NOT IN ${sql.raw(`('${recentExerciseIds.join("','")}')`)}
+          ORDER BY RANDOM() LIMIT 3
+        `);
+      } else {
+        stretchingResult = await db!.execute(sql`
+          SELECT * FROM workout_exercises 
+          WHERE muscle_group_id = ${muscleGroupId} AND exercise_type = 'stretching' AND is_active = true
+          ORDER BY RANDOM() LIMIT 3
+        `);
+      }
+      
+      // If not enough stretching exercises, get any available
+      let stretchingExercises = stretchingResult.rows;
+      if (stretchingExercises.length < 2) {
+        const fallbackStretching = await db!.execute(sql`
+          SELECT * FROM workout_exercises WHERE muscle_group_id = ${muscleGroupId} AND exercise_type = 'stretching' AND is_active = true ORDER BY RANDOM() LIMIT 3
+        `);
+        stretchingExercises = fallbackStretching.rows;
+      }
+      
+      // Get main exercises with rotation
+      let mainResult;
+      if (recentExerciseIds.length > 0) {
+        mainResult = await db!.execute(sql`
+          SELECT * FROM workout_exercises 
+          WHERE muscle_group_id = ${muscleGroupId} AND exercise_type = 'main' AND is_active = true
+          AND id NOT IN ${sql.raw(`('${recentExerciseIds.join("','")}')`)}
+          ORDER BY RANDOM() LIMIT ${exerciseCount}
+        `);
+      } else {
+        mainResult = await db!.execute(sql`
+          SELECT * FROM workout_exercises 
+          WHERE muscle_group_id = ${muscleGroupId} AND exercise_type = 'main' AND is_active = true
+          ORDER BY RANDOM() LIMIT ${exerciseCount}
+        `);
+      }
+      
+      // If not enough main exercises, get any available
+      let mainExercises = mainResult.rows;
+      if (mainExercises.length < exerciseCount) {
+        const fallbackMain = await db!.execute(sql`
+          SELECT * FROM workout_exercises WHERE muscle_group_id = ${muscleGroupId} AND exercise_type = 'main' AND is_active = true ORDER BY RANDOM() LIMIT ${exerciseCount}
+        `);
+        mainExercises = fallbackMain.rows;
+      }
+      
+      // Get optional cardio suggestion
+      let cardioExercise = null;
+      if (includeCardio) {
+        const cardioResult = await db!.execute(sql`
+          SELECT * FROM workout_cardio_library WHERE is_active = true ORDER BY RANDOM() LIMIT 1
+        `);
+        cardioExercise = (cardioResult.rows[0] as any) || null;
+      }
+      
+      // Get muscle group name
+      const muscleGroupResult = await db!.execute(sql`
+        SELECT display_name FROM workout_muscle_groups WHERE id = ${muscleGroupId}
+      `);
+      
+      // Create the training session
+      const cardioId = cardioExercise?.id || null;
+      const sessionResult = await db!.execute(sql`
+        INSERT INTO workout_training_sessions (member_id, gym_id, muscle_group_id, status, start_time, cardio_exercise_id)
+        VALUES (${memberId}, ${gymId}, ${muscleGroupId}, 'in_progress', NOW(), ${cardioId})
+        RETURNING *
+      `);
+      
+      const session = sessionResult.rows[0] as any;
+      
+      // Insert stretching exercises into session
+      for (let i = 0; i < stretchingExercises.length; i++) {
+        const exerciseId = (stretchingExercises[i] as any).id;
+        await db!.execute(sql`
+          INSERT INTO workout_session_exercises (session_id, exercise_id, exercise_type, sort_order)
+          VALUES (${session.id}, ${exerciseId}, 'stretching', ${i})
+        `);
+      }
+      
+      // Insert main exercises into session
+      for (let i = 0; i < mainExercises.length; i++) {
+        const exerciseId = (mainExercises[i] as any).id;
+        const sortOrder = stretchingExercises.length + i;
+        await db!.execute(sql`
+          INSERT INTO workout_session_exercises (session_id, exercise_id, exercise_type, sort_order)
+          VALUES (${session.id}, ${exerciseId}, 'main', ${sortOrder})
+        `);
+      }
+      
+      res.json({
+        session,
+        muscleGroupName: (muscleGroupResult.rows[0] as any)?.display_name || 'Unknown',
+        stretchingExercises,
+        mainExercises,
+        cardioExercise,
+        experienceLevel,
+        exerciseCount
+      });
+    } catch (error: any) {
+      console.error('Error generating workout session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get active training session
+  app.get('/api/workout-planner/active-session', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      
+      const sessionResult = await db!.execute(sql`
+        SELECT wts.*, wmg.display_name as muscle_group_name, wcl.name as cardio_name
+        FROM workout_training_sessions wts
+        LEFT JOIN workout_muscle_groups wmg ON wmg.id = wts.muscle_group_id
+        LEFT JOIN workout_cardio_library wcl ON wcl.id = wts.cardio_exercise_id
+        WHERE wts.member_id = ${memberId} AND wts.gym_id = ${gymId} AND wts.status = 'in_progress'
+        ORDER BY wts.created_at DESC LIMIT 1
+      `);
+      
+      if (sessionResult.rows.length === 0) {
+        return res.json({ session: null });
+      }
+      
+      const session = sessionResult.rows[0] as any;
+      
+      // Get exercises for this session
+      const exercisesResult = await db!.execute(sql`
+        SELECT wse.*, we.name, we.description, we.instructions, we.target_sets, we.target_reps, we.rest_seconds
+        FROM workout_session_exercises wse
+        JOIN workout_exercises we ON we.id = wse.exercise_id
+        WHERE wse.session_id = ${session.id}
+        ORDER BY wse.sort_order
+      `);
+      
+      // Get cardio details if exists
+      let cardioExercise = null;
+      if (session.cardio_exercise_id) {
+        const cardioResult = await db!.execute(sql`
+          SELECT * FROM workout_cardio_library WHERE id = ${session.cardio_exercise_id}
+        `);
+        cardioExercise = (cardioResult.rows[0] as any) || null;
+      }
+      
+      res.json({
+        session,
+        exercises: exercisesResult.rows,
+        cardioExercise
+      });
+    } catch (error: any) {
+      console.error('Error fetching active session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update session exercise (complete/skip)
+  app.patch('/api/workout-planner/session-exercise/:exerciseId', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { exerciseId } = req.params;
+      const { isCompleted, isSkipped, setsCompleted, repsPerSet, weightPerSet, duration, notes } = req.body;
+      
+      // Verify ownership
+      const verifyResult = await db!.execute(sql`
+        SELECT wse.* FROM workout_session_exercises wse
+        JOIN workout_training_sessions wts ON wts.id = wse.session_id
+        WHERE wse.id = ${exerciseId} AND wts.member_id = ${memberId} AND wts.gym_id = ${gymId}
+      `);
+      
+      if (verifyResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Exercise not found' });
+      }
+      
+      const result = await db!.execute(sql`
+        UPDATE workout_session_exercises 
+        SET is_completed = COALESCE(${isCompleted}, is_completed),
+            is_skipped = COALESCE(${isSkipped}, is_skipped),
+            sets_completed = COALESCE(${setsCompleted}, sets_completed),
+            reps_per_set = COALESCE(${repsPerSet}, reps_per_set),
+            weight_per_set = COALESCE(${weightPerSet}, weight_per_set),
+            duration = COALESCE(${duration}, duration),
+            notes = COALESCE(${notes}, notes)
+        WHERE id = ${exerciseId}
+        RETURNING *
+      `);
+      
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error updating session exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete training session
+  app.post('/api/workout-planner/complete-session/:sessionId', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { sessionId } = req.params;
+      const { cardioCompleted } = req.body;
+      
+      // Verify ownership
+      const sessionResult = await db!.execute(sql`
+        SELECT * FROM workout_training_sessions WHERE id = ${sessionId} AND member_id = ${memberId} AND gym_id = ${gymId}
+      `);
+      
+      if (sessionResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+      
+      const session = sessionResult.rows[0] as any;
+      
+      // Calculate total duration
+      const totalDuration = session.start_time 
+        ? Math.floor((Date.now() - new Date(session.start_time).getTime()) / 1000)
+        : 0;
+      
+      // Get completed exercises for report
+      const exercisesResult = await db!.execute(sql`
+        SELECT wse.*, we.name, we.exercise_type
+        FROM workout_session_exercises wse
+        JOIN workout_exercises we ON we.id = wse.exercise_id
+        WHERE wse.session_id = ${sessionId}
+      `);
+      
+      const stretchingExercises = (exercisesResult.rows as any[])
+        .filter(e => e.exercise_type === 'stretching')
+        .map(e => ({ name: e.name, completed: e.is_completed, skipped: e.is_skipped }));
+      
+      const mainExercises = (exercisesResult.rows as any[])
+        .filter(e => e.exercise_type === 'main')
+        .map(e => ({ name: e.name, completed: e.is_completed, skipped: e.is_skipped, sets: e.sets_completed }));
+      
+      // Get cardio info
+      let cardioInfo = null;
+      if (session.cardio_exercise_id) {
+        const cardioResult = await db!.execute(sql`
+          SELECT name FROM workout_cardio_library WHERE id = ${session.cardio_exercise_id}
+        `);
+        if (cardioResult.rows.length > 0) {
+          cardioInfo = { name: (cardioResult.rows[0] as any).name, completed: cardioCompleted };
+        }
+      }
+      
+      // Get muscle group name
+      const muscleGroupResult = await db!.execute(sql`
+        SELECT display_name FROM workout_muscle_groups WHERE id = ${session.muscle_group_id}
+      `);
+      
+      const muscleGroupName = (muscleGroupResult.rows[0] as any)?.display_name || 'Unknown';
+      const cardioCompletedVal = cardioCompleted || false;
+      
+      // Update session to completed
+      await db!.execute(sql`
+        UPDATE workout_training_sessions 
+        SET status = 'completed', end_time = NOW(), total_duration = ${totalDuration}, 
+            stretching_completed = true, cardio_completed = ${cardioCompletedVal}
+        WHERE id = ${sessionId}
+      `);
+      
+      // Create workout report
+      const stretchingJson = JSON.stringify(stretchingExercises);
+      const mainJson = JSON.stringify(mainExercises);
+      const cardioJson = JSON.stringify(cardioInfo);
+      await db!.execute(sql`
+        INSERT INTO workout_reports (member_id, gym_id, session_id, workout_date, muscle_group_id, muscle_group_name, stretching_exercises, main_exercises, cardio_exercise, total_duration)
+        VALUES (${memberId}, ${gymId}, ${sessionId}, NOW(), ${session.muscle_group_id}, ${muscleGroupName}, ${stretchingJson}::jsonb, ${mainJson}::jsonb, ${cardioJson}::jsonb, ${totalDuration})
+      `);
+      
+      // Update exercise history for rotation
+      for (const exercise of (exercisesResult.rows as any[])) {
+        if (exercise.is_completed) {
+          await db!.execute(sql`
+            INSERT INTO member_exercise_history (member_id, gym_id, muscle_group_id, exercise_id, last_used_at, usage_count)
+            VALUES (${memberId}, ${gymId}, ${session.muscle_group_id}, ${exercise.exercise_id}, NOW(), 1)
+            ON CONFLICT DO NOTHING
+          `);
+          
+          // Also try to update if exists (separate query for safety)
+          await db!.execute(sql`
+            UPDATE member_exercise_history SET last_used_at = NOW(), usage_count = usage_count + 1
+            WHERE member_id = ${memberId} AND gym_id = ${gymId} AND exercise_id = ${exercise.exercise_id}
+          `);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        totalDuration,
+        report: {
+          muscleGroup: muscleGroupName,
+          stretchingExercises,
+          mainExercises,
+          cardioExercise: cardioInfo
+        }
+      });
+    } catch (error: any) {
+      console.error('Error completing session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Cancel training session
+  app.post('/api/workout-planner/cancel-session/:sessionId', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { sessionId } = req.params;
+      
+      const result = await db!.execute(sql`
+        UPDATE workout_training_sessions 
+        SET status = 'cancelled', end_time = NOW()
+        WHERE id = ${sessionId} AND member_id = ${memberId} AND gym_id = ${gymId}
+        RETURNING *
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error cancelling session:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get workout reports/history
+  app.get('/api/workout-planner/reports', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { from, to } = req.query;
+      
+      let result;
+      if (from && to) {
+        result = await db!.execute(sql`
+          SELECT * FROM workout_reports 
+          WHERE member_id = ${memberId} AND gym_id = ${gymId}
+          AND workout_date >= ${from as string} AND workout_date <= ${to as string}
+          ORDER BY workout_date DESC
+        `);
+      } else if (from) {
+        result = await db!.execute(sql`
+          SELECT * FROM workout_reports 
+          WHERE member_id = ${memberId} AND gym_id = ${gymId}
+          AND workout_date >= ${from as string}
+          ORDER BY workout_date DESC
+        `);
+      } else if (to) {
+        result = await db!.execute(sql`
+          SELECT * FROM workout_reports 
+          WHERE member_id = ${memberId} AND gym_id = ${gymId}
+          AND workout_date <= ${to as string}
+          ORDER BY workout_date DESC
+        `);
+      } else {
+        result = await db!.execute(sql`
+          SELECT * FROM workout_reports 
+          WHERE member_id = ${memberId} AND gym_id = ${gymId}
+          ORDER BY workout_date DESC
+        `);
+      }
+      
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Error fetching workout reports:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get workout calendar data (for month view)
+  app.get('/api/workout-planner/calendar', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { month, year } = req.query;
+      
+      const targetMonth = parseInt(month as string) || new Date().getMonth() + 1;
+      const targetYear = parseInt(year as string) || new Date().getFullYear();
+      
+      const result = await db!.execute(sql`
+        SELECT DATE(workout_date) as date, COUNT(*) as workout_count, 
+               ARRAY_AGG(muscle_group_name) as muscle_groups
+        FROM workout_reports 
+        WHERE member_id = ${memberId} AND gym_id = ${gymId} 
+        AND EXTRACT(MONTH FROM workout_date) = ${targetMonth} 
+        AND EXTRACT(YEAR FROM workout_date) = ${targetYear}
+        GROUP BY DATE(workout_date)
+        ORDER BY date
+      `);
+      
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Error fetching workout calendar:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get member KPIs for home screen
+  app.get('/api/workout-planner/kpis', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      
+      // Get profile data
+      const profileResult = await db!.execute(sql`
+        SELECT * FROM member_workout_profile WHERE member_id = ${memberId} AND gym_id = ${gymId}
+      `);
+      
+      // Get member basic info
+      const memberResult = await db!.execute(sql`
+        SELECT name, email FROM members WHERE id = ${memberId}
+      `);
+      
+      // Get workout streak (consecutive days)
+      const streakResult = await db!.execute(sql`
+        WITH daily_workouts AS (
+          SELECT DATE(workout_date) as workout_day
+          FROM workout_reports
+          WHERE member_id = ${memberId} AND gym_id = ${gymId}
+          GROUP BY DATE(workout_date)
+          ORDER BY DATE(workout_date) DESC
+        ),
+        streak AS (
+          SELECT workout_day,
+                 workout_day - (ROW_NUMBER() OVER (ORDER BY workout_day DESC))::int as grp
+          FROM daily_workouts
+        )
+        SELECT COUNT(*) as streak
+        FROM streak
+        WHERE grp = (SELECT grp FROM streak LIMIT 1)
+      `);
+      
+      // Get total workouts this week
+      const weekWorkoutsResult = await db!.execute(sql`
+        SELECT COUNT(*) as count FROM workout_reports 
+        WHERE member_id = ${memberId} AND gym_id = ${gymId} 
+        AND workout_date >= DATE_TRUNC('week', CURRENT_DATE)
+      `);
+      
+      // Get total workouts this month
+      const monthWorkoutsResult = await db!.execute(sql`
+        SELECT COUNT(*) as count FROM workout_reports 
+        WHERE member_id = ${memberId} AND gym_id = ${gymId} 
+        AND workout_date >= DATE_TRUNC('month', CURRENT_DATE)
+      `);
+      
+      res.json({
+        member: (memberResult.rows[0] as any) || {},
+        profile: (profileResult.rows[0] as any) || null,
+        streak: parseInt((streakResult.rows[0] as any)?.streak || '0'),
+        workoutsThisWeek: parseInt((weekWorkoutsResult.rows[0] as any)?.count || '0'),
+        workoutsThisMonth: parseInt((monthWorkoutsResult.rows[0] as any)?.count || '0')
+      });
+    } catch (error: any) {
+      console.error('Error fetching KPIs:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Replace exercise in session (for flexibility)
+  app.post('/api/workout-planner/replace-exercise/:sessionExerciseId', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { sessionExerciseId } = req.params;
+      const { newExerciseId } = req.body;
+      
+      if (!newExerciseId) {
+        return res.status(400).json({ error: 'New exercise ID is required' });
+      }
+      
+      // Verify ownership
+      const verifyResult = await db!.execute(sql`
+        SELECT wse.*, wts.muscle_group_id 
+        FROM workout_session_exercises wse
+        JOIN workout_training_sessions wts ON wts.id = wse.session_id
+        WHERE wse.id = ${sessionExerciseId} AND wts.member_id = ${memberId} AND wts.gym_id = ${gymId}
+      `);
+      
+      if (verifyResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Exercise not found' });
+      }
+      
+      const currentExercise = verifyResult.rows[0] as any;
+      
+      // Verify new exercise is from same muscle group and type
+      const newExerciseResult = await db!.execute(sql`
+        SELECT * FROM workout_exercises 
+        WHERE id = ${newExerciseId} AND muscle_group_id = ${currentExercise.muscle_group_id} AND exercise_type = ${currentExercise.exercise_type} AND is_active = true
+      `);
+      
+      if (newExerciseResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid replacement exercise' });
+      }
+      
+      // Replace the exercise
+      await db!.execute(sql`
+        UPDATE workout_session_exercises SET exercise_id = ${newExerciseId} WHERE id = ${sessionExerciseId}
+      `);
+      
+      res.json({ success: true, newExercise: newExerciseResult.rows[0] });
+    } catch (error: any) {
+      console.error('Error replacing exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get available replacement exercises
+  app.get('/api/workout-planner/replacement-exercises/:sessionExerciseId', requireRole('member'), async (req, res) => {
+    try {
+      const context = await getMemberContextFromSession(req);
+      if (!context) {
+        return res.status(400).json({ error: 'User must be associated with a gym' });
+      }
+      const { memberId, gymId } = context;
+      const { sessionExerciseId } = req.params;
+      
+      // Get current exercise details
+      const currentResult = await db!.execute(sql`
+        SELECT wse.exercise_id, we.muscle_group_id, we.exercise_type
+        FROM workout_session_exercises wse
+        JOIN workout_exercises we ON we.id = wse.exercise_id
+        JOIN workout_training_sessions wts ON wts.id = wse.session_id
+        WHERE wse.id = ${sessionExerciseId} AND wts.member_id = ${memberId} AND wts.gym_id = ${gymId}
+      `);
+      
+      if (currentResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Exercise not found' });
+      }
+      
+      const current = currentResult.rows[0] as any;
+      
+      // Get all exercises from same muscle group and type, excluding current
+      const replacementsResult = await db!.execute(sql`
+        SELECT * FROM workout_exercises 
+        WHERE muscle_group_id = ${current.muscle_group_id} AND exercise_type = ${current.exercise_type} AND is_active = true AND id != ${current.exercise_id}
+        ORDER BY name
+      `);
+      
+      res.json(replacementsResult.rows);
+    } catch (error: any) {
+      console.error('Error fetching replacement exercises:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ NOTIFICATIONS API ============
 
   // Get notifications for current user

@@ -39,7 +39,7 @@ import ShopRevenueDashboard from './pages/ShopRevenueDashboard';
 import { BodyCompositionPage, DietPlannerPage, AIDietPlannerPage, HistoryPage, BreakfastPage, LunchPage, DinnerPage } from './pages/diet-planner';
 import MemberDietDashboard from './pages/diet-planner/MemberDietDashboard';
 import ManageMealsPage from './pages/ManageMealsPage';
-import MemberWorkoutPlanner from './pages/workout-planner/MemberWorkoutPlanner';
+import MemberWorkoutPlanner from './pages/workout-planner/MemberWorkoutPlannerNew';
 import AdminWorkoutPlanner from './pages/workout-planner/AdminWorkoutPlanner';
 
 function TestDashboard() {
