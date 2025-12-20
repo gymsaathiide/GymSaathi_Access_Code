@@ -1,0 +1,42 @@
+You must NOT claim “completed” unless you VERIFY by running and testing flows.
+
+Task: Workout Planner Production Hardening + Verification
+
+1) SECURITY PROOF
+For every Workout Planner endpoint (onboarding, generate-session, replace exercise, session complete, reports list/detail, calendar, superadmin CRUD):
+- Confirm it derives memberId+gymId from authenticated session only (no memberId from client).
+- Confirm ALL member data queries are scoped by BOTH memberId AND gymId.
+- Confirm superadmin endpoints are protected by requireAuth + requireRole('superadmin').
+If any query is missing gymId scoping, fix it.
+
+2) ROTATION + REPLACEMENT PROOF
+- Verify rotation avoids recently-used exercises per member+muscleGroup.
+- Replacement must exclude recent history too and must update history.
+- Add fallback: if library too small, use least-recently-used; never return empty or crash.
+
+3) STRETCHING + CARDIO RULES
+- Enforce stretching step before main exercises start.
+- Replacement must work for stretching too.
+- Cardio: suggest EXACTLY ONE, optional, logged only if performed.
+
+4) REPORT IMMUTABILITY
+- Verify reports store exercise snapshot (name + metadata) so later edits don’t change past reports.
+If not, change schema/serialization accordingly.
+
+5) EMPTY STATES + ERROR HANDLING
+- If a muscle group has 0 stretching or insufficient main exercises, return a clear 400 with message and show friendly UI state (no 500).
+
+6) RUNBOOK TESTS (MANDATORY)
+Provide a verified checklist with:
+- which routes tested
+- which UI flows tested
+- sample outputs/logs
+At minimum test:
+- onboarding new member
+- start chest session twice => different exercises second time
+- replace one main exercise + one stretching exercise
+- skip cardio
+- complete session => report saved and appears in calendar
+- superadmin create/edit/toggle exercise and see it affect next generated session
+
+Start by searching the codebase for every /api/workout and /api/superadmin/exercises route and auditing them.
