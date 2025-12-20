@@ -9129,6 +9129,195 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ SUPERADMIN EXERCISE LIBRARY API ============
+
+  // Get exercises for superadmin management
+  app.get('/api/superadmin/exercises', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { muscleGroupId, type } = req.query;
+      
+      let query = sql`SELECT * FROM workout_exercises WHERE 1=1`;
+      
+      if (muscleGroupId && muscleGroupId !== 'all') {
+        query = sql`SELECT * FROM workout_exercises WHERE muscle_group_id = ${muscleGroupId as string}`;
+        if (type) {
+          query = sql`SELECT * FROM workout_exercises WHERE muscle_group_id = ${muscleGroupId as string} AND exercise_type = ${type as string} ORDER BY name`;
+        }
+      } else if (type) {
+        query = sql`SELECT * FROM workout_exercises WHERE exercise_type = ${type as string} ORDER BY name`;
+      } else {
+        query = sql`SELECT * FROM workout_exercises ORDER BY name`;
+      }
+      
+      const result = await db!.execute(query);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Error fetching exercises:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new exercise
+  app.post('/api/superadmin/exercises', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { muscleGroupId, name, description, instructions, exerciseType, difficulty, equipment, targetReps, targetSets, restSeconds, isActive } = req.body;
+      
+      if (!muscleGroupId || !name) {
+        return res.status(400).json({ error: 'Muscle group and name are required' });
+      }
+      
+      const result = await db!.execute(sql`
+        INSERT INTO workout_exercises (muscle_group_id, name, description, instructions, exercise_type, difficulty, equipment, target_reps, target_sets, rest_seconds, is_active)
+        VALUES (${muscleGroupId}, ${name}, ${description}, ${instructions}, ${exerciseType}, ${difficulty}, ${equipment}, ${targetReps}, ${targetSets}, ${restSeconds}, ${isActive})
+        RETURNING *
+      `);
+      
+      res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error creating exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update exercise
+  app.put('/api/superadmin/exercises/:id', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { muscleGroupId, name, description, instructions, exerciseType, difficulty, equipment, targetReps, targetSets, restSeconds, isActive } = req.body;
+      
+      const result = await db!.execute(sql`
+        UPDATE workout_exercises SET
+          muscle_group_id = ${muscleGroupId},
+          name = ${name},
+          description = ${description},
+          instructions = ${instructions},
+          exercise_type = ${exerciseType},
+          difficulty = ${difficulty},
+          equipment = ${equipment},
+          target_reps = ${targetReps},
+          target_sets = ${targetSets},
+          rest_seconds = ${restSeconds},
+          is_active = ${isActive},
+          updated_at = NOW()
+        WHERE id = ${id}
+        RETURNING *
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Exercise not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error updating exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Toggle exercise active status
+  app.patch('/api/superadmin/exercises/:id/toggle', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      const result = await db!.execute(sql`
+        UPDATE workout_exercises SET is_active = ${isActive}, updated_at = NOW() WHERE id = ${id} RETURNING *
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Exercise not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error toggling exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get cardio exercises
+  app.get('/api/superadmin/cardio', requireRole('superadmin'), async (req, res) => {
+    try {
+      const result = await db!.execute(sql`SELECT * FROM workout_cardio_library ORDER BY name`);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Error fetching cardio exercises:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create cardio exercise
+  app.post('/api/superadmin/cardio', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { name, description, intensity, durationMinutes, caloriesPerMinute, isActive } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      
+      const result = await db!.execute(sql`
+        INSERT INTO workout_cardio_library (name, description, intensity, duration_minutes, calories_per_minute, is_active)
+        VALUES (${name}, ${description}, ${intensity}, ${durationMinutes}, ${caloriesPerMinute}, ${isActive})
+        RETURNING *
+      `);
+      
+      res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error creating cardio exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update cardio exercise
+  app.put('/api/superadmin/cardio/:id', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, intensity, durationMinutes, caloriesPerMinute, isActive } = req.body;
+      
+      const result = await db!.execute(sql`
+        UPDATE workout_cardio_library SET
+          name = ${name},
+          description = ${description},
+          intensity = ${intensity},
+          duration_minutes = ${durationMinutes},
+          calories_per_minute = ${caloriesPerMinute},
+          is_active = ${isActive}
+        WHERE id = ${id}
+        RETURNING *
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Cardio exercise not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error updating cardio exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Toggle cardio exercise active status
+  app.patch('/api/superadmin/cardio/:id/toggle', requireRole('superadmin'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      const result = await db!.execute(sql`
+        UPDATE workout_cardio_library SET is_active = ${isActive} WHERE id = ${id} RETURNING *
+      `);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Cardio exercise not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error('Error toggling cardio exercise:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ NOTIFICATIONS API ============
 
   // Get notifications for current user

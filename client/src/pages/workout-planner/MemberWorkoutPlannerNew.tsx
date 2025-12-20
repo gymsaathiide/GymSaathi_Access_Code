@@ -140,6 +140,8 @@ export default function MemberWorkoutPlannerNew() {
   const [isSessionTimerRunning, setIsSessionTimerRunning] = useState(false);
   const [workoutSummary, setWorkoutSummary] = useState<any>(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+  const [selectedExerciseForReplace, setSelectedExerciseForReplace] = useState<Exercise | null>(null);
   
   const exerciseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -327,6 +329,47 @@ export default function MemberWorkoutPlannerNew() {
       });
     }
   });
+
+  const { data: replacementExercises, isLoading: replacementsLoading } = useQuery({
+    queryKey: ['/api/workout-planner/replacement-exercises', selectedExerciseForReplace?.id],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/workout-planner/replacement-exercises/${selectedExerciseForReplace?.id}`);
+      return response.json();
+    },
+    enabled: !!selectedExerciseForReplace?.id && showReplaceDialog
+  });
+
+  const replaceExerciseMutation = useMutation({
+    mutationFn: async ({ sessionExerciseId, newExerciseId }: { sessionExerciseId: string; newExerciseId: string }) => {
+      const response = await apiRequest('POST', `/api/workout-planner/replace-exercise/${sessionExerciseId}`, { newExerciseId });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to replace exercise');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchActiveSession();
+      setShowReplaceDialog(false);
+      setSelectedExerciseForReplace(null);
+      toast({
+        title: "Exercise Replaced",
+        description: "The exercise has been replaced successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleOpenReplaceDialog = (exercise: Exercise) => {
+    setSelectedExerciseForReplace(exercise);
+    setShowReplaceDialog(true);
+  };
 
   useEffect(() => {
     if (profileData && !profileData.onboardingCompleted) {
@@ -713,13 +756,23 @@ export default function MemberWorkoutPlannerNew() {
 
                 <div className="flex space-x-3">
                   {!isExerciseTimerRunning ? (
-                    <Button
-                      onClick={() => startExercise()}
-                      className="flex-1 bg-orange-500 hover:bg-orange-600"
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Exercise
-                    </Button>
+                    <>
+                      <Button
+                        onClick={() => startExercise()}
+                        className="flex-1 bg-orange-500 hover:bg-orange-600"
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        Start Exercise
+                      </Button>
+                      <Button
+                        onClick={() => handleOpenReplaceDialog(currentExercise)}
+                        variant="outline"
+                        className="border-slate-600 hover:border-blue-500 hover:text-blue-500"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Replace
+                      </Button>
+                    </>
                   ) : (
                     <>
                       <Button
@@ -795,6 +848,55 @@ export default function MemberWorkoutPlannerNew() {
             </Button>
           </div>
         </div>
+
+        <Dialog open={showReplaceDialog} onOpenChange={setShowReplaceDialog}>
+          <DialogContent className="bg-slate-900 border-slate-800 max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-white">Replace Exercise</DialogTitle>
+              <DialogDescription>
+                Select a replacement for: {selectedExerciseForReplace?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 mt-4">
+              {replacementsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+                </div>
+              ) : replacementExercises?.length > 0 ? (
+                replacementExercises.map((exercise: any) => (
+                  <Card 
+                    key={exercise.id}
+                    className="bg-slate-800 border-slate-700 cursor-pointer hover:border-orange-500 transition-all"
+                    onClick={() => {
+                      if (selectedExerciseForReplace) {
+                        replaceExerciseMutation.mutate({
+                          sessionExerciseId: selectedExerciseForReplace.id,
+                          newExerciseId: exercise.id
+                        });
+                      }
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-semibold text-white">{exercise.name}</h4>
+                          {exercise.description && (
+                            <p className="text-sm text-slate-400">{exercise.description}</p>
+                          )}
+                        </div>
+                        {replaceExerciseMutation.isPending && (
+                          <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <p className="text-slate-400 text-center py-4">No alternative exercises available</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -899,19 +1001,27 @@ export default function MemberWorkoutPlannerNew() {
                 ))}
                 {daysInMonth.map(date => {
                   const workout = getWorkoutForDate(date);
+                  const isPast = date < new Date() && !isToday(date);
+                  const isFuture = date > new Date();
                   return (
                     <div
                       key={date.toISOString()}
                       className={`p-2 text-center rounded-lg ${
                         isToday(date) ? 'ring-2 ring-orange-500' : ''
                       } ${
-                        workout ? 'bg-green-900/50 text-green-400' : 'text-slate-400'
+                        workout 
+                          ? 'bg-green-900/50 text-green-400' 
+                          : isPast 
+                            ? 'bg-red-900/30 text-red-400/70' 
+                            : 'text-slate-400'
                       }`}
                     >
                       <span className="text-sm">{format(date, 'd')}</span>
-                      {workout && (
+                      {workout ? (
                         <div className="w-2 h-2 rounded-full bg-green-500 mx-auto mt-1" />
-                      )}
+                      ) : isPast ? (
+                        <div className="w-2 h-2 rounded-full bg-red-500/50 mx-auto mt-1" />
+                      ) : null}
                     </div>
                   );
                 })}
