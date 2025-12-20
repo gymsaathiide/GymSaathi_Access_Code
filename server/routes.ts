@@ -9131,6 +9131,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ SUPERADMIN EXERCISE LIBRARY API ============
 
+  // Get muscle groups for superadmin
+  app.get('/api/superadmin/muscle-groups', requireRole('superadmin'), async (req, res) => {
+    try {
+      const result = await db!.execute(sql`
+        SELECT * FROM workout_muscle_groups ORDER BY sort_order
+      `);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error('Error fetching muscle groups:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get exercises for superadmin management
   app.get('/api/superadmin/exercises', requireRole('superadmin'), async (req, res) => {
     try {

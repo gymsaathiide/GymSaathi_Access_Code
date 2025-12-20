@@ -104,9 +104,12 @@ export default function SuperadminExerciseLibrary() {
   });
 
   const { data: muscleGroups, isLoading: muscleGroupsLoading } = useQuery<MuscleGroup[]>({
-    queryKey: ['/api/workout-planner/muscle-groups'],
+    queryKey: ['/api/superadmin/muscle-groups'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/workout-planner/muscle-groups');
+      const response = await apiRequest('GET', '/api/superadmin/muscle-groups');
+      if (!response.ok) {
+        throw new Error('Failed to fetch muscle groups');
+      }
       return response.json();
     }
   });
@@ -118,6 +121,9 @@ export default function SuperadminExerciseLibrary() {
       if (selectedMuscleGroup !== 'all') params.append('muscleGroupId', selectedMuscleGroup);
       if (activeTab !== 'cardio') params.append('type', activeTab);
       const response = await apiRequest('GET', `/api/superadmin/exercises?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch exercises');
+      }
       return response.json();
     },
     enabled: activeTab !== 'cardio'
@@ -127,6 +133,9 @@ export default function SuperadminExerciseLibrary() {
     queryKey: ['/api/superadmin/cardio'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/superadmin/cardio');
+      if (!response.ok) {
+        throw new Error('Failed to fetch cardio exercises');
+      }
       return response.json();
     },
     enabled: activeTab === 'cardio'

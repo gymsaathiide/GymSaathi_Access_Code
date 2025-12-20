@@ -36,6 +36,7 @@ export const superadminNavItems: NavItem[] = [
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Security Audit", url: "/audit", icon: Shield },
   { title: "Manage Meals", url: "/manage-meals", icon: Utensils },
+  { title: "Manage Exercises", url: "/manage-exercises", icon: Dumbbell },
   { title: "User Management", url: "/users", icon: UserCog },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
