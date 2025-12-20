@@ -334,6 +334,9 @@ export default function MemberWorkoutPlannerNew() {
     } else if (activeSessionData?.session) {
       setCurrentView('workout');
       if (!isSessionTimerRunning) {
+        const sessionStartTime = new Date(activeSessionData.session.start_time).getTime();
+        const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+        setTotalTimer(elapsedSeconds > 0 ? elapsedSeconds : 0);
         setIsSessionTimerRunning(true);
       }
     }
