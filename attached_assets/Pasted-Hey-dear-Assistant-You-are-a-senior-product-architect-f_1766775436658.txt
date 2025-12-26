@@ -1,0 +1,238 @@
+Hey dear Assistant,
+
+You are a senior product architect + full-stack engineer.
+
+Context:
+We are building GymSaathi, a multi-tenant Gym ERP SaaS.
+You already understand our system style (members, gyms, superadmin, reports, dashboards).
+Now I want a COMPLETE, DETAILED, PRODUCTION-READY explanation of our MEAL PLANNER system.
+
+This task is NOT to write random ideas.
+You must explain HOW the Meal Planner WORKS in GymSaathi:
+- Frontend
+- Backend
+- Database
+- Roles
+- Permissions
+- Flows
+- Dashboards
+- Reports
+
+Do NOT assume features that are not described logically.
+Explain everything cleanly and systematically as if writing internal technical documentation.
+
+--------------------------------------------------
+1. PURPOSE & ROLE OF MEAL PLANNER
+--------------------------------------------------
+
+Explain:
+- Why Meal Planner exists in GymSaathi
+- How it complements Workout Planner
+- What problem it solves for:
+  - Members
+  - Gym Admins
+  - Superadmin
+
+Clarify that Meal Planner is:
+- A nutrition guidance system
+- Not a medical prescription
+- Controlled centrally via Superadmin
+
+--------------------------------------------------
+2. USER ROLES & ACCESS
+--------------------------------------------------
+
+Explain clearly what each role can do.
+
+A) Superadmin
+- Owns and manages the entire meal library
+- Controls nutrition rules, meals, calories, macros
+- Decides what data is visible to members
+
+B) Gym Admin (if applicable)
+- Whether gym admin can customize meals or not
+- Or gym admin only assigns meal plans (if applicable)
+
+C) Member
+- Can view meal plans
+- Can track meals
+- Can see nutrition reports
+- Cannot edit core meal data
+
+--------------------------------------------------
+3. MEAL PLANNER – HIGH LEVEL FLOW
+--------------------------------------------------
+
+Explain end-to-end flow:
+
+1) Member opens Meal Planner
+2) Meal preferences / profile is collected
+3) Meal plan is generated or assigned
+4) Member follows meals day-to-day
+5) Reports & progress are generated
+
+Explain this in simple logical steps.
+
+--------------------------------------------------
+4. MEMBER ONBOARDING FOR MEAL PLANNER
+--------------------------------------------------
+
+Explain what data is collected from the member for meal planning, such as:
+- Goal (fat loss, muscle gain, maintenance)
+- Dietary preference (veg, non-veg, egg, etc.)
+- Allergies / restrictions (if supported)
+- Meals per day
+- Any other relevant nutrition inputs
+
+Explain:
+- Where this data is stored
+- How it is reused later
+
+--------------------------------------------------
+5. FRONTEND – MEMBER MEAL PLANNER UI
+--------------------------------------------------
+
+Explain the MEMBER UI in detail:
+
+A) Meal Planner Home
+- Daily meal overview
+- Calories summary
+- Macros summary (if supported)
+- Status (followed / skipped)
+
+B) Daily Meal View
+- Breakfast
+- Lunch
+- Snacks
+- Dinner
+For each meal:
+- Meal name
+- Food items
+- Quantity
+- Calories
+- Protein / carbs / fats (if supported)
+
+C) Meal Tracking
+- Mark meal as eaten
+- Skip meal
+- Replace meal (if allowed)
+
+D) Reports View
+- Daily nutrition report
+- Weekly summary
+- Monthly summary
+- Consistency tracking
+
+--------------------------------------------------
+6. FRONTEND – SUPERADMIN MEAL MANAGEMENT UI
+--------------------------------------------------
+
+Explain Superadmin UI in detail:
+
+A) Meal Library Management
+- Create meals
+- Edit meals
+- Delete / deactivate meals
+- Add food items inside a meal
+
+B) Nutrition Data
+- Calories
+- Macros
+- Portion sizes
+
+C) Meal Categories
+- Breakfast / Lunch / Dinner / Snacks
+- Goal-based tagging (fat loss, muscle gain)
+
+Explain how changes made by Superadmin reflect for members.
+
+--------------------------------------------------
+7. BACKEND – MEAL PLANNER LOGIC
+--------------------------------------------------
+
+Explain backend responsibilities:
+
+- Meal plan generation logic
+- How meals are selected based on:
+  - Member goal
+  - Preferences
+  - Diet type
+- How meal replacements work
+- How tracking (eaten / skipped) is saved
+- How reports are calculated
+
+Explain clearly:
+- No hardcoded data
+- Everything driven from database
+
+--------------------------------------------------
+8. DATABASE DESIGN (IMPORTANT)
+--------------------------------------------------
+
+Explain all important tables clearly.
+
+Examples (use logical naming, not guessing):
+- meals
+- meal_food_items
+- food_items
+- member_meal_profiles
+- member_daily_meals
+- meal_tracking
+- meal_reports
+
+For each table explain:
+- Purpose
+- Key columns
+- Relations
+
+--------------------------------------------------
+9. REPORTING & ANALYTICS
+--------------------------------------------------
+
+Explain:
+- How daily meal reports are generated
+- How calorie totals are calculated
+- How consistency score is calculated
+- How reports are shown on dashboard
+
+--------------------------------------------------
+10. SECURITY & MULTI-TENANCY
+--------------------------------------------------
+
+Explain:
+- How member data is isolated
+- How gymId + memberId scoping works
+- Why members cannot see other members’ meal data
+- Why Superadmin can see everything
+
+--------------------------------------------------
+11. EDGE CASES & RULES
+--------------------------------------------------
+
+Explain system behavior for:
+- Member skips meals
+- Member doesn’t open meal planner
+- Meal is deleted by Superadmin
+- Nutrition data updated later (history should remain correct)
+
+--------------------------------------------------
+12. SUMMARY
+--------------------------------------------------
+
+End with a clear summary:
+- What Meal Planner is
+- Who controls it
+- How it scales
+- Why it fits perfectly into GymSaathi ERP
+
+--------------------------------------------------
+IMPORTANT RULES
+--------------------------------------------------
+
+- Do NOT generate code
+- Do NOT invent AI features unless logically required
+- Write as PRODUCTION DOCUMENTATION
+- Be structured, clear, and detailed
+- Assume this explanation will be used by developers and stakeholders
+
+Now produce the full detailed explanation.
