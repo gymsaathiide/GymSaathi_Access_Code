@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Sunrise, Sun, Cookie, Moon, ArrowLeft, Pencil, Trash2, Search, X } from "lucide-react";
+import { Sunrise, Sun, Cookie, Moon, ArrowLeft, Pencil, Trash2, Search, X, Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
+import * as XLSX from "xlsx";
 
 type MealType = "breakfast" | "lunch" | "snacks" | "dinner";
 
@@ -56,6 +57,13 @@ const mealTypeConfig = {
   },
 };
 
+interface ImportResult {
+  successCount: number;
+  errorCount: number;
+  totalProcessed: number;
+  errors: string[];
+}
+
 export default function ManageMealsPage() {
   const [selectedType, setSelectedType] = useState<MealType | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,6 +71,11 @@ export default function ManageMealsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [mealToDelete, setMealToDelete] = useState<Meal | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [parsedMeals, setParsedMeals] = useState<any[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -160,6 +173,159 @@ export default function ManageMealsPage() {
     }
   };
 
+  const convertCategory = (category: string): string | null => {
+    const normalized = category?.toLowerCase().trim() || '';
+    
+    if (normalized === 'non-veg' || normalized === 'non-vegetarian' || normalized === 'nonveg' || normalized === 'non vegetarian') {
+      return 'non-veg';
+    }
+    if (normalized === 'eggetarian' || normalized === 'egg' || normalized === 'eggitarian') {
+      return 'eggetarian';
+    }
+    if (normalized === 'veg' || normalized === 'vegetarian' || normalized === 'v') {
+      return 'veg';
+    }
+    return null;
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+
+        if (jsonData.length < 2) {
+          toast({ title: "Excel file is empty or has no data rows", variant: "destructive" });
+          return;
+        }
+
+        const headers = jsonData[0].map((h: any) => String(h).toLowerCase().trim().replace(/\s+/g, ' '));
+        
+        const findColumnIndex = (patterns: string[]): number => {
+          return headers.findIndex(h => patterns.some(p => h.includes(p)));
+        };
+
+        const nameIdx = findColumnIndex(['meals name', 'meal name', 'name']);
+        const descIdx = findColumnIndex(['description', 'desc']);
+        const ingredientsIdx = findColumnIndex(['ingredients', 'ingredient']);
+        const proteinIdx = findColumnIndex(['protein']);
+        const carbsIdx = findColumnIndex(['carbs', 'carbohydrates']);
+        const fatsIdx = findColumnIndex(['fats', 'fat']);
+        const caloriesIdx = findColumnIndex(['calories', 'calorie', 'kcal']);
+        const categoryIdx = findColumnIndex(['category', 'type']);
+
+        if (nameIdx === -1) {
+          toast({ title: "Missing required column", description: "Could not find 'Meals Name' or 'Name' column in Excel", variant: "destructive" });
+          return;
+        }
+
+        if (categoryIdx === -1) {
+          toast({ title: "Missing required column", description: "Could not find 'Category' column in Excel", variant: "destructive" });
+          return;
+        }
+
+        const mealsToImport: any[] = [];
+        const parseErrors: string[] = [];
+
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          if (!row || row.length === 0) continue;
+
+          const name = String(row[nameIdx] || '').trim();
+          if (!name) continue;
+
+          const rawCategory = String(row[categoryIdx] || '').trim();
+          const category = convertCategory(rawCategory);
+          
+          if (!category) {
+            parseErrors.push(`Row ${i + 1}: Invalid category "${rawCategory}" for "${name}". Must be Vegetarian, Eggetarian, or Non-Vegetarian.`);
+            continue;
+          }
+
+          const meal = {
+            name,
+            description: descIdx >= 0 ? String(row[descIdx] || '').trim() : '',
+            ingredients: ingredientsIdx >= 0 ? String(row[ingredientsIdx] || '').trim() : '',
+            protein: proteinIdx >= 0 ? (parseFloat(row[proteinIdx]) || 0) : 0,
+            carbs: carbsIdx >= 0 ? (parseFloat(row[carbsIdx]) || 0) : 0,
+            fats: fatsIdx >= 0 ? (parseFloat(row[fatsIdx]) || 0) : 0,
+            calories: caloriesIdx >= 0 ? (parseFloat(row[caloriesIdx]) || 0) : 0,
+            category,
+          };
+
+          mealsToImport.push(meal);
+        }
+
+        if (parseErrors.length > 0 && mealsToImport.length === 0) {
+          toast({ 
+            title: "No valid meals found", 
+            description: `${parseErrors.length} rows had errors. Check category values.`, 
+            variant: "destructive" 
+          });
+          return;
+        }
+
+        if (parseErrors.length > 0) {
+          toast({ 
+            title: `${parseErrors.length} rows skipped`, 
+            description: "Some rows had invalid categories and will not be imported.",
+            variant: "destructive"
+          });
+        }
+
+        setParsedMeals(mealsToImport);
+        setImportResult(null);
+        setIsImportDialogOpen(true);
+      } catch (error: any) {
+        console.error('Error parsing Excel:', error);
+        toast({ title: "Failed to parse Excel file", description: error.message, variant: "destructive" });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImportMeals = async () => {
+    if (parsedMeals.length === 0) return;
+
+    setIsImporting(true);
+    try {
+      const res = await fetch('/api/meals/lunch/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meals: parsedMeals }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Import failed');
+      }
+
+      const result = await res.json();
+      setImportResult(result);
+      queryClient.invalidateQueries({ queryKey: ["meals", "lunch"] });
+      toast({ 
+        title: `Import complete: ${result.successCount} meals added`,
+        description: result.errorCount > 0 ? `${result.errorCount} failed` : undefined,
+      });
+    } catch (error: any) {
+      console.error('Error importing meals:', error);
+      toast({ title: "Failed to import meals", description: error.message, variant: "destructive" });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (!selectedType) {
     return (
       <div className="p-6 space-y-6">
@@ -198,25 +364,46 @@ export default function ManageMealsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            setSelectedType(null);
-            setSearchQuery("");
-          }}
-          className="text-white/60 hover:text-white hover:bg-white/10"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center`}>
-          <Icon className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setSelectedType(null);
+              setSearchQuery("");
+            }}
+            className="text-white/60 hover:text-white hover:bg-white/10"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.color} flex items-center justify-center`}>
+            <Icon className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">{config.title} Meals</h1>
+            <p className="text-white/60">{filteredMeals.length} meals available</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-white">{config.title} Meals</h1>
-          <p className="text-white/60">{filteredMeals.length} meals available</p>
-        </div>
+        
+        {selectedType === 'lunch' && (
+          <>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".xlsx,.xls"
+              className="hidden"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Import Excel
+            </Button>
+          </>
+        )}
       </div>
 
       <div className="relative max-w-md">
@@ -478,6 +665,145 @@ export default function ManageMealsPage() {
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isImportDialogOpen} onOpenChange={(open) => {
+        setIsImportDialogOpen(open);
+        if (!open) {
+          setParsedMeals([]);
+          setImportResult(null);
+        }
+      }}>
+        <DialogContent className="bg-[hsl(220,26%,14%)] border-white/10 text-white max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+              Import Lunch Meals from Excel
+            </DialogTitle>
+          </DialogHeader>
+          
+          {!importResult ? (
+            <div className="space-y-4">
+              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                <h4 className="font-medium text-white mb-2">Ready to Import</h4>
+                <p className="text-white/60 text-sm">
+                  Found <span className="text-emerald-400 font-semibold">{parsedMeals.length}</span> meals in the Excel file.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-medium text-white text-sm">Preview (first 5 meals):</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {parsedMeals.slice(0, 5).map((meal, idx) => (
+                    <div key={idx} className="bg-white/5 rounded p-2 text-sm border border-white/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-medium truncate flex-1">{meal.name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          meal.category === 'veg' ? 'bg-green-500/20 text-green-400' :
+                          meal.category === 'eggetarian' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {meal.category}
+                        </span>
+                      </div>
+                      <div className="text-white/50 text-xs mt-1">
+                        {meal.calories} kcal | P: {meal.protein}g | C: {meal.carbs}g | F: {meal.fats}g
+                      </div>
+                    </div>
+                  ))}
+                  {parsedMeals.length > 5 && (
+                    <p className="text-white/40 text-xs text-center py-1">
+                      ... and {parsedMeals.length - 5} more meals
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className={`rounded-lg p-4 border ${
+                importResult.errorCount === 0 
+                  ? 'bg-emerald-500/10 border-emerald-500/30' 
+                  : 'bg-yellow-500/10 border-yellow-500/30'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  {importResult.errorCount === 0 ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-yellow-400" />
+                  )}
+                  <h4 className="font-medium text-white">Import Complete</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Total processed:</span>
+                    <span className="text-white">{importResult.totalProcessed}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Successfully added:</span>
+                    <span className="text-emerald-400">{importResult.successCount}</span>
+                  </div>
+                  {importResult.errorCount > 0 && (
+                    <div className="flex justify-between col-span-2">
+                      <span className="text-white/60">Failed:</span>
+                      <span className="text-red-400">{importResult.errorCount}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-white text-sm">
+                    Errors ({importResult.errorCount > 10 ? `showing 10 of ${importResult.errorCount}` : importResult.errors.length}):
+                  </h4>
+                  <div className="bg-red-500/10 rounded-lg p-3 border border-red-500/20 max-h-32 overflow-y-auto">
+                    {importResult.errors.map((error, idx) => (
+                      <p key={idx} className="text-red-400 text-xs">{error}</p>
+                    ))}
+                    {importResult.errorCount > 10 && (
+                      <p className="text-red-300 text-xs mt-2 italic">
+                        ... and {importResult.errorCount - 10} more errors not shown
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {!importResult ? (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsImportDialogOpen(false)}
+                  className="text-white/60 hover:text-white hover:bg-white/10"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleImportMeals}
+                  disabled={isImporting || parsedMeals.length === 0}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                >
+                  {isImporting ? "Importing..." : `Import ${parsedMeals.length} Meals`}
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => {
+                  setIsImportDialogOpen(false);
+                  setParsedMeals([]);
+                  setImportResult(null);
+                }}
+                className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700"
+              >
+                Done
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
