@@ -980,10 +980,10 @@ export default function AIDietPlannerPage() {
                             </div>
                             <p className="text-xs text-white/50 mt-1">
                               {" "}
-                              {Math.round(meal.calories)} kcal • P{" "}
-                              {Math.round(meal.protein)}g • C{" "}
-                              {Math.round(meal.carbs)}g • F{" "}
-                              {Math.round(meal.fat)}g
+                              {Number(meal.calories).toFixed(1)} kcal • P{" "}
+                              {Number(meal.protein).toFixed(1)}g • C{" "}
+                              {Number(meal.carbs).toFixed(1)}g • F{" "}
+                              {Number(meal.fat).toFixed(1)}g
                             </p>
                           </div>
 
