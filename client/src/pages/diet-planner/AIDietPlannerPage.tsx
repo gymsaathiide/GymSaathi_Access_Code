@@ -382,7 +382,8 @@ export default function AIDietPlannerPage() {
   };
 
   const getDailyTotals = (day: number) => {
-    const meals = getDayMeals(day).filter((m) => !m.isExcluded);
+    // Only count main meals (exclude add-ons) - add-ons are optional extras
+    const meals = getDayMeals(day).filter((m) => !m.isExcluded && !m.isAddOn);
     return {
       calories: meals.reduce((sum, m) => sum + (m.calories || 0), 0),
       protein: meals.reduce((sum, m) => sum + (m.protein || 0), 0),
@@ -499,8 +500,9 @@ export default function AIDietPlannerPage() {
     if (!activePlan) return [];
     const arr = new Array(activePlan.durationDays).fill(0).map((_, i) => {
       const day = i + 1;
+      // Only count main meals (exclude add-ons) - add-ons are optional extras
       const meals = activePlan.items.filter(
-        (it) => it.dayNumber === day && !it.isExcluded,
+        (it) => it.dayNumber === day && !it.isExcluded && !it.isAddOn,
       );
       return meals.reduce((s, m) => s + (m.calories || 0), 0);
     });
@@ -525,8 +527,8 @@ export default function AIDietPlannerPage() {
 
   const donutData = useMemo(() => {
     if (!activePlan) return { p: 0, c: 0, f: 0 };
-    // sum macros for activeDay
-    const meals = getDayMeals(activeDay).filter((m) => !m.isExcluded);
+    // Only count main meals (exclude add-ons) - add-ons are optional extras
+    const meals = getDayMeals(activeDay).filter((m) => !m.isExcluded && !m.isAddOn);
     const p = meals.reduce((s, m) => s + (m.protein || 0), 0);
     const c = meals.reduce((s, m) => s + (m.carbs || 0), 0);
     const f = meals.reduce((s, m) => s + (m.fat || 0), 0);
