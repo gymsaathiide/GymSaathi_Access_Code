@@ -111,14 +111,35 @@ export default function DailyNutritionPage() {
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/diet-planner/food-search?query=${encodeURIComponent(debouncedSearch)}`, {
-        credentials: 'include'
-      });
+      // Search both custom meals and FatSecret
+      const [customResponse, fatsecretResponse] = await Promise.all([
+        fetch(`/api/diet-planner/search-custom-meals?query=${encodeURIComponent(debouncedSearch)}`, {
+          credentials: 'include'
+        }),
+        fetch(`/api/diet-planner/food-search?query=${encodeURIComponent(debouncedSearch)}`, {
+          credentials: 'include'
+        })
+      ]);
       
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.foods || []);
-      }
+      const customMeals = customResponse.ok ? await customResponse.json() : { meals: [] };
+      const fatsecretData = fatsecretResponse.ok ? await fatsecretResponse.json() : { foods: [] };
+      
+      // Combine results, prioritizing custom meals
+      const combined = [
+        ...(customMeals.meals || []).map((meal: any) => ({
+          ...meal,
+          source: 'custom',
+          food_id: `custom-${meal.id}`,
+          food_name: meal.name,
+          food_description: `${meal.calories} kcal - P:${meal.protein}g C:${meal.carbs}g F:${meal.fats}g`
+        })),
+        ...(fatsecretData.foods || []).map((food: any) => ({
+          ...food,
+          source: 'fatsecret'
+        }))
+      ];
+      
+      setSearchResults(combined);
     } catch (error) {
       console.error('Error searching foods:', error);
     } finally {
@@ -130,20 +151,36 @@ export default function DailyNutritionPage() {
     searchFoods();
   }, [debouncedSearch]);
 
-  const selectFood = async (food: FoodSearchResult) => {
+  const selectFood = async (food: any) => {
     setSelectedFood(food);
     setLoadingServings(true);
     
     try {
-      const response = await fetch(`/api/diet-planner/food-details/${food.food_id}`, {
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setServings(data.servings || []);
-        if (data.servings?.length > 0) {
-          setSelectedServing(data.servings[0]);
+      // Handle custom meals differently
+      if (food.source === 'custom') {
+        const serving = {
+          serving_id: 'custom-serving',
+          serving_description: '1 serving',
+          calories: parseFloat(food.calories),
+          protein: parseFloat(food.protein),
+          carbohydrate: parseFloat(food.carbs),
+          fat: parseFloat(food.fats),
+          fiber: parseFloat(food.fiber || 0)
+        };
+        setServings([serving]);
+        setSelectedServing(serving);
+      } else {
+        // FatSecret food
+        const response = await fetch(`/api/diet-planner/food-details/${food.food_id}`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setServings(data.servings || []);
+          if (data.servings?.length > 0) {
+            setSelectedServing(data.servings[0]);
+          }
         }
       }
     } catch (error) {
@@ -213,8 +250,8 @@ export default function DailyNutritionPage() {
         await logFoodMutation.mutateAsync({
           mealType: selectedMealType,
           logDate: selectedDate,
-          source: 'fatsecret',
-          fatsecretFoodId: selectedFood.food_id,
+          source: selectedFood.source === 'custom' ? 'custom' : 'fatsecret',
+          fatsecretFoodId: selectedFood.source === 'custom' ? null : selectedFood.food_id,
           servingId: selectedServing.serving_id,
           foodName: selectedFood.food_name,
           brand: selectedFood.brand_name,
@@ -226,7 +263,8 @@ export default function DailyNutritionPage() {
             fat: selectedServing.fat,
             fiber: selectedServing.fiber
           },
-          quantity
+          quantity,
+          customMealId: selectedFood.source === 'custom' ? selectedFood.id : null
         });
 
         toast({
@@ -435,13 +473,18 @@ export default function DailyNutritionPage() {
 
                   {searchResults.length > 0 && (
                     <div className="max-h-60 overflow-y-auto space-y-2">
-                      {searchResults.map((food) => (
+                      {searchResults.map((food: any) => (
                         <button
                           key={food.food_id}
                           onClick={() => selectFood(food)}
                           className="w-full text-left p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                         >
-                          <p className="font-medium">{food.food_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium flex-1">{food.food_name}</p>
+                            {food.source === 'custom' && (
+                              <Badge variant="secondary" className="text-xs">Custom</Badge>
+                            )}
+                          </div>
                           {food.brand_name && (
                             <p className="text-xs text-muted-foreground">{food.brand_name}</p>
                           )}

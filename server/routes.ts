@@ -4997,6 +4997,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get revenue trend for last 6 months
   app.get('/api/billing/revenue-trend', requireRole('admin', 'trainer'), async (req, res) => {
     try {
+
+
+  // Search custom meals from all meal tables
+  app.get('/api/diet-planner/search-custom-meals', requireAuth, async (req, res) => {
+    try {
+      const query = (req.query.query as string || '').toLowerCase().trim();
+      
+      if (!query || query.length < 2) {
+        return res.json({ meals: [] });
+      }
+
+      const searchPattern = `%${query}%`;
+      
+      // Search across all meal tables
+      const [breakfast, lunch, dinner, snacks] = await Promise.all([
+        db!.execute(sql`
+          SELECT id, name, description, protein, carbs, fats, calories, category, 'breakfast' as meal_type
+          FROM meals_breakfast
+          WHERE LOWER(name) LIKE ${searchPattern}
+          ORDER BY name
+          LIMIT 10
+        `),
+        db!.execute(sql`
+          SELECT id, name, description, protein, carbs, fats, calories, category, 'lunch' as meal_type
+          FROM meals_lunch
+          WHERE LOWER(name) LIKE ${searchPattern}
+          ORDER BY name
+          LIMIT 10
+        `),
+        db!.execute(sql`
+          SELECT id, name, description, protein, carbs, fats, calories, category, 'dinner' as meal_type
+          FROM meals_dinner
+          WHERE LOWER(name) LIKE ${searchPattern}
+          ORDER BY name
+          LIMIT 10
+        `),
+        db!.execute(sql`
+          SELECT id, name, description, protein, carbs, fats, calories, category, 'snacks' as meal_type
+          FROM meals_snacks
+          WHERE LOWER(name) LIKE ${searchPattern}
+          ORDER BY name
+          LIMIT 10
+        `)
+      ]);
+
+      const allMeals = [
+        ...breakfast.rows,
+        ...lunch.rows,
+        ...dinner.rows,
+        ...snacks.rows
+      ];
+
+      res.json({ meals: allMeals });
+    } catch (error: any) {
+      console.error('Error searching custom meals:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
       const user = await storage.getUserById(req.session!.userId!);
       if (!user || !user.gymId) {
         return res.status(400).json({ error: 'User must be associated with a gym' });
