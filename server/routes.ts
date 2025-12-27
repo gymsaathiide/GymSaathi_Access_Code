@@ -12489,12 +12489,12 @@ Return ONLY the JSON object, no other text.`;
           const originalCalories = Number(meal.calories);
           const scalingFactor = targetMealCalories / originalCalories;
           
-          // Scale macros first, then derive calories from macros for consistency
-          const scaledProtein = Math.round(Number(meal.protein) * scalingFactor);
-          const scaledCarbs = Math.round(Number(meal.carbs) * scalingFactor);
-          const scaledFat = Math.round(Number(meal.fats) * scalingFactor);
-          // Derive calories from macros: protein*4 + carbs*4 + fat*9
-          const scaledCalories = (scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9);
+          // Scale macros first with 1 decimal precision, then derive calories from macros for consistency
+          const scaledProtein = Math.round(Number(meal.protein) * scalingFactor * 10) / 10;
+          const scaledCarbs = Math.round(Number(meal.carbs) * scalingFactor * 10) / 10;
+          const scaledFat = Math.round(Number(meal.fats) * scalingFactor * 10) / 10;
+          // Derive calories from macros: protein*4 + carbs*4 + fat*9 (1 decimal precision)
+          const scaledCalories = Math.round(((scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9)) * 10) / 10;
 
           // Insert meal item and get the generated ID
           const itemResult = await db!.execute(sql`
@@ -12787,12 +12787,12 @@ Return ONLY the JSON object, no other text.`;
       
       const scalingFactor = targetMealCalories / originalCalories;
       
-      // Scale macros first, then derive calories from macros for consistency
-      const scaledProtein = Math.round(Number(newMeal.protein) * scalingFactor);
-      const scaledCarbs = Math.round(Number(newMeal.carbs) * scalingFactor);
-      const scaledFat = Math.round(Number(newMeal.fats) * scalingFactor);
-      // Derive calories from macros: protein*4 + carbs*4 + fat*9
-      const scaledCalories = (scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9);
+      // Scale macros first with 1 decimal precision, then derive calories from macros for consistency
+      const scaledProtein = Math.round(Number(newMeal.protein) * scalingFactor * 10) / 10;
+      const scaledCarbs = Math.round(Number(newMeal.carbs) * scalingFactor * 10) / 10;
+      const scaledFat = Math.round(Number(newMeal.fats) * scalingFactor * 10) / 10;
+      // Derive calories from macros: protein*4 + carbs*4 + fat*9 (1 decimal precision)
+      const scaledCalories = Math.round(((scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9)) * 10) / 10;
 
       // Update the item with scaled values
       await db!.execute(sql`

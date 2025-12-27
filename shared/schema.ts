@@ -1116,7 +1116,7 @@ export const aiDietPlanItems = pgTable("ai_diet_plan_items", {
   mealType: text("meal_type").notNull(),
   mealId: uuid("meal_id"),
   mealName: text("meal_name").notNull(),
-  calories: integer("calories").notNull(),
+  calories: decimal("calories", { precision: 8, scale: 1 }).notNull(),
   protein: decimal("protein", { precision: 6, scale: 2 }).notNull(),
   carbs: decimal("carbs", { precision: 6, scale: 2 }).notNull(),
   fat: decimal("fat", { precision: 6, scale: 2 }).notNull(),

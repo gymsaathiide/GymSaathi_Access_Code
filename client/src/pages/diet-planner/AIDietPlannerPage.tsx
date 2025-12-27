@@ -697,7 +697,7 @@ export default function AIDietPlannerPage() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <div className="text-sm text-white/70">Today</div>
                     <div className="text-xl font-bold">
-                      {Math.round(dailyTotals.calories)}
+                      {dailyTotals.calories.toFixed(1)}
                     </div>
                     <div className="text-xs text-white/40">
                       of {activePlan.targetCalories}
