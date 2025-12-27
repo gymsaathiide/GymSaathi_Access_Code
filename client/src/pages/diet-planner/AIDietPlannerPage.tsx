@@ -47,6 +47,7 @@ interface PlanItem {
   category: string;
   isFavorite?: boolean;
   isExcluded?: boolean;
+  isAddOn?: boolean;
 }
 
 interface DietPlan {
@@ -120,6 +121,7 @@ export default function AIDietPlannerPage() {
           protein: Number(item.protein) || 0,
           carbs: Number(item.carbs) || 0,
           fat: Number(item.fat) || 0,
+          isAddOn: item.isAddOn || false,
         })),
       };
       setActivePlan(normalizedPlan);
@@ -415,7 +417,18 @@ export default function AIDietPlannerPage() {
     }
   };
 
-  const getMealTypeConfig = (mealType: string) => {
+  const getMealTypeConfig = (mealType: string, isAddOn?: boolean) => {
+    // Handle add-on meals with special styling
+    if (isAddOn || mealType.startsWith("addon_")) {
+      const addOnNumber = mealType.replace("addon_", "");
+      return {
+        icon: Zap,
+        label: `Add-on ${addOnNumber}`,
+        color: "text-purple-400",
+        bg: "bg-purple-500/10",
+      };
+    }
+    
     switch (mealType) {
       case "breakfast":
         return {
@@ -941,13 +954,14 @@ export default function AIDietPlannerPage() {
 
           {/* Right column: meals with neon cards and animated actions */}
           <section className="lg:col-span-8 space-y-4">
+            {/* Main meals grid */}
             <div className="grid gap-4 md:grid-cols-2">
               {["breakfast", "lunch", "snack", "dinner"].map((mealType) => {
                 const meal = getDayMeals(activeDay).find(
                   (m) => m.mealType === mealType,
                 );
                 if (!meal) return null;
-                const mealConfig = getMealTypeConfig(mealType);
+                const mealConfig = getMealTypeConfig(mealType, meal.isAddOn);
                 const MealIcon = mealConfig.icon;
 
                 return (
@@ -1052,6 +1066,156 @@ export default function AIDietPlannerPage() {
                 );
               })}
             </div>
+
+            {/* Add-on meals section */}
+            {(() => {
+              const addOnMeals = getDayMeals(activeDay).filter((m) => m.isAddOn);
+              const mainMealsCalories = getDayMeals(activeDay)
+                .filter((m) => !m.isAddOn && !m.isExcluded)
+                .reduce((sum, m) => sum + (m.calories || 0), 0);
+              const addOnCalories = addOnMeals
+                .filter((m) => !m.isExcluded)
+                .reduce((sum, m) => sum + (m.calories || 0), 0);
+              const totalWithAddOns = mainMealsCalories + addOnCalories;
+              const targetMet = totalWithAddOns >= activePlan.targetCalories * 0.95;
+
+              if (addOnMeals.length === 0) return null;
+
+              return (
+                <div className="mt-6 space-y-4">
+                  {/* Add-ons banner */}
+                  <div className="rounded-xl p-4 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-purple-300">Add-ons Required</h3>
+                        <p className="text-sm text-white/60">
+                          Your main meals total {Math.round(mainMealsCalories)} kcal. 
+                          Add-ons below add {Math.round(addOnCalories)} kcal to help meet your {activePlan.targetCalories} kcal target.
+                        </p>
+                        {!targetMet && (
+                          <p className="text-xs text-amber-400 mt-1">
+                            Note: Exact calorie match not possible with current meal database.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Add-on meal cards */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {addOnMeals.map((meal) => {
+                      const mealConfig = getMealTypeConfig(meal.mealType, true);
+                      const MealIcon = mealConfig.icon;
+
+                      return (
+                        <article
+                          key={meal.id}
+                          className={`rounded-2xl p-4 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/20 relative overflow-hidden group transition hover:scale-[1.01] ${meal.isExcluded ? "opacity-60" : ""}`}
+                        >
+                          <div className="absolute -inset-1 bg-gradient-to-br from-purple-400/6 to-transparent blur-md opacity-25 pointer-events-none" />
+
+                          <div className="flex items-start gap-4">
+                            <div
+                              className={`w-16 h-16 rounded-lg flex items-center justify-center ${mealConfig.bg} ring-1 ring-purple-500/20`}
+                            >
+                              <MealIcon className={`${mealConfig.color} w-6 h-6`} />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded">
+                                      {mealConfig.label}
+                                    </span>
+                                    <span
+                                      className={`inline-block w-2.5 h-2.5 rounded-full ${getCategoryColor(meal.category)}`}
+                                    />
+                                  </div>
+                                  <h3
+                                    className={`text-base font-semibold mt-1 truncate ${meal.isExcluded ? "line-through" : ""}`}
+                                  >
+                                    {meal.mealName}
+                                  </h3>
+                                  <p className="text-xs text-white/50 mt-1">
+                                    {Number(meal.calories).toFixed(1)} kcal • P{" "}
+                                    {Number(meal.protein).toFixed(1)}g • C{" "}
+                                    {Number(meal.carbs).toFixed(1)}g • F{" "}
+                                    {Number(meal.fat).toFixed(1)}g
+                                  </p>
+                                </div>
+
+                                {meal.isFavorite && (
+                                  <div className="ml-2">
+                                    <Heart className="w-5 h-5 text-rose-400" />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="mt-4 flex gap-2">
+                                <button
+                                  onClick={() =>
+                                    meal.id &&
+                                    toggleFavoriteMutation.mutate({
+                                      planId: activePlan.id,
+                                      itemId: meal.id,
+                                    })
+                                  }
+                                  className={`flex-1 py-2 rounded-lg text-sm font-semibold ${meal.isFavorite ? "bg-rose-500/20 text-rose-300" : "bg-white/5 text-white/80 hover:bg-white/8"}`}
+                                >
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Heart className="w-4 h-4" />
+                                    <span>{meal.isFavorite ? "Saved" : "Save"}</span>
+                                  </div>
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    meal.id &&
+                                    swapMealMutation.mutate({
+                                      planId: activePlan.id,
+                                      itemId: meal.id,
+                                    })
+                                  }
+                                  disabled={swapMealMutation.isPending}
+                                  className="flex-1 py-2 rounded-lg bg-white/5 text-white/80 hover:bg-white/8"
+                                >
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Repeat className="w-4 h-4" />
+                                    <span>Swap</span>
+                                  </div>
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    meal.id &&
+                                    toggleExcludeMutation.mutate({
+                                      planId: activePlan.id,
+                                      itemId: meal.id,
+                                    })
+                                  }
+                                  className={`flex-1 py-2 rounded-lg text-sm font-semibold ${meal.isExcluded ? "bg-emerald-500/20 text-emerald-300" : "bg-white/5 text-white/80 hover:bg-rose-500/10"}`}
+                                >
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Ban className="w-4 h-4" />
+                                    <span>
+                                      {meal.isExcluded ? "Restore" : "Skip"}
+                                    </span>
+                                  </div>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* bottom sticky CTA for mobile */}
             <div className="lg:hidden fixed left-4 right-4 bottom-4 z-50">

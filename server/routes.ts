@@ -12468,7 +12468,43 @@ Return ONLY the JSON object, no other text.`;
       const mealTypes = ['breakfast', 'lunch', 'snack', 'dinner'];
       const planItems: any[] = [];
 
+      // Combine all meals for add-on selection (sorted by goal alignment)
+      const allMeals = [
+        ...mealsByType.breakfast.map((m: any) => ({ ...m, sourceType: 'breakfast' })),
+        ...mealsByType.lunch.map((m: any) => ({ ...m, sourceType: 'lunch' })),
+        ...mealsByType.snack.map((m: any) => ({ ...m, sourceType: 'snack' })),
+        ...mealsByType.dinner.map((m: any) => ({ ...m, sourceType: 'dinner' }))
+      ].filter((m: any) => Number(m.calories) > 0);
+
+      // Score meals based on goal alignment
+      const scoreMealForGoal = (meal: any, goalType: string): number => {
+        const calories = Number(meal.calories);
+        const protein = Number(meal.protein);
+        const carbs = Number(meal.carbs);
+        const fat = Number(meal.fats);
+        
+        if (goalType === 'muscle_gain') {
+          // Prioritize high protein + carbs
+          return (protein * 2) + carbs;
+        } else if (goalType === 'fat_loss') {
+          // Prioritize high protein, lower carbs
+          return (protein * 3) - (carbs * 0.5);
+        } else {
+          // Balanced for maintenance/trim_tone
+          return protein + carbs + fat;
+        }
+      };
+
+      // Sort meals by goal score (descending)
+      const goalSortedMeals = [...allMeals].sort((a, b) => 
+        scoreMealForGoal(b, goal) - scoreMealForGoal(a, goal)
+      );
+
       for (let day = 1; day <= duration; day++) {
+        const usedMealIds: Set<string> = new Set();
+        let dayCalories = 0;
+
+        // Generate the 4 main meals
         for (const mealType of mealTypes) {
           // Pick a valid meal from the appropriate table (with positive calories)
           const mealsForType = mealsByType[mealType];
@@ -12481,24 +12517,26 @@ Return ONLY the JSON object, no other text.`;
           
           const randomIndex = Math.floor(Math.random() * validMeals.length);
           const meal = validMeals[randomIndex];
+          usedMealIds.add(meal.id);
           
           // Use original database values directly (no scaling)
           const mealCalories = Number(meal.calories);
           const mealProtein = Number(meal.protein);
           const mealCarbs = Number(meal.carbs);
           const mealFat = Number(meal.fats);
+          dayCalories += mealCalories;
 
           // Insert meal item and get the generated ID
           const itemResult = await db!.execute(sql`
             INSERT INTO ai_diet_plan_items (
               plan_id, day_number, meal_type, meal_id, meal_name, 
-              calories, protein, carbs, fat, category
+              calories, protein, carbs, fat, category, is_add_on
             )
             VALUES (
               ${planId}, ${day}, ${mealType}, ${meal.id}, ${meal.name},
-              ${mealCalories}, ${mealProtein}, ${mealCarbs}, ${mealFat}, ${meal.category}
+              ${mealCalories}, ${mealProtein}, ${mealCarbs}, ${mealFat}, ${meal.category}, false
             )
-            RETURNING id, is_favorite, is_excluded
+            RETURNING id, is_favorite, is_excluded, is_add_on
           `);
 
           const insertedItem = itemResult.rows[0];
@@ -12514,9 +12552,82 @@ Return ONLY the JSON object, no other text.`;
             fat: mealFat,
             category: meal.category,
             isFavorite: insertedItem.is_favorite || false,
-            isExcluded: insertedItem.is_excluded || false
+            isExcluded: insertedItem.is_excluded || false,
+            isAddOn: false
           });
         }
+
+        // Check if we need add-on meals to meet calorie target (±5% tolerance)
+        const minTarget = targetCalories * 0.95;
+        let addOnCount = 0;
+        const maxAddOns = 5; // Limit add-ons per day to prevent infinite loops
+
+        while (dayCalories < minTarget && addOnCount < maxAddOns) {
+          // Find a meal that fits the gap and hasn't been used today
+          const calorieGap = targetCalories - dayCalories;
+          
+          // Find best add-on: goal-aligned, not already used
+          // First try to find meals that fit within the gap
+          let availableAddOns = goalSortedMeals.filter((m: any) => 
+            !usedMealIds.has(m.id) && Number(m.calories) > 0 && Number(m.calories) <= calorieGap * 1.5
+          );
+          
+          // If no fitting meals, just get any unused meal
+          if (availableAddOns.length === 0) {
+            availableAddOns = goalSortedMeals.filter((m: any) => 
+              !usedMealIds.has(m.id) && Number(m.calories) > 0
+            );
+          }
+
+          if (availableAddOns.length === 0) {
+            // No add-ons available at all, break
+            console.log(`Day ${day}: No more add-ons available. Gap remaining: ${calorieGap} kcal`);
+            break;
+          }
+
+          // Pick the best scoring available add-on
+          const addOnMeal = availableAddOns[0];
+          usedMealIds.add(addOnMeal.id);
+          addOnCount++;
+
+          const addOnCalories = Number(addOnMeal.calories);
+          const addOnProtein = Number(addOnMeal.protein);
+          const addOnCarbs = Number(addOnMeal.carbs);
+          const addOnFat = Number(addOnMeal.fats);
+          dayCalories += addOnCalories;
+
+          // Insert add-on meal
+          const addOnResult = await db!.execute(sql`
+            INSERT INTO ai_diet_plan_items (
+              plan_id, day_number, meal_type, meal_id, meal_name, 
+              calories, protein, carbs, fat, category, is_add_on
+            )
+            VALUES (
+              ${planId}, ${day}, ${'addon_' + addOnCount}, ${addOnMeal.id}, ${addOnMeal.name},
+              ${addOnCalories}, ${addOnProtein}, ${addOnCarbs}, ${addOnFat}, ${addOnMeal.category}, true
+            )
+            RETURNING id, is_favorite, is_excluded, is_add_on
+          `);
+
+          const addOnItem = addOnResult.rows[0];
+          planItems.push({
+            id: addOnItem.id,
+            dayNumber: day,
+            mealType: 'addon_' + addOnCount,
+            mealId: addOnMeal.id,
+            mealName: addOnMeal.name,
+            calories: addOnCalories,
+            protein: addOnProtein,
+            carbs: addOnCarbs,
+            fat: addOnFat,
+            category: addOnMeal.category,
+            isFavorite: addOnItem.is_favorite || false,
+            isExcluded: addOnItem.is_excluded || false,
+            isAddOn: true
+          });
+        }
+
+        console.log(`Day ${day}: Total calories = ${dayCalories} / Target = ${targetCalories} (${Math.round(dayCalories / targetCalories * 100)}%)`);
       }
 
       // Fetch the complete plan with items
@@ -12565,15 +12676,17 @@ Return ONLY the JSON object, no other text.`;
       const itemsResult = await db!.execute(sql`
         SELECT id, day_number as "dayNumber", meal_type as "mealType", meal_id as "mealId", 
                meal_name as "mealName", calories, protein, carbs, fat, category,
-               is_favorite as "isFavorite", is_excluded as "isExcluded"
+               is_favorite as "isFavorite", is_excluded as "isExcluded", is_add_on as "isAddOn"
         FROM ai_diet_plan_items 
         WHERE plan_id = ${plan.id}
         ORDER BY day_number, 
-          CASE meal_type 
-            WHEN 'breakfast' THEN 1 
-            WHEN 'lunch' THEN 2 
-            WHEN 'snack' THEN 3 
-            WHEN 'dinner' THEN 4 
+          CASE 
+            WHEN meal_type = 'breakfast' THEN 1 
+            WHEN meal_type = 'lunch' THEN 2 
+            WHEN meal_type = 'snack' THEN 3 
+            WHEN meal_type = 'dinner' THEN 4 
+            WHEN meal_type LIKE 'addon_%' THEN 5 + CAST(SUBSTRING(meal_type FROM 7) AS INTEGER)
+            ELSE 99
           END
       `);
 
@@ -12724,15 +12837,17 @@ Return ONLY the JSON object, no other text.`;
       }
 
       const mealType = String(itemResult.rows[0].meal_type);
+      const isAddOn = mealType.startsWith('addon_');
       
       // Determine which table to fetch from based on meal type
+      // For add-ons, pick from snacks table (good for supplemental eating)
       const tableMap: Record<string, string> = {
         'breakfast': 'meals_breakfast',
         'lunch': 'meals_lunch',
         'snack': 'meals_snacks',
         'dinner': 'meals_dinner'
       };
-      const tableName = tableMap[mealType] || 'meals_breakfast';
+      const tableName = isAddOn ? 'meals_snacks' : (tableMap[mealType] || 'meals_breakfast');
 
       // Get a new random meal from the appropriate table
       let mealsResult;
@@ -12799,7 +12914,8 @@ Return ONLY the JSON object, no other text.`;
           fat: mealFat,
           category: newMeal.category,
           isFavorite: false,
-          isExcluded: false
+          isExcluded: false,
+          isAddOn: isAddOn
         }
       });
     } catch (error: any) {
