@@ -104,6 +104,32 @@ export default function MemberDashboard() {
     refetchOnWindowFocus: true,
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      const result = await apiRequest("POST", "/api/member/attendance/checkout");
+      return result;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Checked Out",
+        description: "You have successfully checked out of the gym.",
+      });
+      refetchStatus();
+      queryClient.invalidateQueries({ queryKey: ["/api/member/attendance/history"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to check out",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCheckout = () => {
+    checkoutMutation.mutate();
+  };
+
   const { data: dietPlanData, isLoading: dietPlanLoading } = useQuery<{
     plan: DietPlan | null;
   }>({
