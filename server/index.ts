@@ -73,4 +73,18 @@ app.use((req, res, next) => {
   server.listen(PORT, "0.0.0.0", () => {
     log(`Server running on port ${PORT}`);
   });
+
+  // Prevent process from crashing
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+
+  // Keep process alive
+  process.on('SIGTERM', () => {
+    log('SIGTERM received, keeping server alive');
+  });
 })();
