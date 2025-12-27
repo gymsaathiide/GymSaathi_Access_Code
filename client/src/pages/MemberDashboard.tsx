@@ -26,6 +26,7 @@ import {
   Flame,
   Sparkles,
   Dumbbell,
+  CheckCircle2,
 } from "lucide-react";
 import QrScanner from "@/components/QrScanner";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -60,7 +61,7 @@ type AttendanceRecord = {
 type DietPlanItem = {
   id: string;
   dayNumber: number;
-  mealType: "breakfast" | "lunch" | "snack" | "dinner";
+  mealType: "breakfast" | "lunch" | "snack" | "dinner" | string;
   mealName: string;
   calories: number;
   protein: number;
@@ -69,6 +70,16 @@ type DietPlanItem = {
   category: string;
   isFavorite: boolean;
   isExcluded: boolean;
+  isConsumed?: boolean;
+  isAddOn?: boolean;
+};
+
+type ConsumedMealsData = {
+  ok: boolean;
+  consumedMeals: DietPlanItem[];
+  totalCaloriesConsumed: number;
+  targetCalories: number;
+  dayNumber: number;
 };
 
 type DietPlan = {
@@ -143,6 +154,20 @@ export default function MemberDashboard() {
     },
     staleTime: 0,
     refetchOnWindowFocus: true,
+  });
+
+  const { data: consumedMealsData } = useQuery<ConsumedMealsData>({
+    queryKey: ["consumed-meals"],
+    queryFn: async () => {
+      const res = await fetch("/api/diet-planner/consumed-meals?day=1", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch consumed meals");
+      return res.json();
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
   });
 
   const activeDietPlan = dietPlanData?.plan;
@@ -601,6 +626,82 @@ export default function MemberDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Consumed Meals Today Section */}
+      {consumedMealsData && consumedMealsData.consumedMeals && consumedMealsData.consumedMeals.length > 0 && (
+        <Card className="overflow-hidden bg-gradient-to-br from-emerald-900/30 to-emerald-950/50 border-emerald-500/30">
+          <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 flex-shrink-0" />
+                <CardTitle className="text-sm sm:text-base truncate">
+                  Consumed Today
+                </CardTitle>
+              </div>
+            </div>
+            {/* Total Calories Banner */}
+            <div className="mt-2 p-3 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-emerald-300">Total Calories Consumed</span>
+                <div className="flex items-center gap-1">
+                  <Flame className="h-4 w-4 text-emerald-400" />
+                  <span className="font-bold text-lg text-emerald-300">
+                    {Math.round(consumedMealsData.totalCaloriesConsumed)}
+                  </span>
+                  <span className="text-sm text-emerald-400">kcal</span>
+                </div>
+              </div>
+              {consumedMealsData.targetCalories > 0 && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-xs text-emerald-400 mb-1">
+                    <span>Progress</span>
+                    <span>{Math.round((consumedMealsData.totalCaloriesConsumed / consumedMealsData.targetCalories) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-emerald-900/50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (consumedMealsData.totalCaloriesConsumed / consumedMealsData.targetCalories) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="space-y-2 sm:space-y-3">
+              {consumedMealsData.consumedMeals.map((meal) => (
+                <div
+                  key={meal.id}
+                  className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20"
+                >
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-[10px] sm:text-xs font-medium text-emerald-400 capitalize">
+                          {meal.mealType.startsWith('addon_') 
+                            ? `Add-on ${meal.mealType.replace('addon_', '')}` 
+                            : meal.mealType}
+                        </span>
+                      </div>
+                      <p className="font-medium text-xs sm:text-sm truncate">
+                        {meal.mealName}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm flex-shrink-0 ml-2">
+                    <Flame className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500" />
+                    <span className="font-medium text-emerald-300">{Math.round(Number(meal.calories))}</span>
+                    <span className="text-emerald-400/70 text-[10px] sm:text-xs hidden xs:inline">
+                      kcal
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Training Section */}
       <Card className="overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-orange-500/20">

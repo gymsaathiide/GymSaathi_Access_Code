@@ -1124,6 +1124,7 @@ export const aiDietPlanItems = pgTable("ai_diet_plan_items", {
   isFavorite: boolean("is_favorite").default(false),
   isExcluded: boolean("is_excluded").default(false),
   isAddOn: boolean("is_add_on").default(false),
+  isConsumed: boolean("is_consumed").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -12676,7 +12676,8 @@ Return ONLY the JSON object, no other text.`;
       const itemsResult = await db!.execute(sql`
         SELECT id, day_number as "dayNumber", meal_type as "mealType", meal_id as "mealId", 
                meal_name as "mealName", calories, protein, carbs, fat, category,
-               is_favorite as "isFavorite", is_excluded as "isExcluded", is_add_on as "isAddOn"
+               is_favorite as "isFavorite", is_excluded as "isExcluded", is_add_on as "isAddOn",
+               COALESCE(is_consumed, false) as "isConsumed"
         FROM ai_diet_plan_items 
         WHERE plan_id = ${plan.id}
         ORDER BY day_number, 
@@ -13031,6 +13032,123 @@ Return ONLY the JSON object, no other text.`;
       res.json({ ok: true, message: 'Plan deleted successfully' });
     } catch (error: any) {
       console.error('Error deleting diet plan:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Toggle meal consumed status
+  app.post('/api/diet-planner/plans/:planId/items/:itemId/consumed', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const { planId, itemId } = req.params;
+
+      // Verify plan ownership
+      const planResult = await db!.execute(sql`
+        SELECT id FROM ai_diet_plans 
+        WHERE id = ${planId} AND user_id = ${req.session.userId}
+      `);
+
+      if (planResult.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Plan not found' });
+      }
+
+      // Toggle consumed status
+      await db!.execute(sql`
+        UPDATE ai_diet_plan_items 
+        SET is_consumed = NOT COALESCE(is_consumed, false)
+        WHERE id = ${itemId} AND plan_id = ${planId}
+      `);
+
+      // Get updated item details
+      const itemResult = await db!.execute(sql`
+        SELECT id, meal_name, meal_type, calories, is_consumed, is_add_on
+        FROM ai_diet_plan_items 
+        WHERE id = ${itemId}
+      `);
+
+      const item = itemResult.rows[0];
+      res.json({ 
+        ok: true, 
+        isConsumed: item?.is_consumed || false,
+        mealName: item?.meal_name,
+        mealType: item?.meal_type,
+        calories: Number(item?.calories) || 0
+      });
+    } catch (error: any) {
+      console.error('Error toggling consumed status:', error);
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Get consumed meals for today (for dashboard)
+  app.get('/api/diet-planner/consumed-meals', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const dayNumber = parseInt(req.query.day as string) || 1;
+
+      // Get user's active plan
+      const planResult = await db!.execute(sql`
+        SELECT id, target_calories FROM ai_diet_plans 
+        WHERE user_id = ${req.session.userId} AND is_active = true
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+
+      if (planResult.rows.length === 0) {
+        return res.json({ 
+          ok: true, 
+          consumedMeals: [], 
+          totalCaloriesConsumed: 0,
+          targetCalories: 0
+        });
+      }
+
+      const plan = planResult.rows[0] as any;
+
+      // Get consumed meals for the specified day
+      const mealsResult = await db!.execute(sql`
+        SELECT id, meal_name as "mealName", meal_type as "mealType", 
+               calories, protein, carbs, fat, category, is_add_on as "isAddOn"
+        FROM ai_diet_plan_items 
+        WHERE plan_id = ${plan.id} AND day_number = ${dayNumber} AND is_consumed = true
+        ORDER BY 
+          CASE 
+            WHEN meal_type = 'breakfast' THEN 1 
+            WHEN meal_type = 'lunch' THEN 2 
+            WHEN meal_type = 'snack' THEN 3 
+            WHEN meal_type = 'dinner' THEN 4 
+            ELSE 5 
+          END
+      `);
+
+      const consumedMeals = mealsResult.rows.map((row: any) => ({
+        ...row,
+        calories: Number(row.calories) || 0,
+        protein: Number(row.protein) || 0,
+        carbs: Number(row.carbs) || 0,
+        fat: Number(row.fat) || 0
+      }));
+
+      const totalCaloriesConsumed = consumedMeals.reduce(
+        (sum: number, meal: any) => sum + meal.calories, 
+        0
+      );
+
+      res.json({ 
+        ok: true, 
+        consumedMeals,
+        totalCaloriesConsumed,
+        targetCalories: Number(plan.target_calories) || 0,
+        dayNumber
+      });
+    } catch (error: any) {
+      console.error('Error fetching consumed meals:', error);
       res.status(500).json({ ok: false, error: error.message });
     }
   });

@@ -23,6 +23,7 @@ import {
   Sun,
   Coffee,
   UtensilsCrossed,
+  CheckCircle,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,6 +49,7 @@ interface PlanItem {
   isFavorite?: boolean;
   isExcluded?: boolean;
   isAddOn?: boolean;
+  isConsumed?: boolean;
 }
 
 interface DietPlan {
@@ -122,6 +124,7 @@ export default function AIDietPlannerPage() {
           carbs: Number(item.carbs) || 0,
           fat: Number(item.fat) || 0,
           isAddOn: item.isAddOn || false,
+          isConsumed: item.isConsumed || false,
         })),
       };
       setActivePlan(normalizedPlan);
@@ -332,6 +335,38 @@ export default function AIDietPlannerPage() {
           ? "This meal will be skipped"
           : "This meal is back in your plan",
       });
+    },
+  });
+
+  const toggleConsumedMutation = useMutation({
+    mutationFn: async ({
+      planId,
+      itemId,
+    }: {
+      planId: string;
+      itemId: string;
+    }) => {
+      const res = await fetch(
+        `/api/diet-planner/plans/${planId}/items/${itemId}/consumed`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+      if (!res.ok) throw new Error("Failed to toggle consumed status");
+      return res.json();
+    },
+    onSuccess: (data, variables) => {
+      if (activePlan) {
+        const updatedItems = activePlan.items.map((item) =>
+          item.id === variables.itemId
+            ? { ...item, isConsumed: data.isConsumed }
+            : item,
+        );
+        setActivePlan({ ...activePlan, items: updatedItems });
+      }
+      queryClient.invalidateQueries({ queryKey: ["active-diet-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["consumed-meals"] });
     },
   });
 
@@ -969,10 +1004,18 @@ export default function AIDietPlannerPage() {
                 return (
                   <article
                     key={mealType}
-                    className={`rounded-2xl p-4 bg-gradient-to-br from-[#081026]/40 to-[#071022]/20 border border-white/6 relative overflow-hidden group transition hover:scale-[1.01] ${meal.isExcluded ? "opacity-60" : ""}`}
+                    className={`rounded-2xl p-4 relative overflow-hidden group transition hover:scale-[1.01] ${
+                      meal.isConsumed 
+                        ? "bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border-2 border-emerald-500/40" 
+                        : "bg-gradient-to-br from-[#081026]/40 to-[#071022]/20 border border-white/6"
+                    } ${meal.isExcluded ? "opacity-60" : ""}`}
                   >
-                    {/* subtle neon glow */}
-                    <div className="absolute -inset-1 bg-gradient-to-br from-orange-400/6 to-transparent blur-md opacity-25 pointer-events-none" />
+                    {/* subtle neon glow - green when consumed */}
+                    <div className={`absolute -inset-1 blur-md opacity-25 pointer-events-none ${
+                      meal.isConsumed 
+                        ? "bg-gradient-to-br from-emerald-400/10 to-transparent" 
+                        : "bg-gradient-to-br from-orange-400/6 to-transparent"
+                    }`} />
 
                     <div className="flex items-start gap-4">
                       <div
@@ -1011,6 +1054,22 @@ export default function AIDietPlannerPage() {
                         </div>
 
                         <div className="mt-4 flex gap-2">
+                          <button
+                            onClick={() =>
+                              meal.id &&
+                              toggleConsumedMutation.mutate({
+                                planId: activePlan.id,
+                                itemId: meal.id,
+                              })
+                            }
+                            className={`flex-1 py-2 rounded-lg text-sm font-semibold ${meal.isConsumed ? "bg-emerald-500/30 text-emerald-300 ring-1 ring-emerald-500/50" : "bg-white/5 text-white/80 hover:bg-emerald-500/10"}`}
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <CheckCircle className={`w-4 h-4 ${meal.isConsumed ? "fill-emerald-500" : ""}`} />
+                              <span>{meal.isConsumed ? "Done" : "Ate"}</span>
+                            </div>
+                          </button>
+
                           <button
                             onClick={() =>
                               meal.id &&
@@ -1115,9 +1174,17 @@ export default function AIDietPlannerPage() {
                       return (
                         <article
                           key={meal.id}
-                          className={`rounded-2xl p-4 bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/20 relative overflow-hidden group transition hover:scale-[1.01] ${meal.isExcluded ? "opacity-60" : ""}`}
+                          className={`rounded-2xl p-4 relative overflow-hidden group transition hover:scale-[1.01] ${
+                            meal.isConsumed 
+                              ? "bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border-2 border-emerald-500/40" 
+                              : "bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/20"
+                          } ${meal.isExcluded ? "opacity-60" : ""}`}
                         >
-                          <div className="absolute -inset-1 bg-gradient-to-br from-purple-400/6 to-transparent blur-md opacity-25 pointer-events-none" />
+                          <div className={`absolute -inset-1 blur-md opacity-25 pointer-events-none ${
+                            meal.isConsumed 
+                              ? "bg-gradient-to-br from-emerald-400/10 to-transparent" 
+                              : "bg-gradient-to-br from-purple-400/6 to-transparent"
+                          }`} />
 
                           <div className="flex items-start gap-4">
                             <div
@@ -1158,6 +1225,22 @@ export default function AIDietPlannerPage() {
                               </div>
 
                               <div className="mt-4 flex gap-2">
+                                <button
+                                  onClick={() =>
+                                    meal.id &&
+                                    toggleConsumedMutation.mutate({
+                                      planId: activePlan.id,
+                                      itemId: meal.id,
+                                    })
+                                  }
+                                  className={`flex-1 py-2 rounded-lg text-sm font-semibold ${meal.isConsumed ? "bg-emerald-500/30 text-emerald-300 ring-1 ring-emerald-500/50" : "bg-white/5 text-white/80 hover:bg-emerald-500/10"}`}
+                                >
+                                  <div className="flex items-center justify-center gap-2">
+                                    <CheckCircle className={`w-4 h-4 ${meal.isConsumed ? "fill-emerald-500" : ""}`} />
+                                    <span>{meal.isConsumed ? "Done" : "Ate"}</span>
+                                  </div>
+                                </button>
+
                                 <button
                                   onClick={() =>
                                     meal.id &&
