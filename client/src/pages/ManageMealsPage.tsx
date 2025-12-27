@@ -386,24 +386,20 @@ export default function ManageMealsPage() {
           </div>
         </div>
         
-        {(selectedType === 'lunch' || selectedType === 'dinner') && (
-          <>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              accept=".xlsx,.xls"
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              Import Excel
-            </Button>
-          </>
-        )}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          accept=".xlsx,.xls"
+          className="hidden"
+        />
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white gap-2"
+        >
+          <Upload className="w-4 h-4" />
+          Import Excel
+        </Button>
       </div>
 
       <div className="relative max-w-md">
@@ -680,7 +676,7 @@ export default function ManageMealsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-              Import {selectedType === 'lunch' ? 'Lunch' : 'Dinner'} Meals from Excel
+              Import {selectedType === 'breakfast' ? 'Breakfast' : selectedType === 'lunch' ? 'Lunch' : selectedType === 'dinner' ? 'Dinner' : 'Snacks'} Meals from Excel
             </DialogTitle>
           </DialogHeader>
           
