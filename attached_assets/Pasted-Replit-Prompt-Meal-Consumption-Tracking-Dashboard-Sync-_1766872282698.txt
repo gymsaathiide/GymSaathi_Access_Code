@@ -1,0 +1,146 @@
+Replit Prompt – Meal Consumption Tracking + Dashboard Sync
+
+We currently generate meals and add-ons, but there is no way to track what the user has actually consumed. Implement the following feature end-to-end, including UI state, persistence, and dashboard visibility.
+
+1. Meal Card Interaction (Core Feature)
+
+Add a “Consumed” tick/check icon button on every meal card:
+
+Breakfast
+
+Lunch
+
+Snack
+
+Dinner
+
+Add-on meals
+
+When the user clicks the tick:
+
+Toggle the meal into a consumed state
+
+The entire card should visually turn green
+
+The tick icon should show as active/checked
+
+Clicking again should unmark the meal (toggle behavior).
+
+2. Calorie Consumption Logic
+
+Each meal already has a known calorie value.
+
+When a meal is marked as consumed:
+
+Add its calories to total calories consumed
+
+When unmarked:
+
+Subtract its calories from the total.
+
+This total should update in real time (no refresh).
+
+3. Add-ons Must Behave the Same
+
+The exact same tick + green-card behavior must apply to:
+
+Add-on 1
+
+Add-on 2
+
+Any future add-ons
+
+No special-case logic — add-ons are just consumable meals.
+
+4. Dashboard Integration (Critical)
+
+In the Dashboard section, add a new list:
+
+Title: “Consumed Meals Today”
+
+This list should:
+
+Show only meals the user has marked as consumed
+
+Update instantly as meals are toggled
+
+Include:
+
+Meal name
+
+Meal type (Breakfast / Lunch / Snack / Dinner / Add-on)
+
+Calories
+
+5. Total Calories Banner on Dashboard
+
+At the top of the Dashboard consumed-meals list:
+
+Show a banner/card
+
+Text example:
+“Total Calories Consumed Today: XXXX kcal”
+
+This value must:
+
+Increase/decrease dynamically
+
+Match exactly with consumed meals (no mismatch allowed)
+
+6. Persistence Rules (Non-Negotiable)
+
+Consumption state must persist:
+
+On page refresh
+
+When switching tabs (Diet Planner → Dashboard → back)
+
+Store:
+
+mealId
+
+consumed: true/false
+
+calories
+
+date (so it resets daily, not forever)
+
+7. Daily Scope
+
+Consumption tracking is per day
+
+When the user switches to another day:
+
+Load that day’s consumed meals
+
+Do NOT mix days
+
+A new day starts with zero consumed meals unless user marks them.
+
+8. UX Rules (Be Strict)
+
+Green = consumed
+
+Normal card = not consumed
+
+No modal confirmations
+
+No page reloads
+
+No duplicate entries in dashboard list
+
+9. Data Consistency
+
+Dashboard data must be derived from the same source of truth as the diet planner.
+
+Avoid local-only UI state that breaks on refresh.
+
+If Replit tries to:
+
+only change UI without persistence → reject it
+
+show all meals instead of only consumed ones → reject it
+
+calculate calories incorrectly → reject it
+
+This feature is about truthful tracking, not visuals.
