@@ -22,6 +22,7 @@ interface Meal {
   fats: number;
   fiber?: number;
   description?: string;
+  ingredients?: string;
 }
 
 const mealTypeConfig = {
@@ -343,7 +344,7 @@ export default function ManageMealsPage() {
       )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="bg-[hsl(220,26%,14%)] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-[hsl(220,26%,14%)] border-white/10 text-white max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Meal</DialogTitle>
           </DialogHeader>
@@ -355,6 +356,24 @@ export default function ManageMealsPage() {
                   value={editingMeal.name}
                   onChange={(e) => setEditingMeal({ ...editingMeal, name: e.target.value })}
                   className="bg-white/5 border-white/10 text-white"
+                />
+              </div>
+              <div>
+                <Label className="text-white/70">Description</Label>
+                <Input
+                  value={editingMeal.description || ''}
+                  onChange={(e) => setEditingMeal({ ...editingMeal, description: e.target.value })}
+                  className="bg-white/5 border-white/10 text-white"
+                  placeholder="Brief description of the meal"
+                />
+              </div>
+              <div>
+                <Label className="text-white/70">Ingredients</Label>
+                <textarea
+                  value={editingMeal.ingredients || ''}
+                  onChange={(e) => setEditingMeal({ ...editingMeal, ingredients: e.target.value })}
+                  className="w-full min-h-[80px] px-3 py-2 rounded-md bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                  placeholder="List of ingredients with quantities"
                 />
               </div>
               <div>
