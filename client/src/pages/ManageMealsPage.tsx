@@ -296,11 +296,11 @@ export default function ManageMealsPage() {
   };
 
   const handleImportMeals = async () => {
-    if (parsedMeals.length === 0) return;
+    if (parsedMeals.length === 0 || !selectedType) return;
 
     setIsImporting(true);
     try {
-      const res = await fetch('/api/meals/lunch/import', {
+      const res = await fetch(`/api/meals/${selectedType}/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ meals: parsedMeals }),
@@ -313,7 +313,7 @@ export default function ManageMealsPage() {
 
       const result = await res.json();
       setImportResult(result);
-      queryClient.invalidateQueries({ queryKey: ["meals", "lunch"] });
+      queryClient.invalidateQueries({ queryKey: ["meals", selectedType] });
       toast({ 
         title: `Import complete: ${result.successCount} meals added`,
         description: result.errorCount > 0 ? `${result.errorCount} failed` : undefined,
@@ -386,7 +386,7 @@ export default function ManageMealsPage() {
           </div>
         </div>
         
-        {selectedType === 'lunch' && (
+        {(selectedType === 'lunch' || selectedType === 'dinner') && (
           <>
             <input
               type="file"
@@ -680,7 +680,7 @@ export default function ManageMealsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-              Import Lunch Meals from Excel
+              Import {selectedType === 'lunch' ? 'Lunch' : 'Dinner'} Meals from Excel
             </DialogTitle>
           </DialogHeader>
           

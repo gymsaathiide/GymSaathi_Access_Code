@@ -11808,6 +11808,87 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
+  // Bulk import meals for dinner (Excel import)
+  app.post('/api/meals/dinner/import', async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Check if user is superadmin
+    const userResult = await db!.execute(sql`
+      SELECT role FROM users WHERE id = ${req.session.userId}
+    `);
+    
+    if (!userResult.rows?.[0] || userResult.rows[0].role !== 'superadmin') {
+      return res.status(403).json({ error: 'Only superadmins can import meals' });
+    }
+
+    try {
+      const { meals } = req.body;
+      
+      if (!Array.isArray(meals) || meals.length === 0) {
+        return res.status(400).json({ error: 'No meals provided for import' });
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      for (const meal of meals) {
+        try {
+          const { name, description, ingredients, protein, carbs, fats, calories, category } = meal;
+          
+          if (!name || typeof name !== 'string' || name.trim().length === 0) {
+            errors.push(`Skipped meal with invalid name: "${name}"`);
+            errorCount++;
+            continue;
+          }
+
+          const validCategories = ['veg', 'eggetarian', 'non-veg'];
+          if (!validCategories.includes(category)) {
+            errors.push(`Invalid category for "${name}": ${category}`);
+            errorCount++;
+            continue;
+          }
+
+          const safeParseNum = (val: any): number => {
+            const num = parseFloat(val);
+            return isNaN(num) || num < 0 ? 0 : num;
+          };
+
+          await db!.execute(sql`
+            INSERT INTO meals_dinner (name, description, ingredients, protein, carbs, fats, calories, category)
+            VALUES (
+              ${name.trim()}, 
+              ${description || null}, 
+              ${ingredients || null}, 
+              ${safeParseNum(protein)}, 
+              ${safeParseNum(carbs)}, 
+              ${safeParseNum(fats)}, 
+              ${safeParseNum(calories)}, 
+              ${category}
+            )
+          `);
+          successCount++;
+        } catch (mealError: any) {
+          errors.push(`Error importing "${meal.name}": ${mealError.message}`);
+          errorCount++;
+        }
+      }
+
+      res.json({ 
+        ok: true, 
+        successCount, 
+        errorCount, 
+        totalProcessed: meals.length,
+        errors: errors.slice(0, 10)
+      });
+    } catch (error: any) {
+      console.error('Error importing dinner meals:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Generate meal plan (7 or 30 days)
   app.post('/api/meals/breakfast/generate-plan', async (req, res) => {
     if (!req.session?.userId) {
