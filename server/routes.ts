@@ -12482,19 +12482,11 @@ Return ONLY the JSON object, no other text.`;
           const randomIndex = Math.floor(Math.random() * validMeals.length);
           const meal = validMeals[randomIndex];
           
-          // Calculate target calories for this meal type
-          const targetMealCalories = Math.round(targetCalories * mealDistribution[mealType as keyof typeof mealDistribution]);
-
-          // Scale the meal's nutritional values to match target calories
-          const originalCalories = Number(meal.calories);
-          const scalingFactor = targetMealCalories / originalCalories;
-          
-          // Scale macros first with 1 decimal precision, then derive calories from macros for consistency
-          const scaledProtein = Math.round(Number(meal.protein) * scalingFactor * 10) / 10;
-          const scaledCarbs = Math.round(Number(meal.carbs) * scalingFactor * 10) / 10;
-          const scaledFat = Math.round(Number(meal.fats) * scalingFactor * 10) / 10;
-          // Derive calories from macros: protein*4 + carbs*4 + fat*9 (1 decimal precision)
-          const scaledCalories = Math.round(((scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9)) * 10) / 10;
+          // Use original database values directly (no scaling)
+          const mealCalories = Number(meal.calories);
+          const mealProtein = Number(meal.protein);
+          const mealCarbs = Number(meal.carbs);
+          const mealFat = Number(meal.fats);
 
           // Insert meal item and get the generated ID
           const itemResult = await db!.execute(sql`
@@ -12504,7 +12496,7 @@ Return ONLY the JSON object, no other text.`;
             )
             VALUES (
               ${planId}, ${day}, ${mealType}, ${meal.id}, ${meal.name},
-              ${scaledCalories}, ${scaledProtein}, ${scaledCarbs}, ${scaledFat}, ${meal.category}
+              ${mealCalories}, ${mealProtein}, ${mealCarbs}, ${mealFat}, ${meal.category}
             )
             RETURNING id, is_favorite, is_excluded
           `);
@@ -12516,10 +12508,10 @@ Return ONLY the JSON object, no other text.`;
             mealType,
             mealId: meal.id,
             mealName: meal.name,
-            calories: scaledCalories,
-            protein: scaledProtein,
-            carbs: scaledCarbs,
-            fat: scaledFat,
+            calories: mealCalories,
+            protein: mealProtein,
+            carbs: mealCarbs,
+            fat: mealFat,
             category: meal.category,
             isFavorite: insertedItem.is_favorite || false,
             isExcluded: insertedItem.is_excluded || false
@@ -12776,33 +12768,21 @@ Return ONLY the JSON object, no other text.`;
 
       const newMeal = mealsResult.rows[0];
 
-      // Calculate target calories for this meal type and scale nutritional values
-      const targetMealCalories = Math.round(targetCalories * (mealDistribution[mealType] || 0.25));
-      const originalCalories = Number(newMeal.calories);
-      
-      // Validate meal has valid calories before scaling
-      if (!originalCalories || originalCalories <= 0) {
-        return res.status(400).json({ ok: false, error: 'Selected meal has invalid calorie data. Please try again.' });
-      }
-      
-      const scalingFactor = targetMealCalories / originalCalories;
-      
-      // Scale macros first with 1 decimal precision, then derive calories from macros for consistency
-      const scaledProtein = Math.round(Number(newMeal.protein) * scalingFactor * 10) / 10;
-      const scaledCarbs = Math.round(Number(newMeal.carbs) * scalingFactor * 10) / 10;
-      const scaledFat = Math.round(Number(newMeal.fats) * scalingFactor * 10) / 10;
-      // Derive calories from macros: protein*4 + carbs*4 + fat*9 (1 decimal precision)
-      const scaledCalories = Math.round(((scaledProtein * 4) + (scaledCarbs * 4) + (scaledFat * 9)) * 10) / 10;
+      // Use original database values directly (no scaling)
+      const mealCalories = Number(newMeal.calories);
+      const mealProtein = Number(newMeal.protein);
+      const mealCarbs = Number(newMeal.carbs);
+      const mealFat = Number(newMeal.fats);
 
-      // Update the item with scaled values
+      // Update the item with original values
       await db!.execute(sql`
         UPDATE ai_diet_plan_items 
         SET meal_id = ${newMeal.id}, 
             meal_name = ${newMeal.name},
-            calories = ${scaledCalories},
-            protein = ${scaledProtein},
-            carbs = ${scaledCarbs},
-            fat = ${scaledFat},
+            calories = ${mealCalories},
+            protein = ${mealProtein},
+            carbs = ${mealCarbs},
+            fat = ${mealFat},
             category = ${newMeal.category}
         WHERE id = ${itemId} AND plan_id = ${planId}
       `);
@@ -12813,10 +12793,10 @@ Return ONLY the JSON object, no other text.`;
         newMeal: {
           mealId: newMeal.id,
           mealName: newMeal.name,
-          calories: scaledCalories,
-          protein: scaledProtein,
-          carbs: scaledCarbs,
-          fat: scaledFat,
+          calories: mealCalories,
+          protein: mealProtein,
+          carbs: mealCarbs,
+          fat: mealFat,
           category: newMeal.category,
           isFavorite: false,
           isExcluded: false
