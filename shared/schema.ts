@@ -1123,6 +1123,7 @@ export const aiDietPlanItems = pgTable("ai_diet_plan_items", {
   category: text("category").notNull(),
   isFavorite: boolean("is_favorite").default(false),
   isExcluded: boolean("is_excluded").default(false),
+  isAddOn: boolean("is_add_on").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
