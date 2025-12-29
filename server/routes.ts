@@ -976,10 +976,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate or update gym slug
-  app.post('/api/gyms/:id/generate-slug', requireRole('superadmin'), async (req, res) => {
+  app.post('/api/gyms/:id/generate-slug', requireRole('superadmin', 'admin'), async (req, res) => {
     try {
       const { id } = req.params;
       const { customSlug } = req.body;
+
+      // Admins can only generate slugs for their own gym
+      const user = await storage.getUserById(req.session!.userId!);
+      if (user?.role === 'admin' && req.session?.gymId !== id) {
+        return res.status(403).json({ error: 'Access denied - you can only generate slugs for your own gym' });
+      }
 
       const gym = await db!.select().from(schema.gyms).where(eq(schema.gyms.id, id)).limit(1).then(rows => rows[0]);
       if (!gym) {
