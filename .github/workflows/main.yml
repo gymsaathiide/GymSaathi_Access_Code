@@ -25,6 +25,6 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=ggymsaathiide_GymSaathi_Access_Code
+            -Dsonar.projectKey=gymsaathiide_GymSaathi_Access_Code
             -Dsonar.organization=gymsaathiide
             -Dsonar.sources=.
